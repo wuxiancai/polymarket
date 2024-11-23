@@ -1,0 +1,72 @@
+2024-11-23 12:44:55,481 [INFO] 成功加载配置文件
+2024-11-23 12:45:07,289 [INFO] 获取到Cash文本: Cash: 等待数据...
+2024-11-23 12:45:07,289 [ERROR] 设置金额失败: 无法从Cash值中提取数字
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket/crypto_trader.py", line 527, in set_yes_no_cash
+    raise ValueError("无法从Cash值中提取数字")
+ValueError: 无法从Cash值中提取数字
+2024-11-23 12:45:07,291 [ERROR] 金额设置失败，请检查Cash值是否正确
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket/crypto_trader.py", line 527, in set_yes_no_cash
+    raise ValueError("无法从Cash值中提取数字")
+ValueError: 无法从Cash值中提取数字
+2024-11-23 12:45:49,972 [INFO] 获取到Cash文本: Cash: $627.74
+2024-11-23 12:45:49,972 [INFO] 提取到Cash值: 627.74
+2024-11-23 12:45:49,973 [INFO] 金额更新完成
+2024-11-23 12:46:09,966 [INFO] No6价格匹配,执行自动卖出
+2024-11-23 12:46:16,684 [INFO] MetaMask 扩展弹窗操作完成
+2024-11-23 12:46:42,787 [INFO] MetaMask 扩展弹窗操作完成
+2024-11-23 12:47:01,219 [ERROR] Sell_no执行失败: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/urllib3/connectionpool.py", line 789, in urlopen
+    response = self._make_request(
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/urllib3/connectionpool.py", line 536, in _make_request
+    response = conn.getresponse()
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/urllib3/connection.py", line 507, in getresponse
+    httplib_response = super().getresponse()
+  File "/opt/homebrew/Cellar/python@3.9/3.9.20/Frameworks/Python.framework/Versions/3.9/lib/python3.9/http/client.py", line 1377, in getresponse
+    response.begin()
+  File "/opt/homebrew/Cellar/python@3.9/3.9.20/Frameworks/Python.framework/Versions/3.9/lib/python3.9/http/client.py", line 320, in begin
+    version, status, reason = self._read_status()
+  File "/opt/homebrew/Cellar/python@3.9/3.9.20/Frameworks/Python.framework/Versions/3.9/lib/python3.9/http/client.py", line 289, in _read_status
+    raise RemoteDisconnected("Remote end closed connection without"
+http.client.RemoteDisconnected: Remote end closed connection without response
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket/crypto_trader.py", line 2223, in Sell_no
+    self.driver.refresh()
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 603, in refresh
+    self.execute(Command.REFRESH)
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 378, in execute
+    response = self.command_executor.execute(driver_command, params)
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/remote/remote_connection.py", line 391, in execute
+    return self._request(command_info[0], url, body=data)
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/remote/remote_connection.py", line 415, in _request
+    response = self._conn.request(method, url, body=body, headers=headers, timeout=self._client_config.timeout)
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/urllib3/_request_methods.py", line 143, in request
+    return self.request_encode_body(
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/urllib3/_request_methods.py", line 278, in request_encode_body
+    return self.urlopen(method, url, **extra_kw)
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/urllib3/poolmanager.py", line 443, in urlopen
+    response = conn.urlopen(method, u.request_uri, **kw)
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/urllib3/connectionpool.py", line 843, in urlopen
+    retries = retries.increment(
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/urllib3/util/retry.py", line 474, in increment
+    raise reraise(type(error), error, _stacktrace)
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/urllib3/util/util.py", line 38, in reraise
+    raise value.with_traceback(tb)
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/urllib3/connectionpool.py", line 789, in urlopen
+    response = self._make_request(
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/urllib3/connectionpool.py", line 536, in _make_request
+    response = conn.getresponse()
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/urllib3/connection.py", line 507, in getresponse
+    httplib_response = super().getresponse()
+  File "/opt/homebrew/Cellar/python@3.9/3.9.20/Frameworks/Python.framework/Versions/3.9/lib/python3.9/http/client.py", line 1377, in getresponse
+    response.begin()
+  File "/opt/homebrew/Cellar/python@3.9/3.9.20/Frameworks/Python.framework/Versions/3.9/lib/python3.9/http/client.py", line 320, in begin
+    version, status, reason = self._read_status()
+  File "/opt/homebrew/Cellar/python@3.9/3.9.20/Frameworks/Python.framework/Versions/3.9/lib/python3.9/http/client.py", line 289, in _read_status
+    raise RemoteDisconnected("Remote end closed connection without"
+urllib3.exceptions.ProtocolError: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))

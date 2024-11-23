@@ -1,0 +1,74 @@
+2024-11-23 10:20:25,138 [INFO] 成功加载配置文件
+2024-11-23 10:21:30,339 [ERROR] 获取金信息失败: Message: 
+Stacktrace:
+0   chromedriver                        0x00000001054b7ac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x00000001054b0314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000104f184b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000104f5c898 cxxbridge1$string$len + 368748
+4   chromedriver                        0x0000000104f960fc cxxbridge1$string$len + 604368
+5   chromedriver                        0x0000000104f510b0 cxxbridge1$string$len + 321668
+6   chromedriver                        0x0000000104f51d00 cxxbridge1$string$len + 324820
+7   chromedriver                        0x0000000105482e08 cxxbridge1$str$ptr + 3435328
+8   chromedriver                        0x0000000105486120 cxxbridge1$str$ptr + 3448408
+9   chromedriver                        0x000000010546a17c cxxbridge1$str$ptr + 3333812
+10  chromedriver                        0x00000001054869e0 cxxbridge1$str$ptr + 3450648
+11  chromedriver                        0x000000010545b988 cxxbridge1$str$ptr + 3274432
+12  chromedriver                        0x00000001054a10f4 cxxbridge1$str$ptr + 3558956
+13  chromedriver                        0x00000001054a1270 cxxbridge1$str$ptr + 3559336
+14  chromedriver                        0x00000001054aff88 cxxbridge1$str$ptr + 3620032
+15  libsystem_pthread.dylib             0x000000019f9df2e4 _pthread_start + 136
+16  libsystem_pthread.dylib             0x000000019f9da0fc thread_start + 8
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket/crypto_trader.py", line 1267, in check_balance
+    portfolio_element = WebDriverWait(self.driver, 5).until(
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/support/wait.py", line 105, in until
+    raise TimeoutException(message, screen, stacktrace)
+selenium.common.exceptions.TimeoutException: Message: 
+Stacktrace:
+0   chromedriver                        0x00000001054b7ac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x00000001054b0314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000104f184b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000104f5c898 cxxbridge1$string$len + 368748
+4   chromedriver                        0x0000000104f960fc cxxbridge1$string$len + 604368
+5   chromedriver                        0x0000000104f510b0 cxxbridge1$string$len + 321668
+6   chromedriver                        0x0000000104f51d00 cxxbridge1$string$len + 324820
+7   chromedriver                        0x0000000105482e08 cxxbridge1$str$ptr + 3435328
+8   chromedriver                        0x0000000105486120 cxxbridge1$str$ptr + 3448408
+9   chromedriver                        0x000000010546a17c cxxbridge1$str$ptr + 3333812
+10  chromedriver                        0x00000001054869e0 cxxbridge1$str$ptr + 3450648
+11  chromedriver                        0x000000010545b988 cxxbridge1$str$ptr + 3274432
+12  chromedriver                        0x00000001054a10f4 cxxbridge1$str$ptr + 3558956
+13  chromedriver                        0x00000001054a1270 cxxbridge1$str$ptr + 3559336
+14  chromedriver                        0x00000001054aff88 cxxbridge1$str$ptr + 3620032
+15  libsystem_pthread.dylib             0x000000019f9df2e4 _pthread_start + 136
+16  libsystem_pthread.dylib             0x000000019f9da0fc thread_start + 8
+
+2024-11-23 10:22:11,430 [INFO] 获取到Cash文本: Cash: $629.74
+2024-11-23 10:22:11,431 [INFO] 提取到Cash值: 629.74
+2024-11-23 10:22:11,431 [INFO] 金额更新完成
+2024-11-23 10:22:39,569 [ERROR] 点击按钮超时: Buy-Confirm
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket/crypto_trader.py", line 1112, in click_website_button
+    button = WebDriverWait(self.driver, 10).until(
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/support/wait.py", line 105, in until
+    raise TimeoutException(message, screen, stacktrace)
+selenium.common.exceptions.TimeoutException: Message: 
+Stacktrace:
+0   chromedriver                        0x000000010538fac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x0000000105388314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000104df04b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000104e34898 cxxbridge1$string$len + 368748
+4   chromedriver                        0x0000000104e6e0fc cxxbridge1$string$len + 604368
+5   chromedriver                        0x0000000104e290b0 cxxbridge1$string$len + 321668
+6   chromedriver                        0x0000000104e29d00 cxxbridge1$string$len + 324820
+7   chromedriver                        0x000000010535ae08 cxxbridge1$str$ptr + 3435328
+8   chromedriver                        0x000000010535e120 cxxbridge1$str$ptr + 3448408
+9   chromedriver                        0x000000010534217c cxxbridge1$str$ptr + 3333812
+10  chromedriver                        0x000000010535e9e0 cxxbridge1$str$ptr + 3450648
+11  chromedriver                        0x0000000105333988 cxxbridge1$str$ptr + 3274432
+12  chromedriver                        0x00000001053790f4 cxxbridge1$str$ptr + 3558956
+13  chromedriver                        0x0000000105379270 cxxbridge1$str$ptr + 3559336
+14  chromedriver                        0x0000000105387f88 cxxbridge1$str$ptr + 3620032
+15  libsystem_pthread.dylib             0x000000019f9df2e4 _pthread_start + 136
+16  libsystem_pthread.dylib             0x000000019f9da0fc thread_start + 8
+

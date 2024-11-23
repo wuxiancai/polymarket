@@ -1,0 +1,117 @@
+2024-11-23 10:53:53,666 [INFO] 成功加载配置文件
+2024-11-23 10:53:56,562 [ERROR] 加载页面失败: Message: javascript error: LavaMoat - property "Window" of globalThis is inaccessible under scuttling mode. To learn more visit https://github.com/LavaMoat/LavaMoat/pull/360.
+  (Session info: chrome=131.0.6778.86)
+Stacktrace:
+0   chromedriver                        0x000000010137fac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x0000000101378314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000100de04b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000100de5398 cxxbridge1$string$len + 109420
+4   chromedriver                        0x0000000100de73e8 cxxbridge1$string$len + 117692
+5   chromedriver                        0x0000000100de7490 cxxbridge1$string$len + 117860
+6   chromedriver                        0x0000000100e65f44 cxxbridge1$string$len + 636696
+7   chromedriver                        0x0000000100e5e0fc cxxbridge1$string$len + 604368
+8   chromedriver                        0x0000000100e190b0 cxxbridge1$string$len + 321668
+9   chromedriver                        0x0000000100e19d00 cxxbridge1$string$len + 324820
+10  chromedriver                        0x000000010134ae08 cxxbridge1$str$ptr + 3435328
+11  chromedriver                        0x000000010134e120 cxxbridge1$str$ptr + 3448408
+12  chromedriver                        0x000000010133217c cxxbridge1$str$ptr + 3333812
+13  chromedriver                        0x000000010134e9e0 cxxbridge1$str$ptr + 3450648
+14  chromedriver                        0x0000000101323988 cxxbridge1$str$ptr + 3274432
+15  chromedriver                        0x00000001013690f4 cxxbridge1$str$ptr + 3558956
+16  chromedriver                        0x0000000101369270 cxxbridge1$str$ptr + 3559336
+17  chromedriver                        0x0000000101377f88 cxxbridge1$str$ptr + 3620032
+18  libsystem_pthread.dylib             0x000000019f9df2e4 _pthread_start + 136
+19  libsystem_pthread.dylib             0x000000019f9da0fc thread_start + 8
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket/crypto_trader.py", line 798, in monitor_prices
+    actions.key_down(Keys.COMMAND).send_keys('l').key_up(Keys.COMMAND).perform()
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/common/action_chains.py", line 94, in perform
+    self.w3c_actions.perform()
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/common/actions/action_builder.py", line 96, in perform
+    self.driver.execute(Command.W3C_ACTIONS, enc)
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 380, in execute
+    self.error_handler.check_response(response)
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/remote/errorhandler.py", line 229, in check_response
+    raise exception_class(message, screen, stacktrace)
+selenium.common.exceptions.JavascriptException: Message: javascript error: LavaMoat - property "Window" of globalThis is inaccessible under scuttling mode. To learn more visit https://github.com/LavaMoat/LavaMoat/pull/360.
+  (Session info: chrome=131.0.6778.86)
+Stacktrace:
+0   chromedriver                        0x000000010137fac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x0000000101378314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000100de04b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000100de5398 cxxbridge1$string$len + 109420
+4   chromedriver                        0x0000000100de73e8 cxxbridge1$string$len + 117692
+5   chromedriver                        0x0000000100de7490 cxxbridge1$string$len + 117860
+6   chromedriver                        0x0000000100e65f44 cxxbridge1$string$len + 636696
+7   chromedriver                        0x0000000100e5e0fc cxxbridge1$string$len + 604368
+8   chromedriver                        0x0000000100e190b0 cxxbridge1$string$len + 321668
+9   chromedriver                        0x0000000100e19d00 cxxbridge1$string$len + 324820
+10  chromedriver                        0x000000010134ae08 cxxbridge1$str$ptr + 3435328
+11  chromedriver                        0x000000010134e120 cxxbridge1$str$ptr + 3448408
+12  chromedriver                        0x000000010133217c cxxbridge1$str$ptr + 3333812
+13  chromedriver                        0x000000010134e9e0 cxxbridge1$str$ptr + 3450648
+14  chromedriver                        0x0000000101323988 cxxbridge1$str$ptr + 3274432
+15  chromedriver                        0x00000001013690f4 cxxbridge1$str$ptr + 3558956
+16  chromedriver                        0x0000000101369270 cxxbridge1$str$ptr + 3559336
+17  chromedriver                        0x0000000101377f88 cxxbridge1$str$ptr + 3620032
+18  libsystem_pthread.dylib             0x000000019f9df2e4 _pthread_start + 136
+19  libsystem_pthread.dylib             0x000000019f9da0fc thread_start + 8
+
+2024-11-23 10:53:56,579 [ERROR] 加载页面失败: Message: javascript error: LavaMoat - property "Window" of globalThis is inaccessible under scuttling mode. To learn more visit https://github.com/LavaMoat/LavaMoat/pull/360.
+  (Session info: chrome=131.0.6778.86)
+Stacktrace:
+0   chromedriver                        0x000000010137fac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x0000000101378314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000100de04b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000100de5398 cxxbridge1$string$len + 109420
+4   chromedriver                        0x0000000100de73e8 cxxbridge1$string$len + 117692
+5   chromedriver                        0x0000000100de7490 cxxbridge1$string$len + 117860
+6   chromedriver                        0x0000000100e65f44 cxxbridge1$string$len + 636696
+7   chromedriver                        0x0000000100e5e0fc cxxbridge1$string$len + 604368
+8   chromedriver                        0x0000000100e190b0 cxxbridge1$string$len + 321668
+9   chromedriver                        0x0000000100e19d00 cxxbridge1$string$len + 324820
+10  chromedriver                        0x000000010134ae08 cxxbridge1$str$ptr + 3435328
+11  chromedriver                        0x000000010134e120 cxxbridge1$str$ptr + 3448408
+12  chromedriver                        0x000000010133217c cxxbridge1$str$ptr + 3333812
+13  chromedriver                        0x000000010134e9e0 cxxbridge1$str$ptr + 3450648
+14  chromedriver                        0x0000000101323988 cxxbridge1$str$ptr + 3274432
+15  chromedriver                        0x00000001013690f4 cxxbridge1$str$ptr + 3558956
+16  chromedriver                        0x0000000101369270 cxxbridge1$str$ptr + 3559336
+17  chromedriver                        0x0000000101377f88 cxxbridge1$str$ptr + 3620032
+18  libsystem_pthread.dylib             0x000000019f9df2e4 _pthread_start + 136
+19  libsystem_pthread.dylib             0x000000019f9da0fc thread_start + 8
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket/crypto_trader.py", line 798, in monitor_prices
+    actions.key_down(Keys.COMMAND).send_keys('l').key_up(Keys.COMMAND).perform()
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/common/action_chains.py", line 94, in perform
+    self.w3c_actions.perform()
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/common/actions/action_builder.py", line 96, in perform
+    self.driver.execute(Command.W3C_ACTIONS, enc)
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 380, in execute
+    self.error_handler.check_response(response)
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/remote/errorhandler.py", line 229, in check_response
+    raise exception_class(message, screen, stacktrace)
+selenium.common.exceptions.JavascriptException: Message: javascript error: LavaMoat - property "Window" of globalThis is inaccessible under scuttling mode. To learn more visit https://github.com/LavaMoat/LavaMoat/pull/360.
+  (Session info: chrome=131.0.6778.86)
+Stacktrace:
+0   chromedriver                        0x000000010137fac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x0000000101378314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000100de04b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000100de5398 cxxbridge1$string$len + 109420
+4   chromedriver                        0x0000000100de73e8 cxxbridge1$string$len + 117692
+5   chromedriver                        0x0000000100de7490 cxxbridge1$string$len + 117860
+6   chromedriver                        0x0000000100e65f44 cxxbridge1$string$len + 636696
+7   chromedriver                        0x0000000100e5e0fc cxxbridge1$string$len + 604368
+8   chromedriver                        0x0000000100e190b0 cxxbridge1$string$len + 321668
+9   chromedriver                        0x0000000100e19d00 cxxbridge1$string$len + 324820
+10  chromedriver                        0x000000010134ae08 cxxbridge1$str$ptr + 3435328
+11  chromedriver                        0x000000010134e120 cxxbridge1$str$ptr + 3448408
+12  chromedriver                        0x000000010133217c cxxbridge1$str$ptr + 3333812
+13  chromedriver                        0x000000010134e9e0 cxxbridge1$str$ptr + 3450648
+14  chromedriver                        0x0000000101323988 cxxbridge1$str$ptr + 3274432
+15  chromedriver                        0x00000001013690f4 cxxbridge1$str$ptr + 3558956
+16  chromedriver                        0x0000000101369270 cxxbridge1$str$ptr + 3559336
+17  chromedriver                        0x0000000101377f88 cxxbridge1$str$ptr + 3620032
+18  libsystem_pthread.dylib             0x000000019f9df2e4 _pthread_start + 136
+19  libsystem_pthread.dylib             0x000000019f9da0fc thread_start + 8
+

@@ -1,0 +1,114 @@
+2024-11-23 12:19:12,938 [INFO] 成功加载配置文件
+2024-11-23 12:19:28,380 [INFO] 获取到Cash文本: Cash: $627.74
+2024-11-23 12:19:28,380 [INFO] 提取到Cash值: 627.74
+2024-11-23 12:19:28,380 [INFO] 金额更新完成
+2024-11-23 12:19:43,324 [INFO] No6价格匹配,执行自动卖出
+2024-11-23 12:19:48,438 [ERROR] 点击 Positions-Sell-No 按钮失败: Message: 
+Stacktrace:
+0   chromedriver                        0x00000001052cbac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x00000001052c4314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000104d2c4b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000104d70898 cxxbridge1$string$len + 368748
+4   chromedriver                        0x0000000104daa0fc cxxbridge1$string$len + 604368
+5   chromedriver                        0x0000000104d650b0 cxxbridge1$string$len + 321668
+6   chromedriver                        0x0000000104d65d00 cxxbridge1$string$len + 324820
+7   chromedriver                        0x0000000105296e08 cxxbridge1$str$ptr + 3435328
+8   chromedriver                        0x000000010529a120 cxxbridge1$str$ptr + 3448408
+9   chromedriver                        0x000000010527e17c cxxbridge1$str$ptr + 3333812
+10  chromedriver                        0x000000010529a9e0 cxxbridge1$str$ptr + 3450648
+11  chromedriver                        0x000000010526f988 cxxbridge1$str$ptr + 3274432
+12  chromedriver                        0x00000001052b50f4 cxxbridge1$str$ptr + 3558956
+13  chromedriver                        0x00000001052b5270 cxxbridge1$str$ptr + 3559336
+14  chromedriver                        0x00000001052c3f88 cxxbridge1$str$ptr + 3620032
+15  libsystem_pthread.dylib             0x000000019f9df2e4 _pthread_start + 136
+16  libsystem_pthread.dylib             0x000000019f9da0fc thread_start + 8
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket/crypto_trader.py", line 1169, in click_position_sell_no
+    button = WebDriverWait(self.driver, 5).until(
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/support/wait.py", line 105, in until
+    raise TimeoutException(message, screen, stacktrace)
+selenium.common.exceptions.TimeoutException: Message: 
+Stacktrace:
+0   chromedriver                        0x00000001052cbac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x00000001052c4314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000104d2c4b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000104d70898 cxxbridge1$string$len + 368748
+4   chromedriver                        0x0000000104daa0fc cxxbridge1$string$len + 604368
+5   chromedriver                        0x0000000104d650b0 cxxbridge1$string$len + 321668
+6   chromedriver                        0x0000000104d65d00 cxxbridge1$string$len + 324820
+7   chromedriver                        0x0000000105296e08 cxxbridge1$str$ptr + 3435328
+8   chromedriver                        0x000000010529a120 cxxbridge1$str$ptr + 3448408
+9   chromedriver                        0x000000010527e17c cxxbridge1$str$ptr + 3333812
+10  chromedriver                        0x000000010529a9e0 cxxbridge1$str$ptr + 3450648
+11  chromedriver                        0x000000010526f988 cxxbridge1$str$ptr + 3274432
+12  chromedriver                        0x00000001052b50f4 cxxbridge1$str$ptr + 3558956
+13  chromedriver                        0x00000001052b5270 cxxbridge1$str$ptr + 3559336
+14  chromedriver                        0x00000001052c3f88 cxxbridge1$str$ptr + 3620032
+15  libsystem_pthread.dylib             0x000000019f9df2e4 _pthread_start + 136
+16  libsystem_pthread.dylib             0x000000019f9da0fc thread_start + 8
+
+2024-11-23 12:19:48,440 [ERROR] 点击 Positions-Sell-No 按钮失败: Message: 
+Stacktrace:
+0   chromedriver                        0x00000001052cbac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x00000001052c4314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000104d2c4b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000104d70898 cxxbridge1$string$len + 368748
+4   chromedriver                        0x0000000104daa0fc cxxbridge1$string$len + 604368
+5   chromedriver                        0x0000000104d650b0 cxxbridge1$string$len + 321668
+6   chromedriver                        0x0000000104d65d00 cxxbridge1$string$len + 324820
+7   chromedriver                        0x0000000105296e08 cxxbridge1$str$ptr + 3435328
+8   chromedriver                        0x000000010529a120 cxxbridge1$str$ptr + 3448408
+9   chromedriver                        0x000000010527e17c cxxbridge1$str$ptr + 3333812
+10  chromedriver                        0x000000010529a9e0 cxxbridge1$str$ptr + 3450648
+11  chromedriver                        0x000000010526f988 cxxbridge1$str$ptr + 3274432
+12  chromedriver                        0x00000001052b50f4 cxxbridge1$str$ptr + 3558956
+13  chromedriver                        0x00000001052b5270 cxxbridge1$str$ptr + 3559336
+14  chromedriver                        0x00000001052c3f88 cxxbridge1$str$ptr + 3620032
+15  libsystem_pthread.dylib             0x000000019f9df2e4 _pthread_start + 136
+16  libsystem_pthread.dylib             0x000000019f9da0fc thread_start + 8
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket/crypto_trader.py", line 1169, in click_position_sell_no
+    button = WebDriverWait(self.driver, 5).until(
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/support/wait.py", line 105, in until
+    raise TimeoutException(message, screen, stacktrace)
+selenium.common.exceptions.TimeoutException: Message: 
+Stacktrace:
+0   chromedriver                        0x00000001052cbac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x00000001052c4314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000104d2c4b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000104d70898 cxxbridge1$string$len + 368748
+4   chromedriver                        0x0000000104daa0fc cxxbridge1$string$len + 604368
+5   chromedriver                        0x0000000104d650b0 cxxbridge1$string$len + 321668
+6   chromedriver                        0x0000000104d65d00 cxxbridge1$string$len + 324820
+7   chromedriver                        0x0000000105296e08 cxxbridge1$str$ptr + 3435328
+8   chromedriver                        0x000000010529a120 cxxbridge1$str$ptr + 3448408
+9   chromedriver                        0x000000010527e17c cxxbridge1$str$ptr + 3333812
+10  chromedriver                        0x000000010529a9e0 cxxbridge1$str$ptr + 3450648
+11  chromedriver                        0x000000010526f988 cxxbridge1$str$ptr + 3274432
+12  chromedriver                        0x00000001052b50f4 cxxbridge1$str$ptr + 3558956
+13  chromedriver                        0x00000001052b5270 cxxbridge1$str$ptr + 3559336
+14  chromedriver                        0x00000001052c3f88 cxxbridge1$str$ptr + 3620032
+15  libsystem_pthread.dylib             0x000000019f9df2e4 _pthread_start + 136
+16  libsystem_pthread.dylib             0x000000019f9da0fc thread_start + 8
+
+2024-11-23 12:19:55,113 [INFO] MetaMask 扩展弹窗操作完成
+2024-11-23 12:20:10,119 [ERROR] Sell_no执行失败: 'NoneType' object has no attribute 'refresh'
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket/crypto_trader.py", line 2212, in Sell_no
+    self.driver.refresh()
+AttributeError: 'NoneType' object has no attribute 'refresh'
+2024-11-23 12:20:10,120 [ERROR] Sell_no执行失败: 'NoneType' object has no attribute 'refresh'
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket/crypto_trader.py", line 2212, in Sell_no
+    self.driver.refresh()
+AttributeError: 'NoneType' object has no attribute 'refresh'
+2024-11-23 12:20:10,120 [ERROR] 检查资金失败: 浏览器连接丢失
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket/crypto_trader.py", line 1259, in check_balance
+    raise Exception("浏览器连接丢失")
+Exception: 浏览器连接丢失
+2024-11-23 12:20:10,121 [ERROR] 资金检查错误: 浏览器连接丢失
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket/crypto_trader.py", line 1259, in check_balance
+    raise Exception("浏览器连接丢失")
+Exception: 浏览器连接丢失

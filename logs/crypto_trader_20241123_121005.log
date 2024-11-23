@@ -1,0 +1,405 @@
+2024-11-23 12:10:05,749 [INFO] 成功加载配置文件
+2024-11-23 12:10:27,728 [INFO] 获取到Cash文本: Cash: $627.74
+2024-11-23 12:10:27,728 [INFO] 提取到Cash值: 627.74
+2024-11-23 12:10:27,729 [INFO] 金额更新完成
+2024-11-23 12:11:37,980 [INFO] No6价格匹配,执行自动卖出
+2024-11-23 12:11:38,003 [ERROR] 点击 Positions-Sell-No 按钮失败: Message: invalid selector
+from javascript error: {"status":32,"value":"Unable to locate an element with the xpath expression (//tbody/tr[@class=\"c-bVbKdS c-bVbKdS-ihoZIKi-css\"]/td[@class=\"c-hzTKhM c-hzTKhM-ieIMQng-css\"]/button[text()=\"Sell]\") because of the following error:\nSyntaxError: Failed to execute 'evaluate' on 'Document': The string '(//tbody/tr[@class=\"c-bVbKdS c-bVbKdS-ihoZIKi-css\"]/td[@class=\"c-hzTKhM c-hzTKhM-ieIMQng-css\"]/button[text()=\"Sell]\")' is not a valid XPath expression."}
+  (Session info: chrome=131.0.6778.86); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#invalid-selector-exception
+Stacktrace:
+0   chromedriver                        0x0000000105183ac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x000000010517c314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000104be44b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000104be9398 cxxbridge1$string$len + 109420
+4   chromedriver                        0x0000000104beb3e8 cxxbridge1$string$len + 117692
+5   chromedriver                        0x0000000104beb490 cxxbridge1$string$len + 117860
+6   chromedriver                        0x0000000104c285dc cxxbridge1$string$len + 368048
+7   chromedriver                        0x0000000104c620fc cxxbridge1$string$len + 604368
+8   chromedriver                        0x0000000104c1d0b0 cxxbridge1$string$len + 321668
+9   chromedriver                        0x0000000104c1dd00 cxxbridge1$string$len + 324820
+10  chromedriver                        0x000000010514ee08 cxxbridge1$str$ptr + 3435328
+11  chromedriver                        0x0000000105152120 cxxbridge1$str$ptr + 3448408
+12  chromedriver                        0x000000010513617c cxxbridge1$str$ptr + 3333812
+13  chromedriver                        0x00000001051529e0 cxxbridge1$str$ptr + 3450648
+14  chromedriver                        0x0000000105127988 cxxbridge1$str$ptr + 3274432
+15  chromedriver                        0x000000010516d0f4 cxxbridge1$str$ptr + 3558956
+16  chromedriver                        0x000000010516d270 cxxbridge1$str$ptr + 3559336
+17  chromedriver                        0x000000010517bf88 cxxbridge1$str$ptr + 3620032
+18  libsystem_pthread.dylib             0x000000019f9df2e4 _pthread_start + 136
+19  libsystem_pthread.dylib             0x000000019f9da0fc thread_start + 8
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket/crypto_trader.py", line 1169, in click_position_sell_no
+    button = WebDriverWait(self.driver, 5).until(
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/support/wait.py", line 96, in until
+    value = method(self._driver)
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/support/expected_conditions.py", line 363, in _predicate
+    target = driver.find_element(*target)  # grab element at locator
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 766, in find_element
+    return self.execute(Command.FIND_ELEMENT, {"using": by, "value": value})["value"]
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 380, in execute
+    self.error_handler.check_response(response)
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/remote/errorhandler.py", line 229, in check_response
+    raise exception_class(message, screen, stacktrace)
+selenium.common.exceptions.InvalidSelectorException: Message: invalid selector
+from javascript error: {"status":32,"value":"Unable to locate an element with the xpath expression (//tbody/tr[@class=\"c-bVbKdS c-bVbKdS-ihoZIKi-css\"]/td[@class=\"c-hzTKhM c-hzTKhM-ieIMQng-css\"]/button[text()=\"Sell]\") because of the following error:\nSyntaxError: Failed to execute 'evaluate' on 'Document': The string '(//tbody/tr[@class=\"c-bVbKdS c-bVbKdS-ihoZIKi-css\"]/td[@class=\"c-hzTKhM c-hzTKhM-ieIMQng-css\"]/button[text()=\"Sell]\")' is not a valid XPath expression."}
+  (Session info: chrome=131.0.6778.86); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#invalid-selector-exception
+Stacktrace:
+0   chromedriver                        0x0000000105183ac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x000000010517c314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000104be44b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000104be9398 cxxbridge1$string$len + 109420
+4   chromedriver                        0x0000000104beb3e8 cxxbridge1$string$len + 117692
+5   chromedriver                        0x0000000104beb490 cxxbridge1$string$len + 117860
+6   chromedriver                        0x0000000104c285dc cxxbridge1$string$len + 368048
+7   chromedriver                        0x0000000104c620fc cxxbridge1$string$len + 604368
+8   chromedriver                        0x0000000104c1d0b0 cxxbridge1$string$len + 321668
+9   chromedriver                        0x0000000104c1dd00 cxxbridge1$string$len + 324820
+10  chromedriver                        0x000000010514ee08 cxxbridge1$str$ptr + 3435328
+11  chromedriver                        0x0000000105152120 cxxbridge1$str$ptr + 3448408
+12  chromedriver                        0x000000010513617c cxxbridge1$str$ptr + 3333812
+13  chromedriver                        0x00000001051529e0 cxxbridge1$str$ptr + 3450648
+14  chromedriver                        0x0000000105127988 cxxbridge1$str$ptr + 3274432
+15  chromedriver                        0x000000010516d0f4 cxxbridge1$str$ptr + 3558956
+16  chromedriver                        0x000000010516d270 cxxbridge1$str$ptr + 3559336
+17  chromedriver                        0x000000010517bf88 cxxbridge1$str$ptr + 3620032
+18  libsystem_pthread.dylib             0x000000019f9df2e4 _pthread_start + 136
+19  libsystem_pthread.dylib             0x000000019f9da0fc thread_start + 8
+
+2024-11-23 12:11:38,007 [ERROR] 点击 Positions-Sell-No 按钮失败: Message: invalid selector
+from javascript error: {"status":32,"value":"Unable to locate an element with the xpath expression (//tbody/tr[@class=\"c-bVbKdS c-bVbKdS-ihoZIKi-css\"]/td[@class=\"c-hzTKhM c-hzTKhM-ieIMQng-css\"]/button[text()=\"Sell]\") because of the following error:\nSyntaxError: Failed to execute 'evaluate' on 'Document': The string '(//tbody/tr[@class=\"c-bVbKdS c-bVbKdS-ihoZIKi-css\"]/td[@class=\"c-hzTKhM c-hzTKhM-ieIMQng-css\"]/button[text()=\"Sell]\")' is not a valid XPath expression."}
+  (Session info: chrome=131.0.6778.86); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#invalid-selector-exception
+Stacktrace:
+0   chromedriver                        0x0000000105183ac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x000000010517c314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000104be44b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000104be9398 cxxbridge1$string$len + 109420
+4   chromedriver                        0x0000000104beb3e8 cxxbridge1$string$len + 117692
+5   chromedriver                        0x0000000104beb490 cxxbridge1$string$len + 117860
+6   chromedriver                        0x0000000104c285dc cxxbridge1$string$len + 368048
+7   chromedriver                        0x0000000104c620fc cxxbridge1$string$len + 604368
+8   chromedriver                        0x0000000104c1d0b0 cxxbridge1$string$len + 321668
+9   chromedriver                        0x0000000104c1dd00 cxxbridge1$string$len + 324820
+10  chromedriver                        0x000000010514ee08 cxxbridge1$str$ptr + 3435328
+11  chromedriver                        0x0000000105152120 cxxbridge1$str$ptr + 3448408
+12  chromedriver                        0x000000010513617c cxxbridge1$str$ptr + 3333812
+13  chromedriver                        0x00000001051529e0 cxxbridge1$str$ptr + 3450648
+14  chromedriver                        0x0000000105127988 cxxbridge1$str$ptr + 3274432
+15  chromedriver                        0x000000010516d0f4 cxxbridge1$str$ptr + 3558956
+16  chromedriver                        0x000000010516d270 cxxbridge1$str$ptr + 3559336
+17  chromedriver                        0x000000010517bf88 cxxbridge1$str$ptr + 3620032
+18  libsystem_pthread.dylib             0x000000019f9df2e4 _pthread_start + 136
+19  libsystem_pthread.dylib             0x000000019f9da0fc thread_start + 8
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket/crypto_trader.py", line 1169, in click_position_sell_no
+    button = WebDriverWait(self.driver, 5).until(
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/support/wait.py", line 96, in until
+    value = method(self._driver)
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/support/expected_conditions.py", line 363, in _predicate
+    target = driver.find_element(*target)  # grab element at locator
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 766, in find_element
+    return self.execute(Command.FIND_ELEMENT, {"using": by, "value": value})["value"]
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 380, in execute
+    self.error_handler.check_response(response)
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/remote/errorhandler.py", line 229, in check_response
+    raise exception_class(message, screen, stacktrace)
+selenium.common.exceptions.InvalidSelectorException: Message: invalid selector
+from javascript error: {"status":32,"value":"Unable to locate an element with the xpath expression (//tbody/tr[@class=\"c-bVbKdS c-bVbKdS-ihoZIKi-css\"]/td[@class=\"c-hzTKhM c-hzTKhM-ieIMQng-css\"]/button[text()=\"Sell]\") because of the following error:\nSyntaxError: Failed to execute 'evaluate' on 'Document': The string '(//tbody/tr[@class=\"c-bVbKdS c-bVbKdS-ihoZIKi-css\"]/td[@class=\"c-hzTKhM c-hzTKhM-ieIMQng-css\"]/button[text()=\"Sell]\")' is not a valid XPath expression."}
+  (Session info: chrome=131.0.6778.86); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#invalid-selector-exception
+Stacktrace:
+0   chromedriver                        0x0000000105183ac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x000000010517c314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000104be44b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000104be9398 cxxbridge1$string$len + 109420
+4   chromedriver                        0x0000000104beb3e8 cxxbridge1$string$len + 117692
+5   chromedriver                        0x0000000104beb490 cxxbridge1$string$len + 117860
+6   chromedriver                        0x0000000104c285dc cxxbridge1$string$len + 368048
+7   chromedriver                        0x0000000104c620fc cxxbridge1$string$len + 604368
+8   chromedriver                        0x0000000104c1d0b0 cxxbridge1$string$len + 321668
+9   chromedriver                        0x0000000104c1dd00 cxxbridge1$string$len + 324820
+10  chromedriver                        0x000000010514ee08 cxxbridge1$str$ptr + 3435328
+11  chromedriver                        0x0000000105152120 cxxbridge1$str$ptr + 3448408
+12  chromedriver                        0x000000010513617c cxxbridge1$str$ptr + 3333812
+13  chromedriver                        0x00000001051529e0 cxxbridge1$str$ptr + 3450648
+14  chromedriver                        0x0000000105127988 cxxbridge1$str$ptr + 3274432
+15  chromedriver                        0x000000010516d0f4 cxxbridge1$str$ptr + 3558956
+16  chromedriver                        0x000000010516d270 cxxbridge1$str$ptr + 3559336
+17  chromedriver                        0x000000010517bf88 cxxbridge1$str$ptr + 3620032
+18  libsystem_pthread.dylib             0x000000019f9df2e4 _pthread_start + 136
+19  libsystem_pthread.dylib             0x000000019f9da0fc thread_start + 8
+
+2024-11-23 12:11:44,698 [INFO] MetaMask 扩展弹窗操作完成
+2024-11-23 12:12:02,702 [ERROR] 点击 Positions-Sell-Yes 按钮失败: Message: invalid selector
+from javascript error: {"status":32,"value":"Unable to locate an element with the xpath expression (//tbody/tr[@class=\"c-bVbKdS c-bVbKdS-ihoZIKi-css\"]/td[@class=\"c-hzTKhM c-hzTKhM-ieIMQng-css\"]/button[text()=\"Sell]\") because of the following error:\nSyntaxError: Failed to execute 'evaluate' on 'Document': The string '(//tbody/tr[@class=\"c-bVbKdS c-bVbKdS-ihoZIKi-css\"]/td[@class=\"c-hzTKhM c-hzTKhM-ieIMQng-css\"]/button[text()=\"Sell]\")' is not a valid XPath expression."}
+  (Session info: chrome=131.0.6778.86); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#invalid-selector-exception
+Stacktrace:
+0   chromedriver                        0x0000000105183ac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x000000010517c314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000104be44b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000104be9398 cxxbridge1$string$len + 109420
+4   chromedriver                        0x0000000104beb3e8 cxxbridge1$string$len + 117692
+5   chromedriver                        0x0000000104beb490 cxxbridge1$string$len + 117860
+6   chromedriver                        0x0000000104c285dc cxxbridge1$string$len + 368048
+7   chromedriver                        0x0000000104c620fc cxxbridge1$string$len + 604368
+8   chromedriver                        0x0000000104c1d0b0 cxxbridge1$string$len + 321668
+9   chromedriver                        0x0000000104c1dd00 cxxbridge1$string$len + 324820
+10  chromedriver                        0x000000010514ee08 cxxbridge1$str$ptr + 3435328
+11  chromedriver                        0x0000000105152120 cxxbridge1$str$ptr + 3448408
+12  chromedriver                        0x000000010513617c cxxbridge1$str$ptr + 3333812
+13  chromedriver                        0x00000001051529e0 cxxbridge1$str$ptr + 3450648
+14  chromedriver                        0x0000000105127988 cxxbridge1$str$ptr + 3274432
+15  chromedriver                        0x000000010516d0f4 cxxbridge1$str$ptr + 3558956
+16  chromedriver                        0x000000010516d270 cxxbridge1$str$ptr + 3559336
+17  chromedriver                        0x000000010517bf88 cxxbridge1$str$ptr + 3620032
+18  libsystem_pthread.dylib             0x000000019f9df2e4 _pthread_start + 136
+19  libsystem_pthread.dylib             0x000000019f9da0fc thread_start + 8
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket/crypto_trader.py", line 1216, in click_position_sell
+    button = WebDriverWait(self.driver, 5).until(
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/support/wait.py", line 96, in until
+    value = method(self._driver)
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/support/expected_conditions.py", line 363, in _predicate
+    target = driver.find_element(*target)  # grab element at locator
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 766, in find_element
+    return self.execute(Command.FIND_ELEMENT, {"using": by, "value": value})["value"]
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 380, in execute
+    self.error_handler.check_response(response)
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/remote/errorhandler.py", line 229, in check_response
+    raise exception_class(message, screen, stacktrace)
+selenium.common.exceptions.InvalidSelectorException: Message: invalid selector
+from javascript error: {"status":32,"value":"Unable to locate an element with the xpath expression (//tbody/tr[@class=\"c-bVbKdS c-bVbKdS-ihoZIKi-css\"]/td[@class=\"c-hzTKhM c-hzTKhM-ieIMQng-css\"]/button[text()=\"Sell]\") because of the following error:\nSyntaxError: Failed to execute 'evaluate' on 'Document': The string '(//tbody/tr[@class=\"c-bVbKdS c-bVbKdS-ihoZIKi-css\"]/td[@class=\"c-hzTKhM c-hzTKhM-ieIMQng-css\"]/button[text()=\"Sell]\")' is not a valid XPath expression."}
+  (Session info: chrome=131.0.6778.86); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#invalid-selector-exception
+Stacktrace:
+0   chromedriver                        0x0000000105183ac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x000000010517c314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000104be44b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000104be9398 cxxbridge1$string$len + 109420
+4   chromedriver                        0x0000000104beb3e8 cxxbridge1$string$len + 117692
+5   chromedriver                        0x0000000104beb490 cxxbridge1$string$len + 117860
+6   chromedriver                        0x0000000104c285dc cxxbridge1$string$len + 368048
+7   chromedriver                        0x0000000104c620fc cxxbridge1$string$len + 604368
+8   chromedriver                        0x0000000104c1d0b0 cxxbridge1$string$len + 321668
+9   chromedriver                        0x0000000104c1dd00 cxxbridge1$string$len + 324820
+10  chromedriver                        0x000000010514ee08 cxxbridge1$str$ptr + 3435328
+11  chromedriver                        0x0000000105152120 cxxbridge1$str$ptr + 3448408
+12  chromedriver                        0x000000010513617c cxxbridge1$str$ptr + 3333812
+13  chromedriver                        0x00000001051529e0 cxxbridge1$str$ptr + 3450648
+14  chromedriver                        0x0000000105127988 cxxbridge1$str$ptr + 3274432
+15  chromedriver                        0x000000010516d0f4 cxxbridge1$str$ptr + 3558956
+16  chromedriver                        0x000000010516d270 cxxbridge1$str$ptr + 3559336
+17  chromedriver                        0x000000010517bf88 cxxbridge1$str$ptr + 3620032
+18  libsystem_pthread.dylib             0x000000019f9df2e4 _pthread_start + 136
+19  libsystem_pthread.dylib             0x000000019f9da0fc thread_start + 8
+
+2024-11-23 12:12:02,703 [ERROR] 点击 Positions-Sell-Yes 按钮失败: Message: invalid selector
+from javascript error: {"status":32,"value":"Unable to locate an element with the xpath expression (//tbody/tr[@class=\"c-bVbKdS c-bVbKdS-ihoZIKi-css\"]/td[@class=\"c-hzTKhM c-hzTKhM-ieIMQng-css\"]/button[text()=\"Sell]\") because of the following error:\nSyntaxError: Failed to execute 'evaluate' on 'Document': The string '(//tbody/tr[@class=\"c-bVbKdS c-bVbKdS-ihoZIKi-css\"]/td[@class=\"c-hzTKhM c-hzTKhM-ieIMQng-css\"]/button[text()=\"Sell]\")' is not a valid XPath expression."}
+  (Session info: chrome=131.0.6778.86); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#invalid-selector-exception
+Stacktrace:
+0   chromedriver                        0x0000000105183ac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x000000010517c314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000104be44b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000104be9398 cxxbridge1$string$len + 109420
+4   chromedriver                        0x0000000104beb3e8 cxxbridge1$string$len + 117692
+5   chromedriver                        0x0000000104beb490 cxxbridge1$string$len + 117860
+6   chromedriver                        0x0000000104c285dc cxxbridge1$string$len + 368048
+7   chromedriver                        0x0000000104c620fc cxxbridge1$string$len + 604368
+8   chromedriver                        0x0000000104c1d0b0 cxxbridge1$string$len + 321668
+9   chromedriver                        0x0000000104c1dd00 cxxbridge1$string$len + 324820
+10  chromedriver                        0x000000010514ee08 cxxbridge1$str$ptr + 3435328
+11  chromedriver                        0x0000000105152120 cxxbridge1$str$ptr + 3448408
+12  chromedriver                        0x000000010513617c cxxbridge1$str$ptr + 3333812
+13  chromedriver                        0x00000001051529e0 cxxbridge1$str$ptr + 3450648
+14  chromedriver                        0x0000000105127988 cxxbridge1$str$ptr + 3274432
+15  chromedriver                        0x000000010516d0f4 cxxbridge1$str$ptr + 3558956
+16  chromedriver                        0x000000010516d270 cxxbridge1$str$ptr + 3559336
+17  chromedriver                        0x000000010517bf88 cxxbridge1$str$ptr + 3620032
+18  libsystem_pthread.dylib             0x000000019f9df2e4 _pthread_start + 136
+19  libsystem_pthread.dylib             0x000000019f9da0fc thread_start + 8
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket/crypto_trader.py", line 1216, in click_position_sell
+    button = WebDriverWait(self.driver, 5).until(
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/support/wait.py", line 96, in until
+    value = method(self._driver)
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/support/expected_conditions.py", line 363, in _predicate
+    target = driver.find_element(*target)  # grab element at locator
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 766, in find_element
+    return self.execute(Command.FIND_ELEMENT, {"using": by, "value": value})["value"]
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 380, in execute
+    self.error_handler.check_response(response)
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/remote/errorhandler.py", line 229, in check_response
+    raise exception_class(message, screen, stacktrace)
+selenium.common.exceptions.InvalidSelectorException: Message: invalid selector
+from javascript error: {"status":32,"value":"Unable to locate an element with the xpath expression (//tbody/tr[@class=\"c-bVbKdS c-bVbKdS-ihoZIKi-css\"]/td[@class=\"c-hzTKhM c-hzTKhM-ieIMQng-css\"]/button[text()=\"Sell]\") because of the following error:\nSyntaxError: Failed to execute 'evaluate' on 'Document': The string '(//tbody/tr[@class=\"c-bVbKdS c-bVbKdS-ihoZIKi-css\"]/td[@class=\"c-hzTKhM c-hzTKhM-ieIMQng-css\"]/button[text()=\"Sell]\")' is not a valid XPath expression."}
+  (Session info: chrome=131.0.6778.86); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#invalid-selector-exception
+Stacktrace:
+0   chromedriver                        0x0000000105183ac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x000000010517c314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000104be44b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000104be9398 cxxbridge1$string$len + 109420
+4   chromedriver                        0x0000000104beb3e8 cxxbridge1$string$len + 117692
+5   chromedriver                        0x0000000104beb490 cxxbridge1$string$len + 117860
+6   chromedriver                        0x0000000104c285dc cxxbridge1$string$len + 368048
+7   chromedriver                        0x0000000104c620fc cxxbridge1$string$len + 604368
+8   chromedriver                        0x0000000104c1d0b0 cxxbridge1$string$len + 321668
+9   chromedriver                        0x0000000104c1dd00 cxxbridge1$string$len + 324820
+10  chromedriver                        0x000000010514ee08 cxxbridge1$str$ptr + 3435328
+11  chromedriver                        0x0000000105152120 cxxbridge1$str$ptr + 3448408
+12  chromedriver                        0x000000010513617c cxxbridge1$str$ptr + 3333812
+13  chromedriver                        0x00000001051529e0 cxxbridge1$str$ptr + 3450648
+14  chromedriver                        0x0000000105127988 cxxbridge1$str$ptr + 3274432
+15  chromedriver                        0x000000010516d0f4 cxxbridge1$str$ptr + 3558956
+16  chromedriver                        0x000000010516d270 cxxbridge1$str$ptr + 3559336
+17  chromedriver                        0x000000010517bf88 cxxbridge1$str$ptr + 3620032
+18  libsystem_pthread.dylib             0x000000019f9df2e4 _pthread_start + 136
+19  libsystem_pthread.dylib             0x000000019f9da0fc thread_start + 8
+
+2024-11-23 12:12:09,841 [INFO] MetaMask 扩展弹窗操作完成
+2024-11-23 12:12:48,442 [ERROR] 检查资金失败: 浏览器连接丢失
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket/crypto_trader.py", line 1259, in check_balance
+    raise Exception("浏览器连接丢失")
+Exception: 浏览器连接丢失
+2024-11-23 12:12:48,443 [ERROR] 资金检查错误: 浏览器连接丢失
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket/crypto_trader.py", line 1259, in check_balance
+    raise Exception("浏览器连接丢失")
+Exception: 浏览器连接丢失
+2024-11-23 12:12:49,235 [ERROR] 加载页面失败: 'NoneType' object has no attribute 'switch_to'
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket/crypto_trader.py", line 803, in monitor_prices
+    self.driver.switch_to.window(self.driver.window_handles[-1])
+AttributeError: 'NoneType' object has no attribute 'switch_to'
+2024-11-23 12:12:49,235 [ERROR] 加载页面失败: 'NoneType' object has no attribute 'switch_to'
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket/crypto_trader.py", line 803, in monitor_prices
+    self.driver.switch_to.window(self.driver.window_handles[-1])
+AttributeError: 'NoneType' object has no attribute 'switch_to'
+2024-11-23 12:13:07,984 [INFO] 获取到Cash文本: Cash: $627.74
+2024-11-23 12:13:07,985 [INFO] 提取到Cash值: 627.74
+2024-11-23 12:13:07,985 [INFO] 金额更新完成
+2024-11-23 12:13:27,801 [INFO] 获取到Cash文本: Cash: $627.74
+2024-11-23 12:13:27,801 [INFO] 提取到Cash值: 627.74
+2024-11-23 12:13:27,802 [INFO] 金额更新完成
+2024-11-23 12:13:50,871 [ERROR] 点击 Positions-Sell-Yes 按钮失败: Message: invalid selector
+from javascript error: {"status":32,"value":"Unable to locate an element with the xpath expression (//tbody/tr[@class=\"c-bVbKdS c-bVbKdS-ihoZIKi-css\"]/td[@class=\"c-hzTKhM c-hzTKhM-ieIMQng-css\"]/button[text()=\"Sell]\") because of the following error:\nSyntaxError: Failed to execute 'evaluate' on 'Document': The string '(//tbody/tr[@class=\"c-bVbKdS c-bVbKdS-ihoZIKi-css\"]/td[@class=\"c-hzTKhM c-hzTKhM-ieIMQng-css\"]/button[text()=\"Sell]\")' is not a valid XPath expression."}
+  (Session info: chrome=131.0.6778.86); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#invalid-selector-exception
+Stacktrace:
+0   chromedriver                        0x00000001033dfac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x00000001033d8314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000102e404b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000102e45398 cxxbridge1$string$len + 109420
+4   chromedriver                        0x0000000102e473e8 cxxbridge1$string$len + 117692
+5   chromedriver                        0x0000000102e47490 cxxbridge1$string$len + 117860
+6   chromedriver                        0x0000000102e845dc cxxbridge1$string$len + 368048
+7   chromedriver                        0x0000000102ebe0fc cxxbridge1$string$len + 604368
+8   chromedriver                        0x0000000102e790b0 cxxbridge1$string$len + 321668
+9   chromedriver                        0x0000000102e79d00 cxxbridge1$string$len + 324820
+10  chromedriver                        0x00000001033aae08 cxxbridge1$str$ptr + 3435328
+11  chromedriver                        0x00000001033ae120 cxxbridge1$str$ptr + 3448408
+12  chromedriver                        0x000000010339217c cxxbridge1$str$ptr + 3333812
+13  chromedriver                        0x00000001033ae9e0 cxxbridge1$str$ptr + 3450648
+14  chromedriver                        0x0000000103383988 cxxbridge1$str$ptr + 3274432
+15  chromedriver                        0x00000001033c90f4 cxxbridge1$str$ptr + 3558956
+16  chromedriver                        0x00000001033c9270 cxxbridge1$str$ptr + 3559336
+17  chromedriver                        0x00000001033d7f88 cxxbridge1$str$ptr + 3620032
+18  libsystem_pthread.dylib             0x000000019f9df2e4 _pthread_start + 136
+19  libsystem_pthread.dylib             0x000000019f9da0fc thread_start + 8
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket/crypto_trader.py", line 1216, in click_position_sell
+    button = WebDriverWait(self.driver, 5).until(
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/support/wait.py", line 96, in until
+    value = method(self._driver)
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/support/expected_conditions.py", line 363, in _predicate
+    target = driver.find_element(*target)  # grab element at locator
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 766, in find_element
+    return self.execute(Command.FIND_ELEMENT, {"using": by, "value": value})["value"]
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 380, in execute
+    self.error_handler.check_response(response)
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/remote/errorhandler.py", line 229, in check_response
+    raise exception_class(message, screen, stacktrace)
+selenium.common.exceptions.InvalidSelectorException: Message: invalid selector
+from javascript error: {"status":32,"value":"Unable to locate an element with the xpath expression (//tbody/tr[@class=\"c-bVbKdS c-bVbKdS-ihoZIKi-css\"]/td[@class=\"c-hzTKhM c-hzTKhM-ieIMQng-css\"]/button[text()=\"Sell]\") because of the following error:\nSyntaxError: Failed to execute 'evaluate' on 'Document': The string '(//tbody/tr[@class=\"c-bVbKdS c-bVbKdS-ihoZIKi-css\"]/td[@class=\"c-hzTKhM c-hzTKhM-ieIMQng-css\"]/button[text()=\"Sell]\")' is not a valid XPath expression."}
+  (Session info: chrome=131.0.6778.86); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#invalid-selector-exception
+Stacktrace:
+0   chromedriver                        0x00000001033dfac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x00000001033d8314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000102e404b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000102e45398 cxxbridge1$string$len + 109420
+4   chromedriver                        0x0000000102e473e8 cxxbridge1$string$len + 117692
+5   chromedriver                        0x0000000102e47490 cxxbridge1$string$len + 117860
+6   chromedriver                        0x0000000102e845dc cxxbridge1$string$len + 368048
+7   chromedriver                        0x0000000102ebe0fc cxxbridge1$string$len + 604368
+8   chromedriver                        0x0000000102e790b0 cxxbridge1$string$len + 321668
+9   chromedriver                        0x0000000102e79d00 cxxbridge1$string$len + 324820
+10  chromedriver                        0x00000001033aae08 cxxbridge1$str$ptr + 3435328
+11  chromedriver                        0x00000001033ae120 cxxbridge1$str$ptr + 3448408
+12  chromedriver                        0x000000010339217c cxxbridge1$str$ptr + 3333812
+13  chromedriver                        0x00000001033ae9e0 cxxbridge1$str$ptr + 3450648
+14  chromedriver                        0x0000000103383988 cxxbridge1$str$ptr + 3274432
+15  chromedriver                        0x00000001033c90f4 cxxbridge1$str$ptr + 3558956
+16  chromedriver                        0x00000001033c9270 cxxbridge1$str$ptr + 3559336
+17  chromedriver                        0x00000001033d7f88 cxxbridge1$str$ptr + 3620032
+18  libsystem_pthread.dylib             0x000000019f9df2e4 _pthread_start + 136
+19  libsystem_pthread.dylib             0x000000019f9da0fc thread_start + 8
+
+2024-11-23 12:13:50,872 [ERROR] 点击 Positions-Sell-Yes 按钮失败: Message: invalid selector
+from javascript error: {"status":32,"value":"Unable to locate an element with the xpath expression (//tbody/tr[@class=\"c-bVbKdS c-bVbKdS-ihoZIKi-css\"]/td[@class=\"c-hzTKhM c-hzTKhM-ieIMQng-css\"]/button[text()=\"Sell]\") because of the following error:\nSyntaxError: Failed to execute 'evaluate' on 'Document': The string '(//tbody/tr[@class=\"c-bVbKdS c-bVbKdS-ihoZIKi-css\"]/td[@class=\"c-hzTKhM c-hzTKhM-ieIMQng-css\"]/button[text()=\"Sell]\")' is not a valid XPath expression."}
+  (Session info: chrome=131.0.6778.86); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#invalid-selector-exception
+Stacktrace:
+0   chromedriver                        0x00000001033dfac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x00000001033d8314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000102e404b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000102e45398 cxxbridge1$string$len + 109420
+4   chromedriver                        0x0000000102e473e8 cxxbridge1$string$len + 117692
+5   chromedriver                        0x0000000102e47490 cxxbridge1$string$len + 117860
+6   chromedriver                        0x0000000102e845dc cxxbridge1$string$len + 368048
+7   chromedriver                        0x0000000102ebe0fc cxxbridge1$string$len + 604368
+8   chromedriver                        0x0000000102e790b0 cxxbridge1$string$len + 321668
+9   chromedriver                        0x0000000102e79d00 cxxbridge1$string$len + 324820
+10  chromedriver                        0x00000001033aae08 cxxbridge1$str$ptr + 3435328
+11  chromedriver                        0x00000001033ae120 cxxbridge1$str$ptr + 3448408
+12  chromedriver                        0x000000010339217c cxxbridge1$str$ptr + 3333812
+13  chromedriver                        0x00000001033ae9e0 cxxbridge1$str$ptr + 3450648
+14  chromedriver                        0x0000000103383988 cxxbridge1$str$ptr + 3274432
+15  chromedriver                        0x00000001033c90f4 cxxbridge1$str$ptr + 3558956
+16  chromedriver                        0x00000001033c9270 cxxbridge1$str$ptr + 3559336
+17  chromedriver                        0x00000001033d7f88 cxxbridge1$str$ptr + 3620032
+18  libsystem_pthread.dylib             0x000000019f9df2e4 _pthread_start + 136
+19  libsystem_pthread.dylib             0x000000019f9da0fc thread_start + 8
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket/crypto_trader.py", line 1216, in click_position_sell
+    button = WebDriverWait(self.driver, 5).until(
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/support/wait.py", line 96, in until
+    value = method(self._driver)
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/support/expected_conditions.py", line 363, in _predicate
+    target = driver.find_element(*target)  # grab element at locator
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 766, in find_element
+    return self.execute(Command.FIND_ELEMENT, {"using": by, "value": value})["value"]
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 380, in execute
+    self.error_handler.check_response(response)
+  File "/Users/wuwei/Documents/polymarket/venv/lib/python3.9/site-packages/selenium/webdriver/remote/errorhandler.py", line 229, in check_response
+    raise exception_class(message, screen, stacktrace)
+selenium.common.exceptions.InvalidSelectorException: Message: invalid selector
+from javascript error: {"status":32,"value":"Unable to locate an element with the xpath expression (//tbody/tr[@class=\"c-bVbKdS c-bVbKdS-ihoZIKi-css\"]/td[@class=\"c-hzTKhM c-hzTKhM-ieIMQng-css\"]/button[text()=\"Sell]\") because of the following error:\nSyntaxError: Failed to execute 'evaluate' on 'Document': The string '(//tbody/tr[@class=\"c-bVbKdS c-bVbKdS-ihoZIKi-css\"]/td[@class=\"c-hzTKhM c-hzTKhM-ieIMQng-css\"]/button[text()=\"Sell]\")' is not a valid XPath expression."}
+  (Session info: chrome=131.0.6778.86); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#invalid-selector-exception
+Stacktrace:
+0   chromedriver                        0x00000001033dfac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x00000001033d8314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000102e404b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000102e45398 cxxbridge1$string$len + 109420
+4   chromedriver                        0x0000000102e473e8 cxxbridge1$string$len + 117692
+5   chromedriver                        0x0000000102e47490 cxxbridge1$string$len + 117860
+6   chromedriver                        0x0000000102e845dc cxxbridge1$string$len + 368048
+7   chromedriver                        0x0000000102ebe0fc cxxbridge1$string$len + 604368
+8   chromedriver                        0x0000000102e790b0 cxxbridge1$string$len + 321668
+9   chromedriver                        0x0000000102e79d00 cxxbridge1$string$len + 324820
+10  chromedriver                        0x00000001033aae08 cxxbridge1$str$ptr + 3435328
+11  chromedriver                        0x00000001033ae120 cxxbridge1$str$ptr + 3448408
+12  chromedriver                        0x000000010339217c cxxbridge1$str$ptr + 3333812
+13  chromedriver                        0x00000001033ae9e0 cxxbridge1$str$ptr + 3450648
+14  chromedriver                        0x0000000103383988 cxxbridge1$str$ptr + 3274432
+15  chromedriver                        0x00000001033c90f4 cxxbridge1$str$ptr + 3558956
+16  chromedriver                        0x00000001033c9270 cxxbridge1$str$ptr + 3559336
+17  chromedriver                        0x00000001033d7f88 cxxbridge1$str$ptr + 3620032
+18  libsystem_pthread.dylib             0x000000019f9df2e4 _pthread_start + 136
+19  libsystem_pthread.dylib             0x000000019f9da0fc thread_start + 8
+
