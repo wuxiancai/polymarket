@@ -20,6 +20,10 @@ import re
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 import pyautogui  # 添加到文件顶部的导入语句中
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.header import Header
 
 
 class CryptoTrader:
@@ -89,7 +93,7 @@ class CryptoTrader:
                     return saved_config
                     
             except FileNotFoundError:
-                self.logger.warning("配置文件不存在，创建默认配置")
+                self.logger.warning("配置文件不存在，创建默���配置")
                 with open('config.json', 'w', encoding='utf-8') as f:
                     json.dump(default_config, f, indent=4)
                 return default_config
@@ -746,7 +750,7 @@ class CryptoTrader:
             json.dump(self.config, f)
 
     def update_status(self, message):
-        # 检查是否是错误消息
+        # 检查是��是错误消息
         is_error = any(err in message.lower() for err in ['错误', '失败', 'error', 'failed', 'exception'])
         
         # 更新状态标签，如果是错误则显示红色
@@ -978,7 +982,7 @@ class CryptoTrader:
             
             # 确认卖出
             confirm_button = WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((By.XPATH, "//button[contains(text(), '确认卖出')]"))
+                EC.presence_of_element_located((By.XPATH, "//button[contains(text(), '确认卖出')]"))  # 添加缺失的右括号
             )  # 添加缺失的右括号
             confirm_button.click()
             
@@ -1086,7 +1090,6 @@ class CryptoTrader:
             sys.exit(1)
 
     def click_website_button(self, button_type):
-        """点击网站上对应的按钮"""
         try:
             if not self.driver:
                 self.update_status("请先连接浏览器")
@@ -1121,10 +1124,9 @@ class CryptoTrader:
                 return
             
             # 查找并点击按钮
-            button = WebDriverWait(self.driver, 10).until(
+            button = WebDriverWait(self.driver, 10).until(  
                 EC.element_to_be_clickable((By.XPATH, xpath))
-            )
-                
+            
             # 执行点击
             self.driver.execute_script("arguments[0].click();", button)
             self.update_status(f"已点击网站上的 {button_type} 按钮")
@@ -1158,7 +1160,7 @@ class CryptoTrader:
                 # 如果获取第一行失败，不报错，继续执行
                 pass
                 
-            # 根据position_value的值决定点击哪个按钮
+            # 根据position_value的值决���点击哪个按钮
             if position_value == "Yes":
                 # 如果第一行是Yes，点击第二的按钮
                 button = WebDriverWait(self.driver, 5).until(
@@ -1200,7 +1202,6 @@ class CryptoTrader:
                     EC.presence_of_element_located((By.XPATH, 
                         '//tbody/tr[@class="c-bVbKdS c-bVbKdS-ihoZIKi-css" and .//text()="No"]'))
                 )
-                position_value = second_position.text
             except:
                 # 如果获取第二行失败，不报错，继续执行
                 pass
@@ -1239,7 +1240,7 @@ class CryptoTrader:
             button = WebDriverWait(self.driver, 10).until(
                 EC.element_to_be_clickable((By.XPATH, 
                     '//div[@class="c-dhzjXW c-dhzjXW-ihxUIch-css"]//button'))
-            )
+            ))
             self.driver.execute_script("arguments[0].click();", button)
             self.update_status("已点击卖出盈利按钮")
 
@@ -1298,7 +1299,6 @@ class CryptoTrader:
             time.sleep(2)
 
     def click_buy(self):
-        """点击 Buy 按钮"""
         try:
             if not self.driver:
                 self.update_status("请先连接浏览器")
@@ -1323,7 +1323,7 @@ class CryptoTrader:
             
             button = WebDriverWait(self.driver, 10).until(
                 EC.element_to_be_clickable((By.XPATH, '//*[@id="__pm_layout"]/div/div[2]/div/div[1]/div/div[1]/div/div/div[2]'))
-            )
+            ))
             
             self.driver.execute_script("arguments[0].click();", button)
             self.update_status("已点击 Sell 按钮")
@@ -1340,7 +1340,7 @@ class CryptoTrader:
             
             button = WebDriverWait(self.driver, 10).until(
                 EC.element_to_be_clickable((By.XPATH, '//*[@id="__pm_layout"]/div/div[2]/div/div[1]/div/div[2]/div[1]/div[2]/div/div[1]/div'))
-            )
+            ))
             
             self.driver.execute_script("arguments[0].click();", button)
             self.update_status("已点击 Buy-Yes 按钮")
@@ -1358,7 +1358,7 @@ class CryptoTrader:
             button = WebDriverWait(self.driver, 10).until(
                 EC.element_to_be_clickable((By.XPATH, 
                     '//*[@id="__pm_layout"]/div/div[2]/div/div[1]/div/div[2]/div[1]/div[2]/div/div[2]/div'))
-            )
+            ))
             self.driver.execute_script("arguments[0].click();", button)
             self.update_status("已点击 Buy-No 按钮")
         except Exception as e:
@@ -1375,7 +1375,7 @@ class CryptoTrader:
             button = WebDriverWait(self.driver, 10).until(
                 EC.element_to_be_clickable((By.XPATH, 
                     '//*[@id="__pm_layout"]/div/div[2]/div/div[1]/div/div[2]/div[1]/div[2]/div[1]/div[1]/div'))
-            )
+            ))
             self.driver.execute_script("arguments[0].click();", button)
             self.update_status("已点击 Sell-Yes 按钮")
         except Exception as e:
@@ -1392,7 +1392,7 @@ class CryptoTrader:
             button = WebDriverWait(self.driver, 10).until(
                 EC.element_to_be_clickable((By.XPATH, 
                     '//*[@id="__pm_layout"]/div/div[2]/div/div[1]/div/div[2]/div[1]/div[2]/div[1]/div[2]/div'))
-            )
+            ))
             self.driver.execute_script("arguments[0].click();", button)
             self.update_status("已点击 Sell-No 按钮")
         except Exception as e:
@@ -1409,7 +1409,7 @@ class CryptoTrader:
             button = WebDriverWait(self.driver, 10).until(
                 EC.element_to_be_clickable((By.XPATH, 
                     '//*[@id="__pm_layout"]/div/div[2]/div/div[1]/div/div[2]/div[2]/div[1]/div[2]'))
-            )
+            ))
             self.driver.execute_script("arguments[0].click();", button)
             self.update_status("已点击 Sell-Yes-Max 按钮")
         except Exception as e:
@@ -1426,7 +1426,7 @@ class CryptoTrader:
             button = WebDriverWait(self.driver, 10).until(
                 EC.element_to_be_clickable((By.XPATH, 
                     '//*[@id="__pm_layout"]/div/div[2]/div/div[1]/div/div[2]/div[2]/div[1]/div[2]'))
-            )
+            ))
             self.driver.execute_script("arguments[0].click();", button)
             self.update_status("已点击 Sell-No-Max 按钮")
         except Exception as e:
@@ -1447,7 +1447,7 @@ class CryptoTrader:
             # 找到输入框
             amount_input = WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.XPATH, '//*[@id="__pm_layout"]/div/div[2]/div/div[1]/div/div[2]/div[2]/div[2]/input'))
-            )
+            ))
             
             # 清空输入框
             amount_input.clear()
@@ -1543,10 +1543,18 @@ class CryptoTrader:
                     self.amount_button.event_generate('<Button-1>')
                     time.sleep(0.5)
                     self.buy_confirm_button.invoke()
-                    # 增加等待 2秒，之前是 1 秒，不行。如果 2 秒不行，则增加到 3 秒
                     time.sleep(0.5)
                     self._handle_metamask_popup()
                     time.sleep(10)
+                    
+                    # 发送交易邮件
+                    self.send_trade_email(
+                        trade_type="Buy Yes 0",
+                        price=yes_price,
+                        amount=float(self.yes_amount_entry.get()),
+                        trade_count=1
+                    )
+                    
                     # 买了 YES 后也要刷新页面
                     self.driver.refresh()
 
@@ -1580,10 +1588,18 @@ class CryptoTrader:
                     self.amount_no0_button.event_generate('<Button-1>')
                     time.sleep(0.5)
                     self.buy_confirm_button.invoke()
-                    # 增加等待 2秒，之前是 0.5 秒，不行。如果 1 秒不行，则增加到 2 秒
                     time.sleep(1)
                     self._handle_metamask_popup()
                     time.sleep(10)
+                    
+                    # 发送交易邮件
+                    self.send_trade_email(
+                        trade_type="Buy No 0",
+                        price=no_price,
+                        amount=float(self.no_amount_entry.get()),
+                        trade_count=1
+                    )
+                    
                     # 买了 NO 后要刷新页面
                     self.driver.refresh()
                     # 重置Yes0和No0价格为0.00
@@ -1676,8 +1692,15 @@ class CryptoTrader:
                     no2_price_entry.insert(0, "0.55")
                     # 增加等待 3秒
                     time.sleep(3)
-                   
-                
+                    
+                    # 发送交易邮件
+                    self.send_trade_email(
+                        trade_type="Buy Yes 1",
+                        price=yes_price,
+                        amount=float(yes1_price_entry.get()),
+                        trade_count=2
+                    )
+                    
                 # 检查No1价格匹配
                 elif abs(no1_target - no_price) < 0.0001 and no1_target > 0:
                     self.logger.info("No 1价格匹配，执行自动交易")
@@ -1705,6 +1728,14 @@ class CryptoTrader:
                     yes2_price_entry.insert(0, "0.55")
                     # 增加等待 3秒
                     time.sleep(3)
+                    
+                    # 发送交易邮件
+                    self.send_trade_email(
+                        trade_type="Buy No 1",
+                        price=no_price,
+                        amount=float(no1_price_entry.get()),
+                        trade_count=2
+                    )
                     
                 
         except ValueError as e:
@@ -1776,8 +1807,15 @@ class CryptoTrader:
                     no3_price_entry.insert(0, "0.55")
                     # 增加等待 3秒
                     time.sleep(3)
-                   
-                
+                    
+                    # 发送交易邮件
+                    self.send_trade_email(
+                        trade_type="Buy Yes 2",
+                        price=yes_price,
+                        amount=float(yes2_price_entry.get()),
+                        trade_count=3
+                    )
+                    
                 # 检查No2价格匹配
                 elif abs(no2_target - no_price) < 0.0001 and no2_target > 0:
                     self.logger.info("No 2价格匹配，执行自动交易")
@@ -1806,7 +1844,15 @@ class CryptoTrader:
                     # 增加等待 3秒
                     time.sleep(3)
                     
+                    # 发送交易邮件
+                    self.send_trade_email(
+                        trade_type="Buy No 2",
+                        price=no_price,
+                        amount=float(no2_price_entry.get()),
+                        trade_count=3
+                    )
                     
+                
         except ValueError as e:
             self.logger.error(f"价格转换错误: {str(e)}")
         except Exception as e:
@@ -1876,6 +1922,14 @@ class CryptoTrader:
                     # 增加等待 3秒
                     time.sleep(3)
                     
+                    # 发送交易邮件
+                    self.send_trade_email(
+                        trade_type="Buy Yes 3",
+                        price=yes_price,
+                        amount=float(yes3_price_entry.get()),
+                        trade_count=4
+                    )
+                    
                 
                 # 检查No3价格匹配
                 elif abs(no3_target - no_price) < 0.0001 and no3_target > 0:
@@ -1905,7 +1959,15 @@ class CryptoTrader:
                     # 增加等待 3秒
                     time.sleep(3)
                     
+                    # 发送交易邮件
+                    self.send_trade_email(
+                        trade_type="Buy No 3",
+                        price=no_price,
+                        amount=float(no3_price_entry.get()),
+                        trade_count=4
+                    )
                     
+                
         except ValueError as e:
             self.logger.error(f"价格转换错误: {str(e)}")
         except Exception as e:
@@ -1975,10 +2037,18 @@ class CryptoTrader:
                     # 增加等待 3秒
                     time.sleep(3)
                     
+                    # 发送交易邮件
+                    self.send_trade_email(
+                        trade_type="Buy Yes 4",
+                        price=yes_price,
+                        amount=float(yes4_price_entry.get()),
+                        trade_count=5
+                    )
+                    
                 
                 # 检查No4价格匹配
                 elif abs(no4_target - no_price) < 0.0001 and no4_target > 0:
-                    self.logger.info("No 4价格匹配，执行自动交易")
+                    self.logger.info("No 4价格匹��，执行自动交易")
                     
                     # 执行交易操作
                     self.buy_no_button.invoke()
@@ -2004,7 +2074,15 @@ class CryptoTrader:
                     # 增加等待 3秒
                     time.sleep(3)
                     
+                    # 发送交易邮件
+                    self.send_trade_email(
+                        trade_type="Buy No 4",
+                        price=no_price,
+                        amount=float(no4_price_entry.get()),
+                        trade_count=5
+                    )
                     
+                
         except ValueError as e:
             self.logger.error(f"价格转换错误: {str(e)}")
         except Exception as e:
@@ -2066,6 +2144,15 @@ class CryptoTrader:
                     no5_price_entry.insert(0, "0.00")
                     # 增加等待 3秒
                     time.sleep(3)
+                    
+                    # 发送交易邮件
+                    self.send_trade_email(
+                        trade_type="Buy Yes 5",
+                        price=yes_price,
+                        amount=float(yes5_price_entry.get()),
+                        trade_count=6
+                    )
+                    
                 
                 # 检查No5价格匹配
                 elif abs(no5_target - no_price) < 0.0001 and no5_target > 0:
@@ -2089,7 +2176,16 @@ class CryptoTrader:
                     no5_price_entry.insert(0, "0.00")
                     # 增加等待 3秒
                     time.sleep(3)
-                   
+                    
+                    # 发送交易邮件
+                    self.send_trade_email(
+                        trade_type="Buy No 5",
+                        price=no_price,
+                        amount=float(no5_price_entry.get()),
+                        trade_count=6
+                    )
+                    
+                
         except ValueError as e:
             self.logger.error(f"价格转换错误: {str(e)}")
         except Exception as e:
@@ -2139,9 +2235,15 @@ class CryptoTrader:
                     self.sell_profit_button.invoke()
                     # 等待15秒
                     time.sleep(15)   
-                    # 刷新页面
+                    # 刷���页面
                     self.driver.refresh()
-
+                    # 发送交易邮件 - 卖出YES
+                    self.send_trade_email(
+                        trade_type="Sell Yes Final",
+                        price=yes_price,
+                        amount=0.0,  # 卖出时金额为总持仓
+                        trade_count=7
+                    )
                     # 卖出了 YES 后卖 NO
                     # 点击Positions-Sell-No按钮
                     self.position_sell_no_button.invoke()
@@ -2162,12 +2264,20 @@ class CryptoTrader:
                     time.sleep(20)
                     self.stop_button.invoke()
                     
+                    # 发送交易邮件 - 卖出NO
+                    self.send_trade_email(
+                        trade_type="Sell No Final",
+                        price=no_price,
+                        amount=0.0,  # 卖出时金额为总持仓
+                        trade_count=8
+                    )
+                    
         except Exception as e:
             self.logger.error(f"Sell_yes执行失败: {str(e)}")
             self.update_status(f"Sell_yes执行失败: {str(e)}")
 
     def Sell_no(self):
-        """当No6价格等于实时No价格时自动卖出，也就是设定的 0.90 价格触发时卖出 NO"""
+        """当No6价格等于实时No价格时自动卖出，也就是设定的 0.88 价格触发时卖出 NO"""
         try:
             if not self.driver:
                 raise Exception("浏览器连接丢失")
@@ -2212,6 +2322,14 @@ class CryptoTrader:
                     # 刷新页面
                     self.driver.refresh()
 
+                    # 发送交易邮件 - 卖出NO
+                    self.send_trade_email(
+                        trade_type="Sell No Final",
+                        price=no_price,
+                        amount=0.0,  # 卖出时金额为总持仓
+                        trade_count=7
+                    )
+                    
                     # 卖完 NO 后卖 YES
                     # 点击Positions-Sell-Yes按钮
                     self.position_sell_yes_button.invoke()
@@ -2233,9 +2351,104 @@ class CryptoTrader:
                     time.sleep(20)
                     self.stop_button.invoke()
                     
+                    # 发送交易邮件 - 卖出YES
+                    self.send_trade_email(
+                        trade_type="Sell Yes Final",
+                        price=yes_price,
+                        amount=0.0,  # 卖出时金额为总持仓
+                        trade_count=8
+                    )
+                    
         except Exception as e:
             self.logger.error(f"Sell_no执行失败: {str(e)}")
             self.update_status(f"Sell_no执行失败: {str(e)}")
+
+    def send_trade_email(self, trade_type, price, amount, trade_count):
+        """
+        发送交易邮件
+        trade_type: 交易类型 (例如: "Buy Yes", "Buy No", "Sell Yes", "Sell No")
+        price: 交易价格
+        amount: 交易金额
+        trade_count: 交易次数
+        """
+        try:
+            # 邮件配置
+            sender = 'wuxiancai1978@gmail.com'
+            receiver = 'huacaihuijin@126.com'
+            # 使用应用专用密码而不是账户密码
+            app_password = 'ixcq corr uovj tgqe'  # Gmail应用专用密码
+            
+            self.logger.info(f"准备发送邮件: {trade_type}")
+            
+            # 创建邮件对象
+            msg = MIMEMultipart()
+            
+            # 获取当前时间
+            current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            
+            # 设��邮件主题
+            subject = f'polymarket自动交易详情 {current_time}'
+            msg['Subject'] = Header(subject, 'utf-8')
+            
+            # 设置发件人和收件人
+            msg['From'] = sender
+            msg['To'] = receiver
+            
+            # 邮件内容
+            content = f"""
+            交易详情:
+            交易类型: {trade_type}
+            交易价格: ${price:.2f}
+            交易金额: ${amount:.2f}
+            交易时间: {current_time}
+            交易次数: {trade_count}
+            """
+            
+            msg.attach(MIMEText(content, 'plain', 'utf-8'))
+            
+            self.logger.info("正在连接Gmail SMTP服务器...")
+            
+            try:
+                # 连接Gmail SMTP服务器
+                server = smtplib.SMTP('smtp.gmail.com', 587)
+                server.set_debuglevel(1)  # 启用调试模式
+                self.logger.info("SMTP连接成功")
+                
+                server.starttls()
+                self.logger.info("TLS连接成功")
+                
+                # 登录
+                server.login(sender, app_password)
+                self.logger.info("Gmail登录成功")
+                
+                # 发送邮件
+                server.sendmail(sender, receiver, msg.as_string())
+                self.logger.info(f"邮件发送成功: {trade_type}")
+                
+                # 关闭连接
+                server.quit()
+                self.logger.info("SMTP连接已关闭")
+                
+                # 更新GUI状态
+                self.update_status(f"交易邮件发送成功: {trade_type}")
+                
+            except smtplib.SMTPAuthenticationError as e:
+                error_msg = f"Gmail认证失败: {str(e)}"
+                self.logger.error(error_msg)
+                self.update_status(error_msg)
+            except smtplib.SMTPException as e:
+                error_msg = f"SMTP错误: {str(e)}"
+                self.logger.error(error_msg)
+                self.update_status(error_msg)
+            except Exception as e:
+                error_msg = f"发送邮件时发生错误: {str(e)}"
+                self.logger.error(error_msg)
+                self.update_status(error_msg)
+                
+        except Exception as e:
+            error_msg = f"准备邮件发送失败: {str(e)}"
+            self.logger.error(error_msg)
+            self.update_status(error_msg)
 
 if __name__ == "__main__":
     try:
