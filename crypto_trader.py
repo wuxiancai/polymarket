@@ -608,8 +608,8 @@ class CryptoTrader:
         # 启用更金额按钮
         self.update_amount_button['state'] = 'normal'
         
-        # 20秒后自动点击更新金额按钮
-        self.root.after(20000, self.update_amount_button.invoke)
+        # 13秒后自动点击更新金额按钮
+        self.root.after(13000, self.update_amount_button.invoke)
         
         # 启动浏览器作线程
         threading.Thread(target=self._start_browser_monitoring, args=(new_url,), daemon=True).start()
@@ -784,13 +784,23 @@ class CryptoTrader:
             
             target_url = self.url_entry.get()
             
-            # 打开新标签页并导航到目标URL
-            self.driver.execute_script(f"window.open('{target_url}', '_blank');")
+            # 使用JavaScript创建并点击链接来打开新标签页
+            js_script = """
+                const a = document.createElement('a');
+                a.href = arguments[0];
+                a.target = '_blank';
+                a.rel = 'noopener noreferrer';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            """
+            self.driver.execute_script(js_script, target_url)
+            
+            # 等待新标签页打开
             time.sleep(1)
             
-            # 切换到新打开的签页
-            handles = self.driver.window_handles
-            self.driver.switch_to.window(handles[-1])
+            # 切换到新打开的标签页
+            self.driver.switch_to.window(self.driver.window_handles[-1])
             
             # 等待页面加载完成
             WebDriverWait(self.driver, 30).until(
@@ -801,16 +811,16 @@ class CryptoTrader:
                 
             # 开始监控价格
             while self.running:
-                    try:
-                        self.check_prices()
-                        self.check_balance()
-                        time.sleep(1)
-                    except Exception as e:
-                        self.logger.error(f"监控失败: {str(e)}")
-                        time.sleep(self.retry_interval)
+                try:
+                    self.check_prices()
+                    self.check_balance()
+                    time.sleep(1)
+                except Exception as e:
+                    self.logger.error(f"监控失败: {str(e)}")
+                    time.sleep(self.retry_interval)
                     
         except Exception as e:
-            self.logger.error(f"加载面失败: {str(e)}")
+            self.logger.error(f"加载页面失败: {str(e)}")
             self.update_status(f"加载页面失败: {str(e)}")
             self.stop_monitoring()
                 
@@ -968,7 +978,7 @@ class CryptoTrader:
             # 确认卖出
             confirm_button = WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.XPATH, "//button[contains(text(), '确认卖出')]"))
-            )
+            )  # 添加缺失的右括号
             confirm_button.click()
             
         except Exception as e:  # 添加异常处理
@@ -981,7 +991,7 @@ class CryptoTrader:
         try:
             url = self.url_entry.get().strip()
             if not url:
-                messagebox.showwarning("告", "请入网址")
+                messagebox.showwarning("告", "���入网址")
                 return
                 
             if not url.startswith(('http://', 'https://')):
@@ -1095,7 +1105,7 @@ class CryptoTrader:
                 xpath = "//button[contains(text(), 'Max') or .//span[contains(text(), 'Max')]]"
             elif button_type == "Buy-Confirm":
                 # 使用固定的XPath路径
-                xpath = '(//button[text()="Buy"])[last()]'
+                xpath = '//div[@class="c-dhzjXW c-dhzjXW-ihxUIch-css"]//button'
             elif button_type == "SetExpBuy":
                 # 先点击 Set Expiration
                 exp_button = WebDriverWait(self.driver, 10).until(
@@ -1131,18 +1141,16 @@ class CryptoTrader:
             if not self.driver:
                 self.update_status("请先连接浏览器")
                 return
-                
             # 等待页面加载完成
             WebDriverWait(self.driver, 10).until(
                 lambda driver: driver.execute_script('return document.readyState') == 'complete'
             )
-            
             position_value = None
             try:
                 # 尝试获取第一行YES的标签值，如果不存在会直接进入except块
                 first_position = WebDriverWait(self.driver, 2).until(  # 缩短等待时间到2秒
                     EC.presence_of_element_located((By.XPATH, 
-                        '//*[@id="__pm_layout"]/div/div[1]/div/div[2]/div/div[2]/div/div[2]/table/tbody/tr[1]/td[1]/div'))
+                        '//tbody/tr[@class="c-bVbKdS c-bVbKdS-ihoZIKi-css" and .//text()="Yes"]'))
                 )
                 position_value = first_position.text
             except:
@@ -1154,21 +1162,13 @@ class CryptoTrader:
                 # 如果第一行是Yes，点击第二的按钮
                 button = WebDriverWait(self.driver, 5).until(
                     EC.element_to_be_clickable((By.XPATH, 
-                        '//*[@id="__pm_layout"]/div/div[1]/div/div[2]/div/div[2]/div/div[2]/table/tbody/tr[2]/td[6]/div/button'))
+                        '(//button[@class="c-gBrBnR c-gBrBnR-iifsICY-css"])[2]'))
                 )
-                """# 点击完第二行后，等待3秒
-                time.sleep(3)
-                
-                # 点击第一行的 YES 的 SELL 按钮
-                button = WebDriverWait(self.driver, 5).until(
-                    EC.element_to_be_clickable((By.XPATH, 
-                        '//*[@id="__pm_layout"]/div/div[1]/div/div[2]/div/div[2]/div/div[2]/table/tbody/tr/td[6]/div/button'))
-                )"""
             else:
                 # 如果第一行不存在或不是Yes，使用默认的第一行按钮
                 button = WebDriverWait(self.driver, 5).until(
                     EC.element_to_be_clickable((By.XPATH, 
-                        '//*[@id="__pm_layout"]/div/div[1]/div/div[2]/div/div[2]/div/div[2]/table/tbody/tr/td[6]/div/button'))
+                        '(//button[@class="c-gBrBnR c-gBrBnR-iifsICY-css"])'))
                 )
             
             # 执行点击
@@ -1197,7 +1197,7 @@ class CryptoTrader:
                 # 尝试获取第二行NO的标签值，如果不存在会直接进入except块
                 second_position = WebDriverWait(self.driver, 2).until(  # 缩短等待时间到2秒
                     EC.presence_of_element_located((By.XPATH, 
-                        '//*[@id="__pm_layout"]/div/div[1]/div/div[2]/div/div[2]/div/div[2]/table/tbody/tr[2]/td[1]/div'))
+                        '//tbody/tr[@class="c-bVbKdS c-bVbKdS-ihoZIKi-css" and .//text()="No"]'))
                 )
                 position_value = second_position.text
             except:
@@ -1209,13 +1209,13 @@ class CryptoTrader:
                 # 如果第二行是No，点击第一行YES 的 SELL的按钮
                 button = WebDriverWait(self.driver, 5).until(
                     EC.element_to_be_clickable((By.XPATH, 
-                        '//*[@id="__pm_layout"]/div/div[1]/div/div[2]/div/div[2]/div/div[2]/table/tbody/tr[1]/td[6]/div/button'))
+                        '(//button[@class="c-gBrBnR c-gBrBnR-iifsICY-css"])[1]'))
                 )
             else:
                 # 如果第二行不存在或不是No，使用默认的第一行按钮
                 button = WebDriverWait(self.driver, 5).until(
                     EC.element_to_be_clickable((By.XPATH, 
-                        '//*[@id="__pm_layout"]/div/div[1]/div/div[2]/div/div[2]/div/div[2]/table/tbody/tr/td[6]/div/button'))
+                        '(//button[@class="c-gBrBnR c-gBrBnR-iifsICY-css"])'))
                 )
             
             # 执行点击
@@ -1237,7 +1237,7 @@ class CryptoTrader:
             # 点击Sell-卖出按钮
             button = WebDriverWait(self.driver, 10).until(
                 EC.element_to_be_clickable((By.XPATH, 
-                    '//*[@id="__pm_layout"]/div/div[2]/div/div[1]/div/div[2]/div[3]/button/span[1]/span'))
+                    '//div[@class="c-dhzjXW c-dhzjXW-ihxUIch-css"]//button'))
             )
             self.driver.execute_script("arguments[0].click();", button)
             self.update_status("已点击卖出盈利按钮")
@@ -1492,7 +1492,7 @@ class CryptoTrader:
             # 输入金额
             amount_input.send_keys(str(amount))
             
-            self.update_status(f"已在Amount输入框输入: {amount}")
+            self.update_status(f"已在Amount��入框输入: {amount}")
             
         except Exception as e:
             self.logger.error(f"Amount操作失败: {str(e)}")
