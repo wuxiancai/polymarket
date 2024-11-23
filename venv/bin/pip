@@ -1,4 +1,4 @@
-#!/Users/wuwei14/polymarket_v1.0/venv/bin/python3.9
+#!/Users/wuwei/Documents/polymarket/venv/bin/python3.9
 # -*- coding: utf-8 -*-
 import re
 import sys

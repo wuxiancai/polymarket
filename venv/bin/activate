@@ -37,7 +37,7 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV="/Users/wuwei14/polymarket_v1.0/venv"
+VIRTUAL_ENV="/Users/wuwei/Documents/polymarket/venv"
 export VIRTUAL_ENV
 
 _OLD_VIRTUAL_PATH="$PATH"
