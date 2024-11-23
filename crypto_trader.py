@@ -1126,6 +1126,7 @@ class CryptoTrader:
             # 查找并点击按钮
             button = WebDriverWait(self.driver, 10).until(  
                 EC.element_to_be_clickable((By.XPATH, xpath))
+            )
             
             # 执行点击
             self.driver.execute_script("arguments[0].click();", button)
@@ -1240,7 +1241,7 @@ class CryptoTrader:
             button = WebDriverWait(self.driver, 10).until(
                 EC.element_to_be_clickable((By.XPATH, 
                     '//div[@class="c-dhzjXW c-dhzjXW-ihxUIch-css"]//button'))
-            ))
+            )
             self.driver.execute_script("arguments[0].click();", button)
             self.update_status("已点击卖出盈利按钮")
 
@@ -1323,7 +1324,7 @@ class CryptoTrader:
             
             button = WebDriverWait(self.driver, 10).until(
                 EC.element_to_be_clickable((By.XPATH, '//*[@id="__pm_layout"]/div/div[2]/div/div[1]/div/div[1]/div/div/div[2]'))
-            ))
+            )
             
             self.driver.execute_script("arguments[0].click();", button)
             self.update_status("已点击 Sell 按钮")
@@ -1340,7 +1341,7 @@ class CryptoTrader:
             
             button = WebDriverWait(self.driver, 10).until(
                 EC.element_to_be_clickable((By.XPATH, '//*[@id="__pm_layout"]/div/div[2]/div/div[1]/div/div[2]/div[1]/div[2]/div/div[1]/div'))
-            ))
+            )
             
             self.driver.execute_script("arguments[0].click();", button)
             self.update_status("已点击 Buy-Yes 按钮")
@@ -1358,7 +1359,7 @@ class CryptoTrader:
             button = WebDriverWait(self.driver, 10).until(
                 EC.element_to_be_clickable((By.XPATH, 
                     '//*[@id="__pm_layout"]/div/div[2]/div/div[1]/div/div[2]/div[1]/div[2]/div/div[2]/div'))
-            ))
+            )
             self.driver.execute_script("arguments[0].click();", button)
             self.update_status("已点击 Buy-No 按钮")
         except Exception as e:
@@ -1375,7 +1376,7 @@ class CryptoTrader:
             button = WebDriverWait(self.driver, 10).until(
                 EC.element_to_be_clickable((By.XPATH, 
                     '//*[@id="__pm_layout"]/div/div[2]/div/div[1]/div/div[2]/div[1]/div[2]/div[1]/div[1]/div'))
-            ))
+            )
             self.driver.execute_script("arguments[0].click();", button)
             self.update_status("已点击 Sell-Yes 按钮")
         except Exception as e:
@@ -1392,7 +1393,7 @@ class CryptoTrader:
             button = WebDriverWait(self.driver, 10).until(
                 EC.element_to_be_clickable((By.XPATH, 
                     '//*[@id="__pm_layout"]/div/div[2]/div/div[1]/div/div[2]/div[1]/div[2]/div[1]/div[2]/div'))
-            ))
+            )
             self.driver.execute_script("arguments[0].click();", button)
             self.update_status("已点击 Sell-No 按钮")
         except Exception as e:
@@ -1409,7 +1410,7 @@ class CryptoTrader:
             button = WebDriverWait(self.driver, 10).until(
                 EC.element_to_be_clickable((By.XPATH, 
                     '//*[@id="__pm_layout"]/div/div[2]/div/div[1]/div/div[2]/div[2]/div[1]/div[2]'))
-            ))
+            )
             self.driver.execute_script("arguments[0].click();", button)
             self.update_status("已点击 Sell-Yes-Max 按钮")
         except Exception as e:
@@ -1426,7 +1427,7 @@ class CryptoTrader:
             button = WebDriverWait(self.driver, 10).until(
                 EC.element_to_be_clickable((By.XPATH, 
                     '//*[@id="__pm_layout"]/div/div[2]/div/div[1]/div/div[2]/div[2]/div[1]/div[2]'))
-            ))
+            )
             self.driver.execute_script("arguments[0].click();", button)
             self.update_status("已点击 Sell-No-Max 按钮")
         except Exception as e:
@@ -1447,7 +1448,7 @@ class CryptoTrader:
             # 找到输入框
             amount_input = WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.XPATH, '//*[@id="__pm_layout"]/div/div[2]/div/div[1]/div/div[2]/div[2]/div[2]/input'))
-            ))
+            )
             
             # 清空输入框
             amount_input.clear()
