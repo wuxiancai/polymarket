@@ -1,0 +1,386 @@
+2024-11-22 19:31:04,243 [INFO] 成功加载配置文件
+2024-11-22 19:31:19,985 [WARNING] Connection pool is full, discarding connection: localhost. Connection pool size: 1
+2024-11-22 19:31:19,990 [ERROR] 加载网站失败: 'NoneType' object has no attribute 'execute_script'
+Traceback (most recent call last):
+  File "/Users/wuwei14/polymarket_v1.0/crypto_trader.py", line 642, in _start_browser_monitoring
+    WebDriverWait(self.driver, 60).until(
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/support/wait.py", line 96, in until
+    value = method(self._driver)
+  File "/Users/wuwei14/polymarket_v1.0/crypto_trader.py", line 643, in <lambda>
+    lambda driver: driver.execute_script('return document.readyState') == 'complete'
+AttributeError: 'NoneType' object has no attribute 'execute_script'
+2024-11-22 19:31:20,052 [ERROR] 加载网站失败: 'NoneType' object has no attribute 'execute_script'
+Traceback (most recent call last):
+  File "/Users/wuwei14/polymarket_v1.0/crypto_trader.py", line 642, in _start_browser_monitoring
+    WebDriverWait(self.driver, 60).until(
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/support/wait.py", line 96, in until
+    value = method(self._driver)
+  File "/Users/wuwei14/polymarket_v1.0/crypto_trader.py", line 643, in <lambda>
+    lambda driver: driver.execute_script('return document.readyState') == 'complete'
+AttributeError: 'NoneType' object has no attribute 'execute_script'
+2024-11-22 19:31:53,095 [WARNING] Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x1187991c0>: Failed to establish a new connection: [Errno 61] Connection refused')': /session/3c9e13d194819ccff7089a88d58b3e69/element
+2024-11-22 19:31:53,097 [WARNING] Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x1187992b0>: Failed to establish a new connection: [Errno 61] Connection refused')': /session/3c9e13d194819ccff7089a88d58b3e69/element
+2024-11-22 19:31:53,097 [WARNING] Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x1187994f0>: Failed to establish a new connection: [Errno 61] Connection refused')': /session/3c9e13d194819ccff7089a88d58b3e69/element
+2024-11-22 19:31:53,098 [ERROR] 获取金信息失败: HTTPConnectionPool(host='localhost', port=52948): Max retries exceeded with url: /session/3c9e13d194819ccff7089a88d58b3e69/element (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x1187996a0>: Failed to establish a new connection: [Errno 61] Connection refused'))
+Traceback (most recent call last):
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/urllib3/connection.py", line 199, in _new_conn
+    sock = connection.create_connection(
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/urllib3/util/connection.py", line 85, in create_connection
+    raise err
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/urllib3/util/connection.py", line 73, in create_connection
+    sock.connect(sa)
+ConnectionRefusedError: [Errno 61] Connection refused
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/urllib3/connectionpool.py", line 789, in urlopen
+    response = self._make_request(
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/urllib3/connectionpool.py", line 495, in _make_request
+    conn.request(
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/urllib3/connection.py", line 441, in request
+    self.endheaders()
+  File "/opt/homebrew/Cellar/python@3.9/3.9.20/Frameworks/Python.framework/Versions/3.9/lib/python3.9/http/client.py", line 1280, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/opt/homebrew/Cellar/python@3.9/3.9.20/Frameworks/Python.framework/Versions/3.9/lib/python3.9/http/client.py", line 1040, in _send_output
+    self.send(msg)
+  File "/opt/homebrew/Cellar/python@3.9/3.9.20/Frameworks/Python.framework/Versions/3.9/lib/python3.9/http/client.py", line 980, in send
+    self.connect()
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/urllib3/connection.py", line 279, in connect
+    self.sock = self._new_conn()
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/urllib3/connection.py", line 214, in _new_conn
+    raise NewConnectionError(
+urllib3.exceptions.NewConnectionError: <urllib3.connection.HTTPConnection object at 0x1187996a0>: Failed to establish a new connection: [Errno 61] Connection refused
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/wuwei14/polymarket_v1.0/crypto_trader.py", line 1267, in check_balance
+    portfolio_element = WebDriverWait(self.driver, 5).until(
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/support/wait.py", line 96, in until
+    value = method(self._driver)
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/support/expected_conditions.py", line 84, in _predicate
+    return driver.find_element(*locator)
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 766, in find_element
+    return self.execute(Command.FIND_ELEMENT, {"using": by, "value": value})["value"]
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 378, in execute
+    response = self.command_executor.execute(driver_command, params)
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/remote/remote_connection.py", line 391, in execute
+    return self._request(command_info[0], url, body=data)
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/remote/remote_connection.py", line 415, in _request
+    response = self._conn.request(method, url, body=body, headers=headers, timeout=self._client_config.timeout)
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/urllib3/_request_methods.py", line 143, in request
+    return self.request_encode_body(
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/urllib3/_request_methods.py", line 278, in request_encode_body
+    return self.urlopen(method, url, **extra_kw)
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/urllib3/poolmanager.py", line 443, in urlopen
+    response = conn.urlopen(method, u.request_uri, **kw)
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/urllib3/connectionpool.py", line 873, in urlopen
+    return self.urlopen(
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/urllib3/connectionpool.py", line 873, in urlopen
+    return self.urlopen(
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/urllib3/connectionpool.py", line 873, in urlopen
+    return self.urlopen(
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/urllib3/connectionpool.py", line 843, in urlopen
+    retries = retries.increment(
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/urllib3/util/retry.py", line 519, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+urllib3.exceptions.MaxRetryError: HTTPConnectionPool(host='localhost', port=52948): Max retries exceeded with url: /session/3c9e13d194819ccff7089a88d58b3e69/element (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x1187996a0>: Failed to establish a new connection: [Errno 61] Connection refused'))
+2024-11-22 19:34:50,289 [INFO] 获取到Cash文本: Cash: $630.73
+2024-11-22 19:34:50,292 [INFO] 提取到Cash值: 630.73
+2024-11-22 19:34:50,293 [INFO] 金额更新完成
+2024-11-22 19:35:50,961 [ERROR] 检查价格失败: Message: no such window: target window already closed
+from unknown error: web view not found
+  (Session info: chrome=131.0.6778.86)
+Stacktrace:
+0   chromedriver                        0x00000001032dfac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x00000001032d8314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000102d404b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000102d1b994 core::str::slice_error_fail::ha0e52dbcb60e6bae + 3780
+4   chromedriver                        0x0000000102daa890 cxxbridge1$string$len + 524388
+5   chromedriver                        0x0000000102dbd76c cxxbridge1$string$len + 601920
+6   chromedriver                        0x0000000102d790b0 cxxbridge1$string$len + 321668
+7   chromedriver                        0x0000000102d79d00 cxxbridge1$string$len + 324820
+8   chromedriver                        0x00000001032aae08 cxxbridge1$str$ptr + 3435328
+9   chromedriver                        0x00000001032ae120 cxxbridge1$str$ptr + 3448408
+10  chromedriver                        0x000000010329217c cxxbridge1$str$ptr + 3333812
+11  chromedriver                        0x00000001032ae9e0 cxxbridge1$str$ptr + 3450648
+12  chromedriver                        0x0000000103283988 cxxbridge1$str$ptr + 3274432
+13  chromedriver                        0x00000001032c90f4 cxxbridge1$str$ptr + 3558956
+14  chromedriver                        0x00000001032c9270 cxxbridge1$str$ptr + 3559336
+15  chromedriver                        0x00000001032d7f88 cxxbridge1$str$ptr + 3620032
+16  libsystem_pthread.dylib             0x000000018a42ef94 _pthread_start + 136
+17  libsystem_pthread.dylib             0x000000018a429d34 thread_start + 8
+Traceback (most recent call last):
+  File "/Users/wuwei14/polymarket_v1.0/crypto_trader.py", line 828, in check_prices
+    WebDriverWait(self.driver, 20).until(
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/support/wait.py", line 96, in until
+    value = method(self._driver)
+  File "/Users/wuwei14/polymarket_v1.0/crypto_trader.py", line 829, in <lambda>
+    lambda driver: driver.execute_script('return document.readyState') == 'complete'
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 440, in execute_script
+    return self.execute(command, {"script": script, "args": converted_args})["value"]
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 380, in execute
+    self.error_handler.check_response(response)
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/remote/errorhandler.py", line 229, in check_response
+    raise exception_class(message, screen, stacktrace)
+selenium.common.exceptions.NoSuchWindowException: Message: no such window: target window already closed
+from unknown error: web view not found
+  (Session info: chrome=131.0.6778.86)
+Stacktrace:
+0   chromedriver                        0x00000001032dfac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x00000001032d8314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000102d404b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000102d1b994 core::str::slice_error_fail::ha0e52dbcb60e6bae + 3780
+4   chromedriver                        0x0000000102daa890 cxxbridge1$string$len + 524388
+5   chromedriver                        0x0000000102dbd76c cxxbridge1$string$len + 601920
+6   chromedriver                        0x0000000102d790b0 cxxbridge1$string$len + 321668
+7   chromedriver                        0x0000000102d79d00 cxxbridge1$string$len + 324820
+8   chromedriver                        0x00000001032aae08 cxxbridge1$str$ptr + 3435328
+9   chromedriver                        0x00000001032ae120 cxxbridge1$str$ptr + 3448408
+10  chromedriver                        0x000000010329217c cxxbridge1$str$ptr + 3333812
+11  chromedriver                        0x00000001032ae9e0 cxxbridge1$str$ptr + 3450648
+12  chromedriver                        0x0000000103283988 cxxbridge1$str$ptr + 3274432
+13  chromedriver                        0x00000001032c90f4 cxxbridge1$str$ptr + 3558956
+14  chromedriver                        0x00000001032c9270 cxxbridge1$str$ptr + 3559336
+15  chromedriver                        0x00000001032d7f88 cxxbridge1$str$ptr + 3620032
+16  libsystem_pthread.dylib             0x000000018a42ef94 _pthread_start + 136
+17  libsystem_pthread.dylib             0x000000018a429d34 thread_start + 8
+
+2024-11-22 19:35:50,965 [ERROR] 价检查错误: Message: no such window: target window already closed
+from unknown error: web view not found
+  (Session info: chrome=131.0.6778.86)
+Stacktrace:
+0   chromedriver                        0x00000001032dfac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x00000001032d8314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000102d404b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000102d1b994 core::str::slice_error_fail::ha0e52dbcb60e6bae + 3780
+4   chromedriver                        0x0000000102daa890 cxxbridge1$string$len + 524388
+5   chromedriver                        0x0000000102dbd76c cxxbridge1$string$len + 601920
+6   chromedriver                        0x0000000102d790b0 cxxbridge1$string$len + 321668
+7   chromedriver                        0x0000000102d79d00 cxxbridge1$string$len + 324820
+8   chromedriver                        0x00000001032aae08 cxxbridge1$str$ptr + 3435328
+9   chromedriver                        0x00000001032ae120 cxxbridge1$str$ptr + 3448408
+10  chromedriver                        0x000000010329217c cxxbridge1$str$ptr + 3333812
+11  chromedriver                        0x00000001032ae9e0 cxxbridge1$str$ptr + 3450648
+12  chromedriver                        0x0000000103283988 cxxbridge1$str$ptr + 3274432
+13  chromedriver                        0x00000001032c90f4 cxxbridge1$str$ptr + 3558956
+14  chromedriver                        0x00000001032c9270 cxxbridge1$str$ptr + 3559336
+15  chromedriver                        0x00000001032d7f88 cxxbridge1$str$ptr + 3620032
+16  libsystem_pthread.dylib             0x000000018a42ef94 _pthread_start + 136
+17  libsystem_pthread.dylib             0x000000018a429d34 thread_start + 8
+Traceback (most recent call last):
+  File "/Users/wuwei14/polymarket_v1.0/crypto_trader.py", line 828, in check_prices
+    WebDriverWait(self.driver, 20).until(
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/support/wait.py", line 96, in until
+    value = method(self._driver)
+  File "/Users/wuwei14/polymarket_v1.0/crypto_trader.py", line 829, in <lambda>
+    lambda driver: driver.execute_script('return document.readyState') == 'complete'
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 440, in execute_script
+    return self.execute(command, {"script": script, "args": converted_args})["value"]
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 380, in execute
+    self.error_handler.check_response(response)
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/remote/errorhandler.py", line 229, in check_response
+    raise exception_class(message, screen, stacktrace)
+selenium.common.exceptions.NoSuchWindowException: Message: no such window: target window already closed
+from unknown error: web view not found
+  (Session info: chrome=131.0.6778.86)
+Stacktrace:
+0   chromedriver                        0x00000001032dfac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x00000001032d8314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000102d404b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000102d1b994 core::str::slice_error_fail::ha0e52dbcb60e6bae + 3780
+4   chromedriver                        0x0000000102daa890 cxxbridge1$string$len + 524388
+5   chromedriver                        0x0000000102dbd76c cxxbridge1$string$len + 601920
+6   chromedriver                        0x0000000102d790b0 cxxbridge1$string$len + 321668
+7   chromedriver                        0x0000000102d79d00 cxxbridge1$string$len + 324820
+8   chromedriver                        0x00000001032aae08 cxxbridge1$str$ptr + 3435328
+9   chromedriver                        0x00000001032ae120 cxxbridge1$str$ptr + 3448408
+10  chromedriver                        0x000000010329217c cxxbridge1$str$ptr + 3333812
+11  chromedriver                        0x00000001032ae9e0 cxxbridge1$str$ptr + 3450648
+12  chromedriver                        0x0000000103283988 cxxbridge1$str$ptr + 3274432
+13  chromedriver                        0x00000001032c90f4 cxxbridge1$str$ptr + 3558956
+14  chromedriver                        0x00000001032c9270 cxxbridge1$str$ptr + 3559336
+15  chromedriver                        0x00000001032d7f88 cxxbridge1$str$ptr + 3620032
+16  libsystem_pthread.dylib             0x000000018a42ef94 _pthread_start + 136
+17  libsystem_pthread.dylib             0x000000018a429d34 thread_start + 8
+
+2024-11-22 19:35:52,972 [ERROR] 检查资金失败: Message: no such window: target window already closed
+from unknown error: web view not found
+  (Session info: chrome=131.0.6778.86)
+Stacktrace:
+0   chromedriver                        0x00000001032dfac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x00000001032d8314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000102d404b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000102d1b994 core::str::slice_error_fail::ha0e52dbcb60e6bae + 3780
+4   chromedriver                        0x0000000102daa890 cxxbridge1$string$len + 524388
+5   chromedriver                        0x0000000102dbd76c cxxbridge1$string$len + 601920
+6   chromedriver                        0x0000000102d790b0 cxxbridge1$string$len + 321668
+7   chromedriver                        0x0000000102d79d00 cxxbridge1$string$len + 324820
+8   chromedriver                        0x00000001032aae08 cxxbridge1$str$ptr + 3435328
+9   chromedriver                        0x00000001032ae120 cxxbridge1$str$ptr + 3448408
+10  chromedriver                        0x000000010329217c cxxbridge1$str$ptr + 3333812
+11  chromedriver                        0x00000001032ae9e0 cxxbridge1$str$ptr + 3450648
+12  chromedriver                        0x0000000103283988 cxxbridge1$str$ptr + 3274432
+13  chromedriver                        0x00000001032c90f4 cxxbridge1$str$ptr + 3558956
+14  chromedriver                        0x00000001032c9270 cxxbridge1$str$ptr + 3559336
+15  chromedriver                        0x00000001032d7f88 cxxbridge1$str$ptr + 3620032
+16  libsystem_pthread.dylib             0x000000018a42ef94 _pthread_start + 136
+17  libsystem_pthread.dylib             0x000000018a429d34 thread_start + 8
+Traceback (most recent call last):
+  File "/Users/wuwei14/polymarket_v1.0/crypto_trader.py", line 1261, in check_balance
+    WebDriverWait(self.driver, 20).until(
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/support/wait.py", line 96, in until
+    value = method(self._driver)
+  File "/Users/wuwei14/polymarket_v1.0/crypto_trader.py", line 1262, in <lambda>
+    lambda driver: driver.execute_script('return document.readyState') == 'complete'
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 440, in execute_script
+    return self.execute(command, {"script": script, "args": converted_args})["value"]
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 380, in execute
+    self.error_handler.check_response(response)
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/remote/errorhandler.py", line 229, in check_response
+    raise exception_class(message, screen, stacktrace)
+selenium.common.exceptions.NoSuchWindowException: Message: no such window: target window already closed
+from unknown error: web view not found
+  (Session info: chrome=131.0.6778.86)
+Stacktrace:
+0   chromedriver                        0x00000001032dfac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x00000001032d8314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000102d404b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000102d1b994 core::str::slice_error_fail::ha0e52dbcb60e6bae + 3780
+4   chromedriver                        0x0000000102daa890 cxxbridge1$string$len + 524388
+5   chromedriver                        0x0000000102dbd76c cxxbridge1$string$len + 601920
+6   chromedriver                        0x0000000102d790b0 cxxbridge1$string$len + 321668
+7   chromedriver                        0x0000000102d79d00 cxxbridge1$string$len + 324820
+8   chromedriver                        0x00000001032aae08 cxxbridge1$str$ptr + 3435328
+9   chromedriver                        0x00000001032ae120 cxxbridge1$str$ptr + 3448408
+10  chromedriver                        0x000000010329217c cxxbridge1$str$ptr + 3333812
+11  chromedriver                        0x00000001032ae9e0 cxxbridge1$str$ptr + 3450648
+12  chromedriver                        0x0000000103283988 cxxbridge1$str$ptr + 3274432
+13  chromedriver                        0x00000001032c90f4 cxxbridge1$str$ptr + 3558956
+14  chromedriver                        0x00000001032c9270 cxxbridge1$str$ptr + 3559336
+15  chromedriver                        0x00000001032d7f88 cxxbridge1$str$ptr + 3620032
+16  libsystem_pthread.dylib             0x000000018a42ef94 _pthread_start + 136
+17  libsystem_pthread.dylib             0x000000018a429d34 thread_start + 8
+
+2024-11-22 19:35:52,974 [ERROR] 资金检查错误: Message: no such window: target window already closed
+from unknown error: web view not found
+  (Session info: chrome=131.0.6778.86)
+Stacktrace:
+0   chromedriver                        0x00000001032dfac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x00000001032d8314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000102d404b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000102d1b994 core::str::slice_error_fail::ha0e52dbcb60e6bae + 3780
+4   chromedriver                        0x0000000102daa890 cxxbridge1$string$len + 524388
+5   chromedriver                        0x0000000102dbd76c cxxbridge1$string$len + 601920
+6   chromedriver                        0x0000000102d790b0 cxxbridge1$string$len + 321668
+7   chromedriver                        0x0000000102d79d00 cxxbridge1$string$len + 324820
+8   chromedriver                        0x00000001032aae08 cxxbridge1$str$ptr + 3435328
+9   chromedriver                        0x00000001032ae120 cxxbridge1$str$ptr + 3448408
+10  chromedriver                        0x000000010329217c cxxbridge1$str$ptr + 3333812
+11  chromedriver                        0x00000001032ae9e0 cxxbridge1$str$ptr + 3450648
+12  chromedriver                        0x0000000103283988 cxxbridge1$str$ptr + 3274432
+13  chromedriver                        0x00000001032c90f4 cxxbridge1$str$ptr + 3558956
+14  chromedriver                        0x00000001032c9270 cxxbridge1$str$ptr + 3559336
+15  chromedriver                        0x00000001032d7f88 cxxbridge1$str$ptr + 3620032
+16  libsystem_pthread.dylib             0x000000018a42ef94 _pthread_start + 136
+17  libsystem_pthread.dylib             0x000000018a429d34 thread_start + 8
+Traceback (most recent call last):
+  File "/Users/wuwei14/polymarket_v1.0/crypto_trader.py", line 1261, in check_balance
+    WebDriverWait(self.driver, 20).until(
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/support/wait.py", line 96, in until
+    value = method(self._driver)
+  File "/Users/wuwei14/polymarket_v1.0/crypto_trader.py", line 1262, in <lambda>
+    lambda driver: driver.execute_script('return document.readyState') == 'complete'
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 440, in execute_script
+    return self.execute(command, {"script": script, "args": converted_args})["value"]
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 380, in execute
+    self.error_handler.check_response(response)
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/remote/errorhandler.py", line 229, in check_response
+    raise exception_class(message, screen, stacktrace)
+selenium.common.exceptions.NoSuchWindowException: Message: no such window: target window already closed
+from unknown error: web view not found
+  (Session info: chrome=131.0.6778.86)
+Stacktrace:
+0   chromedriver                        0x00000001032dfac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x00000001032d8314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x0000000102d404b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000102d1b994 core::str::slice_error_fail::ha0e52dbcb60e6bae + 3780
+4   chromedriver                        0x0000000102daa890 cxxbridge1$string$len + 524388
+5   chromedriver                        0x0000000102dbd76c cxxbridge1$string$len + 601920
+6   chromedriver                        0x0000000102d790b0 cxxbridge1$string$len + 321668
+7   chromedriver                        0x0000000102d79d00 cxxbridge1$string$len + 324820
+8   chromedriver                        0x00000001032aae08 cxxbridge1$str$ptr + 3435328
+9   chromedriver                        0x00000001032ae120 cxxbridge1$str$ptr + 3448408
+10  chromedriver                        0x000000010329217c cxxbridge1$str$ptr + 3333812
+11  chromedriver                        0x00000001032ae9e0 cxxbridge1$str$ptr + 3450648
+12  chromedriver                        0x0000000103283988 cxxbridge1$str$ptr + 3274432
+13  chromedriver                        0x00000001032c90f4 cxxbridge1$str$ptr + 3558956
+14  chromedriver                        0x00000001032c9270 cxxbridge1$str$ptr + 3559336
+15  chromedriver                        0x00000001032d7f88 cxxbridge1$str$ptr + 3620032
+16  libsystem_pthread.dylib             0x000000018a42ef94 _pthread_start + 136
+17  libsystem_pthread.dylib             0x000000018a429d34 thread_start + 8
+
+2024-11-23 07:04:18,289 [INFO] 获取到Cash文本: Cash: $630.73
+2024-11-23 07:04:18,289 [INFO] 提取到Cash值: 630.73
+2024-11-23 07:04:18,289 [INFO] 金额更新完成
+2024-11-23 07:04:23,299 [ERROR] 连接浏览器失败: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+Traceback (most recent call last):
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/urllib3/connectionpool.py", line 789, in urlopen
+    response = self._make_request(
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/urllib3/connectionpool.py", line 536, in _make_request
+    response = conn.getresponse()
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/urllib3/connection.py", line 507, in getresponse
+    httplib_response = super().getresponse()
+  File "/opt/homebrew/Cellar/python@3.9/3.9.20/Frameworks/Python.framework/Versions/3.9/lib/python3.9/http/client.py", line 1377, in getresponse
+    response.begin()
+  File "/opt/homebrew/Cellar/python@3.9/3.9.20/Frameworks/Python.framework/Versions/3.9/lib/python3.9/http/client.py", line 320, in begin
+    version, status, reason = self._read_status()
+  File "/opt/homebrew/Cellar/python@3.9/3.9.20/Frameworks/Python.framework/Versions/3.9/lib/python3.9/http/client.py", line 289, in _read_status
+    raise RemoteDisconnected("Remote end closed connection without"
+http.client.RemoteDisconnected: Remote end closed connection without response
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/wuwei14/polymarket_v1.0/crypto_trader.py", line 629, in _start_browser_monitoring
+    self.driver = webdriver.Chrome(options=chrome_options)
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/chrome/webdriver.py", line 45, in __init__
+    super().__init__(
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/chromium/webdriver.py", line 66, in __init__
+    super().__init__(command_executor=executor, options=options)
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 238, in __init__
+    self.start_session(capabilities)
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 325, in start_session
+    response = self.execute(Command.NEW_SESSION, caps)["value"]
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 378, in execute
+    response = self.command_executor.execute(driver_command, params)
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/remote/remote_connection.py", line 391, in execute
+    return self._request(command_info[0], url, body=data)
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/remote/remote_connection.py", line 415, in _request
+    response = self._conn.request(method, url, body=body, headers=headers, timeout=self._client_config.timeout)
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/urllib3/_request_methods.py", line 143, in request
+    return self.request_encode_body(
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/urllib3/_request_methods.py", line 278, in request_encode_body
+    return self.urlopen(method, url, **extra_kw)
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/urllib3/poolmanager.py", line 443, in urlopen
+    response = conn.urlopen(method, u.request_uri, **kw)
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/urllib3/connectionpool.py", line 843, in urlopen
+    retries = retries.increment(
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/urllib3/util/retry.py", line 474, in increment
+    raise reraise(type(error), error, _stacktrace)
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/urllib3/util/util.py", line 38, in reraise
+    raise value.with_traceback(tb)
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/urllib3/connectionpool.py", line 789, in urlopen
+    response = self._make_request(
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/urllib3/connectionpool.py", line 536, in _make_request
+    response = conn.getresponse()
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/urllib3/connection.py", line 507, in getresponse
+    httplib_response = super().getresponse()
+  File "/opt/homebrew/Cellar/python@3.9/3.9.20/Frameworks/Python.framework/Versions/3.9/lib/python3.9/http/client.py", line 1377, in getresponse
+    response.begin()
+  File "/opt/homebrew/Cellar/python@3.9/3.9.20/Frameworks/Python.framework/Versions/3.9/lib/python3.9/http/client.py", line 320, in begin
+    version, status, reason = self._read_status()
+  File "/opt/homebrew/Cellar/python@3.9/3.9.20/Frameworks/Python.framework/Versions/3.9/lib/python3.9/http/client.py", line 289, in _read_status
+    raise RemoteDisconnected("Remote end closed connection without"
+urllib3.exceptions.ProtocolError: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))

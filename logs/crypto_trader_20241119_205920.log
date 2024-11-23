@@ -1,0 +1,44 @@
+2024-11-19 20:59:20,731 [INFO] 成功加载配置文件
+2024-11-19 21:00:02,198 [INFO] 获取到Cash文本: Cash: $833.59
+2024-11-19 21:00:02,198 [INFO] 提取到Cash值: 833.59
+2024-11-19 21:00:02,199 [INFO] 金额更新完成
+2024-11-19 21:00:27,631 [INFO] 获取到Cash文本: Cash: $833.59
+2024-11-19 21:00:27,631 [INFO] 提取到Cash值: 833.59
+2024-11-19 21:00:27,631 [INFO] 金额更新完成
+2024-11-19 21:00:53,059 [INFO] Yes 0价格匹配，执行自动交易
+2024-11-19 21:01:02,588 [INFO] MetaMask 扩展弹窗操作完成
+2024-11-19 21:01:20,543 [INFO] No 1价格匹配，执行自动交易
+2024-11-19 21:01:29,655 [INFO] MetaMask 扩展弹窗操作完成
+2024-11-19 21:01:48,086 [INFO] Yes 2价格匹配，执行自动交易
+2024-11-19 21:01:56,582 [INFO] MetaMask 扩展弹窗操作完成
+2024-11-19 21:02:17,646 [INFO] No 3价格匹配，执行自动交易
+2024-11-19 21:02:26,669 [INFO] MetaMask 扩展弹窗操作完成
+2024-11-19 21:02:43,601 [INFO] Yes 4价格匹配，执行自动交易
+2024-11-19 21:02:52,087 [INFO] MetaMask 扩展弹窗操作完成
+2024-11-19 21:03:23,610 [INFO] No 5价格匹配，执行自动交易
+2024-11-19 21:03:32,639 [INFO] MetaMask 扩展弹窗操作完成
+2024-11-19 21:03:44,595 [INFO] Yes 0价格匹配，执行自动交易
+2024-11-19 21:03:54,088 [INFO] MetaMask 扩展弹窗操作完成
+2024-11-19 21:04:15,461 [INFO] Yes6价格匹配，执行自动卖出
+2024-11-19 21:04:22,891 [INFO] MetaMask 扩展弹窗操作完成
+2024-11-19 21:04:35,826 [INFO] MetaMask 扩展弹窗操作完成
+2024-11-19 21:04:55,831 [ERROR] Sell_no执行失败: 浏览器连接丢失
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket_v1.0/crypto_trader.py", line 2131, in Sell_no
+    raise Exception("浏览器连接丢失")
+Exception: 浏览器连接丢失
+2024-11-19 21:04:55,832 [ERROR] Sell_no执行失败: 浏览器连接丢失
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket_v1.0/crypto_trader.py", line 2131, in Sell_no
+    raise Exception("浏览器连接丢失")
+Exception: 浏览器连接丢失
+2024-11-19 21:04:55,832 [ERROR] 检查资金失败: 浏览器连接丢失
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket_v1.0/crypto_trader.py", line 1258, in check_balance
+    raise Exception("浏览器连接丢失")
+Exception: 浏览器连接丢失
+2024-11-19 21:04:55,832 [ERROR] 资金检查错误: 浏览器连接丢失
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket_v1.0/crypto_trader.py", line 1258, in check_balance
+    raise Exception("浏览器连接丢失")
+Exception: 浏览器连接丢失

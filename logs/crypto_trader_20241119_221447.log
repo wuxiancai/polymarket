@@ -1,0 +1,27 @@
+2024-11-19 22:14:47,108 [INFO] 成功加载配置文件
+2024-11-19 22:15:09,233 [INFO] 获取到Cash文本: Cash: $829.05
+2024-11-19 22:15:09,234 [INFO] 提取到Cash值: 829.05
+2024-11-19 22:15:09,234 [INFO] 金额更新完成
+2024-11-19 22:15:29,429 [INFO] Yes6价格匹配，执行自动卖出
+2024-11-19 22:15:36,203 [INFO] MetaMask 扩展弹窗操作完成
+2024-11-19 22:15:54,035 [INFO] MetaMask 扩展弹窗操作完成
+2024-11-19 22:16:23,467 [ERROR] Sell_no执行失败: 浏览器连接丢失
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket_v1.0/crypto_trader.py", line 2157, in Sell_no
+    raise Exception("浏览器连接丢失")
+Exception: 浏览器连接丢失
+2024-11-19 22:16:23,468 [ERROR] Sell_no执行失败: 浏览器连接丢失
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket_v1.0/crypto_trader.py", line 2157, in Sell_no
+    raise Exception("浏览器连接丢失")
+Exception: 浏览器连接丢失
+2024-11-19 22:16:23,468 [ERROR] 检查资金失败: 浏览器连接丢失
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket_v1.0/crypto_trader.py", line 1258, in check_balance
+    raise Exception("浏览器连接丢失")
+Exception: 浏览器连接丢失
+2024-11-19 22:16:23,469 [ERROR] 资金检查错误: 浏览器连接丢失
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket_v1.0/crypto_trader.py", line 1258, in check_balance
+    raise Exception("浏览器连接丢失")
+Exception: 浏览器连接丢失
