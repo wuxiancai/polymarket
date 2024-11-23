@@ -20,6 +20,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 import pyautogui  # 添加到文件顶部的导入语句中
 
+
 class CryptoTrader:
     def __init__(self):
         super().__init__()
@@ -1094,7 +1095,7 @@ class CryptoTrader:
                 xpath = "//button[contains(text(), 'Max') or .//span[contains(text(), 'Max')]]"
             elif button_type == "Buy-Confirm":
                 # 使用固定的XPath路径
-                xpath = '//*[@id="__pm_layout"]/div/div[2]/div/div[1]/div/div[2]/div[3]/button'
+                xpath = '(//button[text()="Buy"])[last()]'
             elif button_type == "SetExpBuy":
                 # 先点击 Set Expiration
                 exp_button = WebDriverWait(self.driver, 10).until(
