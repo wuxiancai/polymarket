@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# polymarket_v1.0.0
 import platform
 import tkinter as tk
 from tkinter import ttk, messagebox
