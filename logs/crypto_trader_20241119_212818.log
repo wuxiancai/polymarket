@@ -1,0 +1,12 @@
+2024-11-19 21:28:18,432 [INFO] 成功加载配置文件
+2024-11-19 21:28:30,288 [INFO] 获取到Cash文本: Cash: 等待数据...
+2024-11-19 21:28:30,289 [ERROR] 设置金额失败: 无法从Cash值中提取数字
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket_v1.0/crypto_trader.py", line 526, in set_yes_no_cash
+    raise ValueError("无法从Cash值中提取数字")
+ValueError: 无法从Cash值中提取数字
+2024-11-19 21:28:30,290 [ERROR] 金额设置失败，请检查Cash值是否正确
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket_v1.0/crypto_trader.py", line 526, in set_yes_no_cash
+    raise ValueError("无法从Cash值中提取数字")
+ValueError: 无法从Cash值中提取数字

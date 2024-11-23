@@ -1,0 +1,128 @@
+2024-11-23 07:05:17,000 [INFO] 成功加载配置文件
+2024-11-23 07:05:49,321 [INFO] 获取到Cash文本: Cash: 等待数据...
+2024-11-23 07:05:49,323 [ERROR] 设置金额失败: 无法从Cash值中提取数字
+Traceback (most recent call last):
+  File "/Users/wuwei14/polymarket_v1.0/crypto_trader.py", line 526, in set_yes_no_cash
+    raise ValueError("无法从Cash值中提取数字")
+ValueError: 无法从Cash值中提取数字
+2024-11-23 07:05:49,327 [ERROR] 金额设置失败，请检查Cash值是否正确
+Traceback (most recent call last):
+  File "/Users/wuwei14/polymarket_v1.0/crypto_trader.py", line 526, in set_yes_no_cash
+    raise ValueError("无法从Cash值中提取数字")
+ValueError: 无法从Cash值中提取数字
+2024-11-23 07:05:56,483 [ERROR] 加载网站失败: Message: no such window: target window already closed
+from unknown error: web view not found
+  (Session info: chrome=131.0.6778.86)
+Stacktrace:
+0   chromedriver                        0x0000000100627ac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x0000000100620314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x00000001000884b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000100063994 core::str::slice_error_fail::ha0e52dbcb60e6bae + 3780
+4   chromedriver                        0x00000001000f2890 cxxbridge1$string$len + 524388
+5   chromedriver                        0x000000010010576c cxxbridge1$string$len + 601920
+6   chromedriver                        0x00000001000c10b0 cxxbridge1$string$len + 321668
+7   chromedriver                        0x00000001000c1d00 cxxbridge1$string$len + 324820
+8   chromedriver                        0x00000001005f2e08 cxxbridge1$str$ptr + 3435328
+9   chromedriver                        0x00000001005f6120 cxxbridge1$str$ptr + 3448408
+10  chromedriver                        0x00000001005da17c cxxbridge1$str$ptr + 3333812
+11  chromedriver                        0x00000001005f69e0 cxxbridge1$str$ptr + 3450648
+12  chromedriver                        0x00000001005cb988 cxxbridge1$str$ptr + 3274432
+13  chromedriver                        0x00000001006110f4 cxxbridge1$str$ptr + 3558956
+14  chromedriver                        0x0000000100611270 cxxbridge1$str$ptr + 3559336
+15  chromedriver                        0x000000010061ff88 cxxbridge1$str$ptr + 3620032
+16  libsystem_pthread.dylib             0x000000018a42ef94 _pthread_start + 136
+17  libsystem_pthread.dylib             0x000000018a429d34 thread_start + 8
+Traceback (most recent call last):
+  File "/Users/wuwei14/polymarket_v1.0/crypto_trader.py", line 642, in _start_browser_monitoring
+    WebDriverWait(self.driver, 60).until(
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/support/wait.py", line 96, in until
+    value = method(self._driver)
+  File "/Users/wuwei14/polymarket_v1.0/crypto_trader.py", line 643, in <lambda>
+    lambda driver: driver.execute_script('return document.readyState') == 'complete'
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 440, in execute_script
+    return self.execute(command, {"script": script, "args": converted_args})["value"]
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 380, in execute
+    self.error_handler.check_response(response)
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/remote/errorhandler.py", line 229, in check_response
+    raise exception_class(message, screen, stacktrace)
+selenium.common.exceptions.NoSuchWindowException: Message: no such window: target window already closed
+from unknown error: web view not found
+  (Session info: chrome=131.0.6778.86)
+Stacktrace:
+0   chromedriver                        0x0000000100627ac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x0000000100620314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x00000001000884b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000100063994 core::str::slice_error_fail::ha0e52dbcb60e6bae + 3780
+4   chromedriver                        0x00000001000f2890 cxxbridge1$string$len + 524388
+5   chromedriver                        0x000000010010576c cxxbridge1$string$len + 601920
+6   chromedriver                        0x00000001000c10b0 cxxbridge1$string$len + 321668
+7   chromedriver                        0x00000001000c1d00 cxxbridge1$string$len + 324820
+8   chromedriver                        0x00000001005f2e08 cxxbridge1$str$ptr + 3435328
+9   chromedriver                        0x00000001005f6120 cxxbridge1$str$ptr + 3448408
+10  chromedriver                        0x00000001005da17c cxxbridge1$str$ptr + 3333812
+11  chromedriver                        0x00000001005f69e0 cxxbridge1$str$ptr + 3450648
+12  chromedriver                        0x00000001005cb988 cxxbridge1$str$ptr + 3274432
+13  chromedriver                        0x00000001006110f4 cxxbridge1$str$ptr + 3558956
+14  chromedriver                        0x0000000100611270 cxxbridge1$str$ptr + 3559336
+15  chromedriver                        0x000000010061ff88 cxxbridge1$str$ptr + 3620032
+16  libsystem_pthread.dylib             0x000000018a42ef94 _pthread_start + 136
+17  libsystem_pthread.dylib             0x000000018a429d34 thread_start + 8
+
+2024-11-23 07:05:56,485 [ERROR] 加载网站失败: Message: no such window: target window already closed
+from unknown error: web view not found
+  (Session info: chrome=131.0.6778.86)
+Stacktrace:
+0   chromedriver                        0x0000000100627ac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x0000000100620314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x00000001000884b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000100063994 core::str::slice_error_fail::ha0e52dbcb60e6bae + 3780
+4   chromedriver                        0x00000001000f2890 cxxbridge1$string$len + 524388
+5   chromedriver                        0x000000010010576c cxxbridge1$string$len + 601920
+6   chromedriver                        0x00000001000c10b0 cxxbridge1$string$len + 321668
+7   chromedriver                        0x00000001000c1d00 cxxbridge1$string$len + 324820
+8   chromedriver                        0x00000001005f2e08 cxxbridge1$str$ptr + 3435328
+9   chromedriver                        0x00000001005f6120 cxxbridge1$str$ptr + 3448408
+10  chromedriver                        0x00000001005da17c cxxbridge1$str$ptr + 3333812
+11  chromedriver                        0x00000001005f69e0 cxxbridge1$str$ptr + 3450648
+12  chromedriver                        0x00000001005cb988 cxxbridge1$str$ptr + 3274432
+13  chromedriver                        0x00000001006110f4 cxxbridge1$str$ptr + 3558956
+14  chromedriver                        0x0000000100611270 cxxbridge1$str$ptr + 3559336
+15  chromedriver                        0x000000010061ff88 cxxbridge1$str$ptr + 3620032
+16  libsystem_pthread.dylib             0x000000018a42ef94 _pthread_start + 136
+17  libsystem_pthread.dylib             0x000000018a429d34 thread_start + 8
+Traceback (most recent call last):
+  File "/Users/wuwei14/polymarket_v1.0/crypto_trader.py", line 642, in _start_browser_monitoring
+    WebDriverWait(self.driver, 60).until(
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/support/wait.py", line 96, in until
+    value = method(self._driver)
+  File "/Users/wuwei14/polymarket_v1.0/crypto_trader.py", line 643, in <lambda>
+    lambda driver: driver.execute_script('return document.readyState') == 'complete'
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 440, in execute_script
+    return self.execute(command, {"script": script, "args": converted_args})["value"]
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/remote/webdriver.py", line 380, in execute
+    self.error_handler.check_response(response)
+  File "/Users/wuwei14/polymarket_v1.0/venv/lib/python3.9/site-packages/selenium/webdriver/remote/errorhandler.py", line 229, in check_response
+    raise exception_class(message, screen, stacktrace)
+selenium.common.exceptions.NoSuchWindowException: Message: no such window: target window already closed
+from unknown error: web view not found
+  (Session info: chrome=131.0.6778.86)
+Stacktrace:
+0   chromedriver                        0x0000000100627ac4 cxxbridge1$str$ptr + 3651580
+1   chromedriver                        0x0000000100620314 cxxbridge1$str$ptr + 3620940
+2   chromedriver                        0x00000001000884b4 cxxbridge1$string$len + 89224
+3   chromedriver                        0x0000000100063994 core::str::slice_error_fail::ha0e52dbcb60e6bae + 3780
+4   chromedriver                        0x00000001000f2890 cxxbridge1$string$len + 524388
+5   chromedriver                        0x000000010010576c cxxbridge1$string$len + 601920
+6   chromedriver                        0x00000001000c10b0 cxxbridge1$string$len + 321668
+7   chromedriver                        0x00000001000c1d00 cxxbridge1$string$len + 324820
+8   chromedriver                        0x00000001005f2e08 cxxbridge1$str$ptr + 3435328
+9   chromedriver                        0x00000001005f6120 cxxbridge1$str$ptr + 3448408
+10  chromedriver                        0x00000001005da17c cxxbridge1$str$ptr + 3333812
+11  chromedriver                        0x00000001005f69e0 cxxbridge1$str$ptr + 3450648
+12  chromedriver                        0x00000001005cb988 cxxbridge1$str$ptr + 3274432
+13  chromedriver                        0x00000001006110f4 cxxbridge1$str$ptr + 3558956
+14  chromedriver                        0x0000000100611270 cxxbridge1$str$ptr + 3559336
+15  chromedriver                        0x000000010061ff88 cxxbridge1$str$ptr + 3620032
+16  libsystem_pthread.dylib             0x000000018a42ef94 _pthread_start + 136
+17  libsystem_pthread.dylib             0x000000018a429d34 thread_start + 8
+
