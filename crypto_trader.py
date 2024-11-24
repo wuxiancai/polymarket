@@ -34,6 +34,8 @@ class CryptoTrader:
         self.running = False
         self.retry_count = 3
         self.retry_interval = 5
+        # 添加交易次数计数器
+        self.trade_count = 0
         
         try:
             self.config = self.load_config()
@@ -616,6 +618,9 @@ class CryptoTrader:
         # 13秒后自动点击更新金额按钮
         self.root.after(13000, self.update_amount_button.invoke)
         
+        # 重置交易次数计数器
+        self.trade_count = 0
+        
         # 启动浏览器作线程
         threading.Thread(target=self._start_browser_monitoring, args=(new_url,), daemon=True).start()
 
@@ -708,6 +713,9 @@ class CryptoTrader:
         if self.driver:
             self.driver.quit()
             self.driver = None
+        # 记录最终交易次数
+        final_trade_count = self.trade_count
+        self.logger.info(f"本次监控共执行 {final_trade_count} 次交易")
 
     def save_config(self):
         # 从GUI获取并保存配置
@@ -1548,12 +1556,14 @@ class CryptoTrader:
                     self._handle_metamask_popup()
                     time.sleep(10)
                     
+                    # 增加交易次数
+                    self.trade_count += 1
                     # 发送交易邮件
                     self.send_trade_email(
                         trade_type="Buy Yes 0",
                         price=yes_price,
                         amount=float(self.yes_amount_entry.get()),
-                        trade_count=1
+                        trade_count=self.trade_count
                     )
                     
                     # 买了 YES 后也要刷新页面
@@ -1593,12 +1603,14 @@ class CryptoTrader:
                     self._handle_metamask_popup()
                     time.sleep(10)
                     
+                    # 增加交易次数
+                    self.trade_count += 1
                     # 发送交易邮件
                     self.send_trade_email(
                         trade_type="Buy No 0",
                         price=no_price,
                         amount=float(self.no_amount_entry.get()),
-                        trade_count=1
+                        trade_count=self.trade_count
                     )
                     
                     # 买了 NO 后要刷新页面
@@ -1694,12 +1706,14 @@ class CryptoTrader:
                     # 增加等待 3秒
                     time.sleep(3)
                     
+                    # 增加交易次数
+                    self.trade_count += 1
                     # 发送交易邮件
                     self.send_trade_email(
                         trade_type="Buy Yes 1",
                         price=yes_price,
                         amount=float(yes1_price_entry.get()),
-                        trade_count=2
+                        trade_count=self.trade_count
                     )
                     
                 # 检查No1价格匹配
@@ -1730,12 +1744,14 @@ class CryptoTrader:
                     # 增加等待 3秒
                     time.sleep(3)
                     
+                    # 增加交易次数
+                    self.trade_count += 1
                     # 发送交易邮件
                     self.send_trade_email(
                         trade_type="Buy No 1",
                         price=no_price,
                         amount=float(no1_price_entry.get()),
-                        trade_count=2
+                        trade_count=self.trade_count
                     )
                     
                 
@@ -1809,12 +1825,14 @@ class CryptoTrader:
                     # 增加等待 3秒
                     time.sleep(3)
                     
+                    # 增加交易次数
+                    self.trade_count += 1
                     # 发送交易邮件
                     self.send_trade_email(
                         trade_type="Buy Yes 2",
                         price=yes_price,
                         amount=float(yes2_price_entry.get()),
-                        trade_count=3
+                        trade_count=self.trade_count
                     )
                     
                 # 检查No2价格匹配
@@ -1845,12 +1863,14 @@ class CryptoTrader:
                     # 增加等待 3秒
                     time.sleep(3)
                     
+                    # 增加交易次数
+                    self.trade_count += 1
                     # 发送交易邮件
                     self.send_trade_email(
                         trade_type="Buy No 2",
                         price=no_price,
                         amount=float(no2_price_entry.get()),
-                        trade_count=3
+                        trade_count=self.trade_count
                     )
                     
                 
@@ -1923,12 +1943,14 @@ class CryptoTrader:
                     # 增加等待 3秒
                     time.sleep(3)
                     
+                    # 增加交易次数
+                    self.trade_count += 1
                     # 发送交易邮件
                     self.send_trade_email(
                         trade_type="Buy Yes 3",
                         price=yes_price,
                         amount=float(yes3_price_entry.get()),
-                        trade_count=4
+                        trade_count=self.trade_count
                     )
                     
                 
@@ -1960,12 +1982,14 @@ class CryptoTrader:
                     # 增加等待 3秒
                     time.sleep(3)
                     
+                    # 增加交易次数
+                    self.trade_count += 1
                     # 发送交易邮件
                     self.send_trade_email(
                         trade_type="Buy No 3",
                         price=no_price,
                         amount=float(no3_price_entry.get()),
-                        trade_count=4
+                        trade_count=self.trade_count
                     )
                     
                 
@@ -2038,12 +2062,14 @@ class CryptoTrader:
                     # 增加等待 3秒
                     time.sleep(3)
                     
+                    # 增加交易次数
+                    self.trade_count += 1
                     # 发送交易邮件
                     self.send_trade_email(
                         trade_type="Buy Yes 4",
                         price=yes_price,
                         amount=float(yes4_price_entry.get()),
-                        trade_count=5
+                        trade_count=self.trade_count
                     )
                     
                 
@@ -2075,12 +2101,14 @@ class CryptoTrader:
                     # 增加等待 3秒
                     time.sleep(3)
                     
+                    # 增加交易次数
+                    self.trade_count += 1
                     # 发送交易邮件
                     self.send_trade_email(
                         trade_type="Buy No 4",
                         price=no_price,
                         amount=float(no4_price_entry.get()),
-                        trade_count=5
+                        trade_count=self.trade_count
                     )
                     
                 
@@ -2146,12 +2174,14 @@ class CryptoTrader:
                     # 增加等待 3秒
                     time.sleep(3)
                     
+                    # 增加交易次数
+                    self.trade_count += 1
                     # 发送交易邮件
                     self.send_trade_email(
                         trade_type="Buy Yes 5",
                         price=yes_price,
                         amount=float(yes5_price_entry.get()),
-                        trade_count=6
+                        trade_count=self.trade_count
                     )
                     
                 
@@ -2178,12 +2208,14 @@ class CryptoTrader:
                     # 增加等待 3秒
                     time.sleep(3)
                     
+                    # 增加交易次数
+                    self.trade_count += 1
                     # 发送交易邮件
                     self.send_trade_email(
                         trade_type="Buy No 5",
                         price=no_price,
                         amount=float(no5_price_entry.get()),
-                        trade_count=6
+                        trade_count=self.trade_count
                     )
                     
                 
@@ -2367,10 +2399,6 @@ class CryptoTrader:
     def send_trade_email(self, trade_type, price, amount, trade_count):
         """
         发送交易邮件
-        trade_type: 交易类型 (例如: "Buy Yes", "Buy No", "Sell Yes", "Sell No")
-        price: 交易价格
-        amount: 交易金额
-        trade_count: 交易次数
         """
         try:
             # 邮件配置
@@ -2395,14 +2423,20 @@ class CryptoTrader:
             msg['From'] = sender
             msg['To'] = receiver
             
+            # 获取交易币对信息
+            trading_pair = self.trading_pair_label.cget("text")
+            if not trading_pair or trading_pair == "--":
+                trading_pair = "未知交易币对"
+            
             # 邮件内容
             content = f"""
             交易详情:
+            交易币对: {trading_pair}
             交易类型: {trade_type}
             交易价格: ${price:.2f}
             交易金额: ${amount:.2f}
             交易时间: {current_time}
-            交易次数: {trade_count}
+            当前总交易次数: {trade_count}
             """
             
             msg.attach(MIMEText(content, 'plain', 'utf-8'))
