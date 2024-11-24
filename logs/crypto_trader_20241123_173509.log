@@ -1,0 +1,31 @@
+2024-11-23 17:35:09,990 [INFO] 成功加载配置文件
+2024-11-23 17:35:33,042 [INFO] 获取到Cash文本: Cash: 等待数据...
+2024-11-23 17:35:33,043 [ERROR] 设置金额失败: 无法从Cash值中提取数字
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket/crypto_trader.py", line 532, in set_yes_no_cash
+    raise ValueError("无法从Cash值中提取数字")
+ValueError: 无法从Cash值中提取数字
+2024-11-23 17:35:33,045 [ERROR] 金额设置失败，请检查Cash值是否正确
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket/crypto_trader.py", line 532, in set_yes_no_cash
+    raise ValueError("无法从Cash值中提取数字")
+ValueError: 无法从Cash值中提取数字
+2024-11-23 17:44:33,945 [INFO] No 0价格匹配，执行自动交易
+2024-11-23 17:44:42,420 [INFO] MetaMask 扩展弹窗操作完成
+2024-11-23 17:44:57,355 [ERROR] 发送交易邮件失败: (534, b'5.7.9 Application-specific password required. For more information, go to\n5.7.9  https://support.google.com/mail/?p=InvalidSecondFactor d2e1a72fcca58-724de52f754sm2927801b3a.92 - gsmtp')
+Traceback (most recent call last):
+  File "/Users/wuwei/Documents/polymarket/crypto_trader.py", line 2305, in send_trade_email
+    server.login(sender, password)
+  File "/opt/homebrew/Cellar/python@3.9/3.9.20/Frameworks/Python.framework/Versions/3.9/lib/python3.9/smtplib.py", line 750, in login
+    raise last_exception
+  File "/opt/homebrew/Cellar/python@3.9/3.9.20/Frameworks/Python.framework/Versions/3.9/lib/python3.9/smtplib.py", line 739, in login
+    (code, resp) = self.auth(
+  File "/opt/homebrew/Cellar/python@3.9/3.9.20/Frameworks/Python.framework/Versions/3.9/lib/python3.9/smtplib.py", line 662, in auth
+    raise SMTPAuthenticationError(code, resp)
+smtplib.SMTPAuthenticationError: (534, b'5.7.9 Application-specific password required. For more information, go to\n5.7.9  https://support.google.com/mail/?p=InvalidSecondFactor d2e1a72fcca58-724de52f754sm2927801b3a.92 - gsmtp')
+2024-11-23 17:46:25,235 [INFO] 获取到Cash文本: Cash: $587.73
+2024-11-23 17:46:25,235 [INFO] 提取到Cash值: 587.73
+2024-11-23 17:46:25,235 [INFO] 金额更新完成
+2024-11-23 17:46:47,686 [INFO] 获取到Cash文本: Cash: $587.73
+2024-11-23 17:46:47,686 [INFO] 提取到Cash值: 587.73
+2024-11-23 17:46:47,686 [INFO] 金额更新完成
