@@ -1,0 +1,24 @@
+# 忽略所有的日志文件
+*.log
+log/
+logs/
+
+# 忽略 node_modules 文件夹
+node_modules/
+
+# 忽略特定文件
+#config/settings.json
+
+# 忽略所有 `.env` 文件
+*.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.env
+# 忽略某些文件夹中的临时文件
+temp/
+build/
+.Ds_store
