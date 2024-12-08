@@ -24,6 +24,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.header import Header
 import socket  # 添加在其他 import 语句附近
+import subprocess
 
 
 class Logger:
@@ -710,11 +711,26 @@ class CryptoTrader:
                     chrome_options.add_argument('--disable-software-rasterizer')
                 
                 try:
+                    # 检查start_chrome.sh是否正在运行
+                    result = subprocess.run(['pgrep', '-f', 'chrome.*--remote-debugging-port=9222'], capture_output=True)
+                    if result.returncode != 0:
+                        error_msg = "请先运行 start_chrome.sh 脚本！\n\n运行方法：\n1. 打开终端\n2. 进入程序目录\n3. 执行：bash start_chrome.sh"
+                        self.logger.error(error_msg)
+                        self._show_error_and_reset(error_msg)
+                        return
+                    
                     self.driver = webdriver.Chrome(options=chrome_options)
-                    self.update_status("连接到浏览器")
+                    self.update_status("连接到浏览器成功")
                 except Exception as e:
                     self.logger.error(f"连接浏览器失败: {str(e)}")
-                    self._show_error_and_reset("无法连接Chrome浏览器，请确保已运行start_chrome.sh")
+                    error_msg = ("无法连接Chrome浏览器，请按以下步骤操作：\n\n"
+                               "1. 确保已安装Chrome浏览器\n"
+                               "2. 打开终端\n"
+                               "3. 进入程序目录\n"
+                               "4. 执行：bash start_chrome.sh\n"
+                               "5. 等待Chrome浏览器启动\n"
+                               "6. 重新运行本程序")
+                    self._show_error_and_reset(error_msg)
                     return
             
             try:
@@ -1098,7 +1114,7 @@ class CryptoTrader:
                     self.driver = webdriver.Chrome(options=chrome_options)
                     self.update_status("已连接到浏览器")
                 except Exception as e:
-                    self.logger.error(f"连接浏览器失败: {str(e)}")
+                    self.logger.error(f"连接浏览器失��: {str(e)}")
                     messagebox.showerror("错误", "无法连接到Chrome浏览器，请确保已运行start_chrome.sh")
                     return
             
@@ -1458,7 +1474,7 @@ class CryptoTrader:
         """点击 Sell-Yes 按钮"""
         try:
             if not self.driver:
-                self.update_status("请先连接浏览器")
+                self.update_status("��先连接浏览器")
                 return
             
             button = WebDriverWait(self.driver, 10).until(
@@ -1671,7 +1687,7 @@ class CryptoTrader:
                     # 增加等待 1秒
                     time.sleep(1)
                     
-                # 检查No0价格匹配
+                # ���查No0价格匹配
                 elif abs(no0_target - no_price) < 0.0001 and no0_target > 0:
                     self.logger.info("No 0价格匹配，执行自动交易")
                     
