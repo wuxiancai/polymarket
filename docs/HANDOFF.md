@@ -147,3 +147,15 @@ Added local Web dashboard and one-click scripts.
 - `PAPER_INITIAL_CAPITAL_USDT` can override the default capital.
 - Verification:
   - `python3 -m pytest -p no:cacheprovider tests -q`: 18 passed.
+
+## 2026-06-27 Dashboard copy and error display update
+
+- Header title changed from `Polyarb BTC 套利模拟系统` to
+  `Polyarb 套利模拟系统`.
+- Profit labels changed from `累计保证收益` / `保证收益` to `累计收益` / `收益`.
+- Added spacing between `纸面模拟持仓` and the first asset panel.
+- Long Gamma API network errors are now shortened in the dashboard. Full error
+  details remain available from `/api/status`.
+- `Network is unreachable` means the server cannot reach Polymarket's API from
+  its outbound network path; check Ubuntu DNS, gateway, proxy, firewall, or ISP
+  reachability.

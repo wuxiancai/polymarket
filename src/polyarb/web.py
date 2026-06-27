@@ -259,7 +259,7 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
       margin-bottom: 12px;
     }}
     .portfolio-detail {{ margin-top: 12px; overflow-x: auto; }}
-    .asset-panel {{ margin-bottom: 56px; }}
+    .asset-panel {{ margin-top: 28px; margin-bottom: 56px; }}
     .asset-title {{ margin: 0 0 14px; font-size: 22px; line-height: 1.2; }}
     .metric, section {{
       background: var(--panel);
@@ -298,7 +298,7 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
   <header>
     <div class="wrap top">
       <div>
-        <h1>Polyarb BTC 套利模拟系统</h1>
+        <h1>Polyarb 套利模拟系统</h1>
         <p>只读 Polymarket BTC / ETH 行情，执行纸面模拟交易；不连接钱包，不真实下单。</p>
       </div>
       <div class="toolbar">
@@ -420,7 +420,7 @@ def _portfolio_summary_html(summary: dict) -> str:
         "<div class='portfolio-grid'>"
         f"{_metric('初始本金', _money(summary['initial_capital']), 'initialCapitalValue')}"
         f"{_metric('已用本金', _money(summary['used']), 'usedCapitalValue')}"
-        f"{_metric('累计保证收益', _signed_money(summary['profit']), 'profitValue')}"
+        f"{_metric('累计收益', _signed_money(summary['profit']), 'profitValue')}"
         f"{_metric('收益率', _percent(summary['return_rate']), 'returnRateValue')}"
         "</div>"
     )
@@ -440,7 +440,7 @@ def _portfolio_summary_html(summary: dict) -> str:
     detail = (
         "<div class='portfolio-detail'><table><thead><tr>"
         "<th>币种</th><th>分配本金</th><th>已用本金</th><th>剩余本金</th>"
-        "<th>保证收益</th><th>收益率</th><th>持仓数</th>"
+        "<th>收益</th><th>收益率</th><th>持仓数</th>"
         "</tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table></div>"
@@ -468,7 +468,7 @@ def _position_table(rows: list, states: list[WebState]) -> str:
         )
     return (
         "<table><thead><tr><th>币种</th><th>交易对</th><th>持仓腿</th><th>份额</th>"
-        "<th>成本</th><th>最低赔付</th><th>保证收益</th><th>开仓时间</th></tr></thead><tbody>"
+        "<th>成本</th><th>最低赔付</th><th>收益</th><th>开仓时间</th></tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table>"
     )
@@ -536,8 +536,18 @@ def _error_html(states: list[WebState]) -> str:
     for state in states:
         snapshot = state.snapshot()
         if snapshot["error"]:
-            errors.append(f"<p class='error'>{escape(state.asset.symbol)}: {escape(snapshot['error'])}</p>")
+            errors.append(f"<p class='error'>{escape(state.asset.symbol)}: {escape(_friendly_error(snapshot['error']))}</p>")
     return "".join(errors)
+
+
+def _friendly_error(error: str) -> str:
+    if "Network is unreachable" in error and "gamma-api.polymarket.com" in error:
+        return "行情源连接失败：服务器无法访问 Polymarket Gamma API（Network is unreachable）。"
+    if "Network is unreachable" in error:
+        return "网络连接失败：服务器出站网络不可达。"
+    if "gamma-api.polymarket.com" in error:
+        return "行情源连接失败：Polymarket Gamma API 请求失败。"
+    return error
 
 
 def status_label(snapshot: dict) -> str:
@@ -644,7 +654,7 @@ def _trade_table(rows: list) -> str:
         )
     return (
         "<table><thead><tr><th>交易对</th><th>持仓腿</th><th>份额</th><th>成本</th>"
-        "<th>保证收益</th><th>时间</th></tr></thead><tbody>"
+        "<th>收益</th><th>时间</th></tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table>"
     )

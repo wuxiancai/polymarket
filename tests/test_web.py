@@ -17,7 +17,8 @@ def test_dashboard_renders_chinese_status(tmp_path):
 
     html = render_dashboard([btc, eth])
 
-    assert "Polyarb BTC 套利模拟系统" in html
+    assert "Polyarb 套利模拟系统" in html
+    assert "Polyarb BTC 套利模拟系统" not in html
     assert "BTC 套利模拟" in html
     assert "ETH 套利模拟" in html
     assert "ETHStatusValue" in html
@@ -25,6 +26,8 @@ def test_dashboard_renders_chinese_status(tmp_path):
     assert "收益概览" in html
     assert "纸面模拟持仓" in html
     assert "10,000.00 USDT" in html
+    assert "累计收益" in html
+    assert "累计保证收益" not in html
     assert "暂无纸面成交" in html
     assert "最近扫描" not in html
     assert "最近盘口事件" not in html
@@ -108,6 +111,22 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "3,000.00 USDT" in payload["portfolio"]["summary_html"]
     assert "pair-btc" in payload["portfolio"]["positions_html"]
     assert "Will Bitcoin reach $70,000 in June?" in payload["portfolio"]["positions_html"]
+
+
+def test_dashboard_shortens_network_error(tmp_path):
+    config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
+    store = PaperStore(config.database_path)
+    store.initialize()
+    state = WebState(config=config, store=store, asset=BTC_ASSET, runner=PaperRunner(config, BTC_ASSET))
+    state.latest_error = (
+        "request failed: https://gamma-api.polymarket.com/events?tag_slug=bitcoin"
+        "&closed=false&active=true&limit=500: <urlopen error [Errno 101] Network is unreachable>"
+    )
+
+    html = render_dashboard(state)
+
+    assert "BTC: 行情源连接失败" in html
+    assert "tag_slug=bitcoin" not in html
 
 
 def test_standard_time_is_precise_to_seconds():
