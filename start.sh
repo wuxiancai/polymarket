@@ -9,16 +9,65 @@ if [[ ! -x ".venv/bin/python" ]]; then
   exit 1
 fi
 
-export POLYARB_DB="${POLYARB_DB:-data/paper.sqlite3}"
-export MIN_24H_VOLUME_USD="${MIN_24H_VOLUME_USD:-1000}"
-export MIN_ARBITRAGE_DEPTH_USD="${MIN_ARBITRAGE_DEPTH_USD:-100}"
-export SLIPPAGE_BUFFER_CENTS="${SLIPPAGE_BUFFER_CENTS:-2}"
-export MIN_INTERVAL_MINUTES="${MIN_INTERVAL_MINUTES:-15}"
-export ALLOW_CURRENT_MONTH_ONLY="${ALLOW_CURRENT_MONTH_ONLY:-true}"
-export REFRESH_SECONDS="${REFRESH_SECONDS:-30}"
+if ! command -v systemctl >/dev/null 2>&1; then
+  echo "未发现 systemd/systemctl；服务器启动必须使用 systemd。"
+  exit 1
+fi
 
-HOST="${HOST:-127.0.0.1}"
+POLYARB_DB="${POLYARB_DB:-${ROOT_DIR}/data/paper.sqlite3}"
+MIN_24H_VOLUME_USD="${MIN_24H_VOLUME_USD:-1000}"
+MIN_ARBITRAGE_DEPTH_USD="${MIN_ARBITRAGE_DEPTH_USD:-100}"
+SLIPPAGE_BUFFER_CENTS="${SLIPPAGE_BUFFER_CENTS:-2}"
+MIN_INTERVAL_MINUTES="${MIN_INTERVAL_MINUTES:-15}"
+ALLOW_CURRENT_MONTH_ONLY="${ALLOW_CURRENT_MONTH_ONLY:-true}"
+REFRESH_SECONDS="${REFRESH_SECONDS:-30}"
+HOST="${HOST:-0.0.0.0}"
 PORT="${PORT:-8787}"
+SERVICE_NAME="${SERVICE_NAME:-polyarb}"
+SERVICE_USER="${SERVICE_USER:-$(id -un)}"
+SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 
-echo "启动 Polyarb Web: http://${HOST}:${PORT}"
-.venv/bin/python -m polyarb web --host "$HOST" --port "$PORT"
+mkdir -p data
+
+SERVICE_CONTENT="[Unit]
+Description=Polyarb Polymarket BTC paper arbitrage dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=${SERVICE_USER}
+WorkingDirectory=${ROOT_DIR}
+Environment=POLYARB_DB=${POLYARB_DB}
+Environment=MIN_24H_VOLUME_USD=${MIN_24H_VOLUME_USD}
+Environment=MIN_ARBITRAGE_DEPTH_USD=${MIN_ARBITRAGE_DEPTH_USD}
+Environment=SLIPPAGE_BUFFER_CENTS=${SLIPPAGE_BUFFER_CENTS}
+Environment=MIN_INTERVAL_MINUTES=${MIN_INTERVAL_MINUTES}
+Environment=ALLOW_CURRENT_MONTH_ONLY=${ALLOW_CURRENT_MONTH_ONLY}
+Environment=REFRESH_SECONDS=${REFRESH_SECONDS}
+ExecStart=${ROOT_DIR}/.venv/bin/python -m polyarb web --host ${HOST} --port ${PORT}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+"
+
+echo "写入 systemd 服务：${SERVICE_FILE}"
+printf '%s\n' "$SERVICE_CONTENT" | sudo tee "$SERVICE_FILE" >/dev/null
+
+echo "重载并启动 systemd 服务：${SERVICE_NAME}"
+sudo systemctl daemon-reload
+sudo systemctl enable --now "$SERVICE_NAME"
+sudo systemctl restart "$SERVICE_NAME"
+
+LAN_IP="$(hostname -I 2>/dev/null | awk '{print $1}' || true)"
+echo "Polyarb 已通过 systemd 启动。"
+echo "本机监听：http://${HOST}:${PORT}"
+if [[ -n "${LAN_IP}" ]]; then
+  echo "局域网访问：http://${LAN_IP}:${PORT}"
+else
+  echo "局域网访问：http://<服务器IP>:${PORT}"
+fi
+echo "查看状态：sudo systemctl status ${SERVICE_NAME}"
+echo "查看日志：sudo journalctl -u ${SERVICE_NAME} -f"

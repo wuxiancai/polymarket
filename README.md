@@ -38,7 +38,7 @@ Polyarb 是一个 Polymarket BTC 短周期套利扫描与纸面模拟交易系�
 ## 一键部署
 
 ```bash
-cd /Users/wuxiancai/Documents/polymarket
+cd ~/polymarket
 bash deploy.sh
 ```
 
@@ -51,14 +51,23 @@ bash deploy.sh
 ## 一键启动系统
 
 ```bash
-cd /Users/wuxiancai/Documents/polymarket
+cd ~/polymarket
 bash start.sh
 ```
 
-启动后打开：
+启动脚本会写入并启动 systemd 服务 `polyarb.service`，终端关闭后系统仍会继续运行。默认监听 `0.0.0.0:8787`，可通过局域网 IP 访问：
 
 ```text
-http://127.0.0.1:8787
+http://<服务器IP>:8787
+```
+
+常用服务命令：
+
+```bash
+sudo systemctl status polyarb
+sudo journalctl -u polyarb -f
+sudo systemctl restart polyarb
+sudo systemctl stop polyarb
 ```
 
 页面会显示：
@@ -115,7 +124,7 @@ MIN_INTERVAL_MINUTES=15
 ALLOW_CURRENT_MONTH_ONLY=true
 REFRESH_SECONDS=30
 POLYARB_DB=data/paper.sqlite3
-HOST=127.0.0.1
+HOST=0.0.0.0
 PORT=8787
 ```
 
@@ -123,6 +132,12 @@ PORT=8787
 
 ```bash
 SLIPPAGE_BUFFER_CENTS=3 MIN_ARBITRAGE_DEPTH_USD=500 bash start.sh
+```
+
+如果要换端口或服务名：
+
+```bash
+PORT=8888 SERVICE_NAME=polyarb bash start.sh
 ```
 
 ## 当前实现

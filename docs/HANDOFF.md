@@ -98,3 +98,14 @@ Added local Web dashboard and one-click scripts.
   updates every 5 seconds.
 - Kept timestamp fields in `/api/status` for debugging, but they are no longer
   displayed in the main page.
+
+## 2026-06-27 Ubuntu systemd startup update
+
+- `start.sh` now installs and starts a systemd service instead of running the
+  Web server in the foreground.
+- Default bind host changed to `0.0.0.0`, so the dashboard is reachable from LAN
+  via `http://<server-ip>:8787`.
+- Service name defaults to `polyarb`; useful commands:
+  - `sudo systemctl status polyarb`
+  - `sudo journalctl -u polyarb -f`
+  - `sudo systemctl restart polyarb`
