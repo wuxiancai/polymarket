@@ -89,3 +89,12 @@ Added local Web dashboard and one-click scripts.
 - Dashboard/API expose `last_event_at` for the latest received order book event.
 - Added tests for WebSocket subscription payload and `price_change` order book
   updates.
+
+## 2026-06-27 Dashboard refresh update
+
+- Removed `最近扫描` and `最近盘口事件` timestamp rows from the visible dashboard;
+  the real-time status itself is the primary signal.
+- Replaced full-page `location.reload()` refresh with `/api/dashboard` partial
+  updates every 5 seconds.
+- Kept timestamp fields in `/api/status` for debugging, but they are no longer
+  displayed in the main page.

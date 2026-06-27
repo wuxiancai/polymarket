@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from polyarb.config import Config
 from polyarb.runner import PaperRunner
 from polyarb.store import PaperStore
-from polyarb.web import WebState, format_standard_time, render_dashboard
+from polyarb.web import WebState, dashboard_payload, format_standard_time, render_dashboard
 
 
 def test_dashboard_renders_chinese_status(tmp_path):
@@ -18,6 +18,9 @@ def test_dashboard_renders_chinese_status(tmp_path):
     assert "Polyarb BTC 套利模拟系统" in html
     assert "触发扫描" in html
     assert "暂无纸面成交" in html
+    assert "最近扫描" not in html
+    assert "最近盘口事件" not in html
+    assert "location.reload" not in html
 
 
 def test_dashboard_shows_realtime_listening_status(tmp_path):
@@ -29,7 +32,18 @@ def test_dashboard_shows_realtime_listening_status(tmp_path):
     html = render_dashboard(state)
 
     assert "实时监听中" in html
-    assert "最近盘口事件" in html
+
+
+def test_dashboard_payload_contains_fragments(tmp_path):
+    config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
+    store = PaperStore(config.database_path)
+    store.initialize()
+    state = WebState(config=config, store=store, runner=PaperRunner(config), running=True, realtime=True)
+
+    payload = dashboard_payload(state)
+
+    assert payload["status_text"] == "实时监听中"
+    assert "暂无纸面成交" in payload["trades_html"]
 
 
 def test_standard_time_is_precise_to_seconds():

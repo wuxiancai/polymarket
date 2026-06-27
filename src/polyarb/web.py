@@ -130,6 +130,9 @@ class PolyarbHandler(BaseHTTPRequestHandler):
         if self.path == "/api/status":
             self._json(self.web_state.snapshot())
             return
+        if self.path == "/api/dashboard":
+            self._json(dashboard_payload(self.web_state))
+            return
         if self.path == "/api/report":
             self._json(
                 {
@@ -173,14 +176,7 @@ def render_dashboard(state: WebState) -> str:
     snapshot = state.snapshot()
     trades = state.store.latest_trades(10)
     opportunities = state.store.latest_opportunities(10)
-    if snapshot["running"] and snapshot["realtime"]:
-        status_text = "实时监听中"
-    elif snapshot["running"]:
-        status_text = "扫描中"
-    elif snapshot["error"]:
-        status_text = "监听异常"
-    else:
-        status_text = "未启动"
+    status_text = status_label(snapshot)
     error_html = f"<p class='error'>{escape(snapshot['error'])}</p>" if snapshot["error"] else ""
     return f"""<!doctype html>
 <html lang="zh-CN">
@@ -287,47 +283,90 @@ def render_dashboard(state: WebState) -> str:
       </div>
       <div class="toolbar">
         <button id="scanBtn">触发扫描</button>
-        <button class="secondary" id="refreshBtn">刷新页面</button>
+        <button class="secondary" id="refreshBtn">刷新数据</button>
       </div>
     </div>
   </header>
   <main class="wrap">
-    {error_html}
+    <div id="errorBox">{error_html}</div>
     <div class="metrics">
-      {_metric("状态", status_text)}
-      {_metric("市场", snapshot["markets"])}
-      {_metric("交易对", snapshot["pairs"])}
-      {_metric("机会", snapshot["opportunities"])}
+      {_metric("状态", status_text, "statusValue")}
+      {_metric("市场", snapshot["markets"], "marketsValue")}
+      {_metric("交易对", snapshot["pairs"], "pairsValue")}
+      {_metric("机会", snapshot["opportunities"], "opportunitiesValue")}
     </div>
-    <p>最近扫描：{escape(str(snapshot["scanned_at"] or "尚未完成"))}</p>
-    <p>最近盘口事件：{escape(str(snapshot["last_event_at"] or "尚未收到"))}</p>
     <section>
       <h2>最近套利机会</h2>
-      {_opportunity_table(opportunities)}
+      <div id="opportunityTable">{_opportunity_table(opportunities)}</div>
     </section>
     <section>
       <h2>纸面模拟成交</h2>
-      {_trade_table(trades)}
+      <div id="tradeTable">{_trade_table(trades)}</div>
     </section>
   </main>
   <script>
+    function setText(id, value) {{
+      document.getElementById(id).textContent = value;
+    }}
+    async function refreshDashboard() {{
+      const response = await fetch('/api/dashboard');
+      const payload = await response.json();
+      setText('statusValue', payload.status_text);
+      setText('marketsValue', payload.status.markets);
+      setText('pairsValue', payload.status.pairs);
+      setText('opportunitiesValue', payload.status.opportunities);
+      document.getElementById('errorBox').innerHTML = payload.error_html;
+      document.getElementById('opportunityTable').innerHTML = payload.opportunities_html;
+      document.getElementById('tradeTable').innerHTML = payload.trades_html;
+    }}
     async function triggerScan() {{
       const btn = document.getElementById('scanBtn');
       btn.disabled = true;
       btn.textContent = '扫描中';
       await fetch('/api/scan', {{ method: 'POST' }});
-      setTimeout(() => location.reload(), 2000);
+      setTimeout(async () => {{
+        await refreshDashboard();
+        btn.disabled = false;
+        btn.textContent = '触发扫描';
+      }}, 2000);
     }}
     document.getElementById('scanBtn').addEventListener('click', triggerScan);
-    document.getElementById('refreshBtn').addEventListener('click', () => location.reload());
-    setInterval(() => location.reload(), 5000);
+    document.getElementById('refreshBtn').addEventListener('click', refreshDashboard);
+    setInterval(refreshDashboard, 5000);
   </script>
 </body>
 </html>"""
 
 
-def _metric(label: str, value: object) -> str:
-    return f"<div class='metric'><div class='label'>{escape(label)}</div><div class='value'>{escape(str(value))}</div></div>"
+def dashboard_payload(state: WebState) -> dict:
+    snapshot = state.snapshot()
+    opportunities = state.store.latest_opportunities(10)
+    trades = state.store.latest_trades(10)
+    error_html = f"<p class='error'>{escape(snapshot['error'])}</p>" if snapshot["error"] else ""
+    return {
+        "status": snapshot,
+        "status_text": status_label(snapshot),
+        "error_html": error_html,
+        "opportunities_html": _opportunity_table(opportunities),
+        "trades_html": _trade_table(trades),
+    }
+
+
+def status_label(snapshot: dict) -> str:
+    if snapshot["running"] and snapshot["realtime"]:
+        return "实时监听中"
+    if snapshot["running"]:
+        return "扫描中"
+    if snapshot["error"]:
+        return "监听异常"
+    return "未启动"
+
+
+def _metric(label: str, value: object, element_id: str) -> str:
+    return (
+        f"<div class='metric'><div class='label'>{escape(label)}</div>"
+        f"<div class='value' id='{escape(element_id)}'>{escape(str(value))}</div></div>"
+    )
 
 
 def format_standard_time(value: datetime) -> str:
