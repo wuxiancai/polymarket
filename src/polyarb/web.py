@@ -9,10 +9,13 @@ from html import escape
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 from .config import Config
 from .runner import PaperRunner, ScanResult
 from .store import PaperStore
+
+DISPLAY_TZ = ZoneInfo("Asia/Shanghai")
 
 
 @dataclass
@@ -53,7 +56,7 @@ class WebState:
             "markets": len(result.markets) if result else 0,
             "pairs": result.pairs if result else 0,
             "opportunities": len(result.opportunities) if result else 0,
-            "scanned_at": result.scanned_at.isoformat() if result else None,
+            "scanned_at": format_standard_time(result.scanned_at) if result else None,
         }
 
 
@@ -285,6 +288,10 @@ def render_dashboard(state: WebState) -> str:
 
 def _metric(label: str, value: object) -> str:
     return f"<div class='metric'><div class='label'>{escape(label)}</div><div class='value'>{escape(str(value))}</div></div>"
+
+
+def format_standard_time(value: datetime) -> str:
+    return value.astimezone(DISPLAY_TZ).replace(microsecond=0).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def _opportunity_table(rows: list) -> str:

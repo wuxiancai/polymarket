@@ -73,3 +73,9 @@ Added local Web dashboard and one-click scripts.
   - `.venv/`
   - `data/*.sqlite3`
   - Python caches and pytest caches
+
+## 2026-06-27 Time display update
+
+- Web dashboard `最近扫描` now displays standard second-precision Beijing time:
+  `YYYY-MM-DD HH:MM:SS`.
+- Removed microseconds and ISO offset from the dashboard/API status timestamp.
