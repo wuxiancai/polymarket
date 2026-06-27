@@ -186,6 +186,7 @@ class PolyarbHandler(BaseHTTPRequestHandler):
 def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
     panels = _as_states(states)
     error_html = _error_html(panels)
+    portfolio = _portfolio_payload(panels)
     asset_sections = "\n".join(_asset_section(state) for state in panels)
     return f"""<!doctype html>
 <html lang="zh-CN">
@@ -251,6 +252,13 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
       gap: 12px;
       margin-bottom: 18px;
     }}
+    .portfolio-grid {{
+      display: grid;
+      grid-template-columns: repeat(4, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: 12px;
+    }}
+    .portfolio-detail {{ margin-top: 12px; overflow-x: auto; }}
     .asset-panel {{ margin-bottom: 56px; }}
     .asset-title {{ margin: 0 0 14px; font-size: 22px; line-height: 1.2; }}
     .metric, section {{
@@ -280,6 +288,7 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
     @media (max-width: 760px) {{
       .top {{ align-items: flex-start; flex-direction: column; padding: 18px 0; }}
       .metrics {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+      .portfolio-grid {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
       table {{ min-width: 760px; }}
       section {{ overflow-x: auto; }}
     }}
@@ -300,6 +309,14 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
   </header>
   <main class="wrap">
     <div id="errorBox">{error_html}</div>
+    <section>
+      <h2>收益概览</h2>
+      <div id="portfolioSummary">{portfolio["summary_html"]}</div>
+    </section>
+    <section>
+      <h2>纸面模拟持仓</h2>
+      <div id="positionTable">{portfolio["positions_html"]}</div>
+    </section>
     {asset_sections}
   </main>
   <script>
@@ -310,6 +327,8 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
       const response = await fetch('/api/dashboard');
       const payload = await response.json();
       document.getElementById('errorBox').innerHTML = payload.error_html;
+      document.getElementById('portfolioSummary').innerHTML = payload.portfolio.summary_html;
+      document.getElementById('positionTable').innerHTML = payload.portfolio.positions_html;
       for (const asset of payload.assets) {{
         setText(asset.symbol + 'StatusValue', asset.status_text);
         setText(asset.symbol + 'MarketsValue', asset.status.markets);
@@ -342,12 +361,127 @@ def dashboard_payload(states: Union[WebState, list[WebState]]) -> dict:
     panels = _as_states(states)
     return {
         "error_html": _error_html(panels),
+        "portfolio": _portfolio_payload(panels),
         "assets": [_asset_payload(state) for state in panels],
     }
 
 
 def _as_states(states: Union[WebState, list[WebState]]) -> list[WebState]:
     return states if isinstance(states, list) else [states]
+
+
+def _portfolio_payload(states: list[WebState]) -> dict:
+    if not states:
+        return {
+            "summary_html": "<div class='empty'>暂无资产配置。</div>",
+            "positions_html": "<div class='empty'>暂无纸面持仓。</div>",
+        }
+    store = states[0].store
+    positions = store.latest_positions(100)
+    asset_summaries = []
+    total_cost = 0.0
+    total_profit = 0.0
+    for state in states:
+        rows = _filter_rows_by_asset(positions, state.asset)
+        cost = _sum_float(rows, "total_cost")
+        profit = _sum_float(rows, "guaranteed_profit")
+        allocation = state.config.initial_capital_usdt * state.asset.allocation_ratio
+        asset_summaries.append(
+            {
+                "symbol": state.asset.symbol,
+                "allocation": allocation,
+                "used": cost,
+                "available": allocation - cost,
+                "profit": profit,
+                "return_rate": _rate(profit, allocation),
+                "positions": len(rows),
+            }
+        )
+        total_cost += cost
+        total_profit += profit
+    total_capital = states[0].config.initial_capital_usdt
+    summary = {
+        "initial_capital": total_capital,
+        "used": total_cost,
+        "available": total_capital - total_cost,
+        "profit": total_profit,
+        "return_rate": _rate(total_profit, total_capital),
+        "assets": asset_summaries,
+    }
+    return {
+        "summary": summary,
+        "summary_html": _portfolio_summary_html(summary),
+        "positions_html": _position_table(positions, states),
+    }
+
+
+def _portfolio_summary_html(summary: dict) -> str:
+    metrics = (
+        "<div class='portfolio-grid'>"
+        f"{_metric('初始本金', _money(summary['initial_capital']), 'initialCapitalValue')}"
+        f"{_metric('已用本金', _money(summary['used']), 'usedCapitalValue')}"
+        f"{_metric('累计保证收益', _signed_money(summary['profit']), 'profitValue')}"
+        f"{_metric('收益率', _percent(summary['return_rate']), 'returnRateValue')}"
+        "</div>"
+    )
+    body = []
+    for asset in summary["assets"]:
+        body.append(
+            "<tr>"
+            f"<td>{escape(str(asset['symbol']))}</td>"
+            f"<td>{_money(asset['allocation'])}</td>"
+            f"<td>{_money(asset['used'])}</td>"
+            f"<td>{_money(asset['available'])}</td>"
+            f"<td>{_signed_money(asset['profit'])}</td>"
+            f"<td>{_percent(asset['return_rate'])}</td>"
+            f"<td>{escape(str(asset['positions']))}</td>"
+            "</tr>"
+        )
+    detail = (
+        "<div class='portfolio-detail'><table><thead><tr>"
+        "<th>币种</th><th>分配本金</th><th>已用本金</th><th>剩余本金</th>"
+        "<th>保证收益</th><th>收益率</th><th>持仓数</th>"
+        "</tr></thead><tbody>"
+        + "".join(body)
+        + "</tbody></table></div>"
+    )
+    return metrics + detail
+
+
+def _position_table(rows: list, states: list[WebState]) -> str:
+    if not rows:
+        return "<div class='empty'>暂无纸面持仓。</div>"
+    body = []
+    for row in rows:
+        asset = _asset_symbol_for_row(row, states)
+        body.append(
+            "<tr>"
+            f"<td>{escape(asset)}</td>"
+            f"<td>{escape(str(row.get('pair_key', '')))}</td>"
+            f"<td>YES: {escape(str(row.get('yes_question', '')))}<br>NO: {escape(str(row.get('no_question', '')))}</td>"
+            f"<td>{_number(row.get('shares', 0))}</td>"
+            f"<td>{_money(row.get('total_cost', 0))}</td>"
+            f"<td>{_money(row.get('min_payout', 0))}</td>"
+            f"<td>{_signed_money(row.get('guaranteed_profit', 0))}</td>"
+            f"<td>{escape(str(row.get('detected_at', '')))}</td>"
+            "</tr>"
+        )
+    return (
+        "<table><thead><tr><th>币种</th><th>交易对</th><th>持仓腿</th><th>份额</th>"
+        "<th>成本</th><th>最低赔付</th><th>保证收益</th><th>开仓时间</th></tr></thead><tbody>"
+        + "".join(body)
+        + "</tbody></table>"
+    )
+
+
+def _asset_symbol_for_row(row: dict, states: list[WebState]) -> str:
+    for state in states:
+        needle = state.asset.title_name.lower()
+        yes_question = str(row.get("yes_question", "")).lower()
+        no_question = str(row.get("no_question", "")).lower()
+        if needle in yes_question or needle in no_question:
+            return state.asset.symbol
+    return "-"
 
 
 def _asset_section(state: WebState) -> str:
@@ -423,6 +557,53 @@ def _metric(label: str, value: object, element_id: str) -> str:
     )
 
 
+def _sum_float(rows: list, key: str) -> float:
+    total = 0.0
+    for row in rows:
+        try:
+            total += float(row.get(key) or 0)
+        except (TypeError, ValueError):
+            continue
+    return total
+
+
+def _rate(numerator: float, denominator: float) -> float:
+    return 0.0 if denominator == 0 else numerator / denominator
+
+
+def _money(value: object) -> str:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        number = 0.0
+    return f"{number:,.2f} USDT"
+
+
+def _signed_money(value: object) -> str:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        number = 0.0
+    sign = "+" if number >= 0 else "-"
+    return f"{sign}{abs(number):,.2f} USDT"
+
+
+def _percent(value: object) -> str:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        number = 0.0
+    return f"{number * 100:.2f}%"
+
+
+def _number(value: object) -> str:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        number = 0.0
+    return f"{number:,.4f}"
+
+
 def format_standard_time(value: datetime) -> str:
     return value.astimezone(DISPLAY_TZ).replace(microsecond=0).strftime("%Y-%m-%d %H:%M:%S")
 
@@ -454,10 +635,16 @@ def _trade_table(rows: list) -> str:
         body.append(
             "<tr>"
             f"<td>{escape(str(row.get('pair_key', '')))}</td>"
-            f"<td>{escape(str(row.get('shares', '')))}</td>"
-            f"<td>{escape(str(row.get('total_cost', '')))}</td>"
-            f"<td>{escape(str(row.get('guaranteed_profit', '')))}</td>"
+            f"<td>YES: {escape(str(row.get('yes_question', '')))}<br>NO: {escape(str(row.get('no_question', '')))}</td>"
+            f"<td>{_number(row.get('shares', 0))}</td>"
+            f"<td>{_money(row.get('total_cost', 0))}</td>"
+            f"<td>{_signed_money(row.get('guaranteed_profit', 0))}</td>"
             f"<td>{escape(str(row.get('detected_at', '')))}</td>"
             "</tr>"
         )
-    return "<table><thead><tr><th>交易对</th><th>份额</th><th>成本</th><th>保证利润</th><th>时间</th></tr></thead><tbody>" + "".join(body) + "</tbody></table>"
+    return (
+        "<table><thead><tr><th>交易对</th><th>持仓腿</th><th>份额</th><th>成本</th>"
+        "<th>保证收益</th><th>时间</th></tr></thead><tbody>"
+        + "".join(body)
+        + "</tbody></table>"
+    )

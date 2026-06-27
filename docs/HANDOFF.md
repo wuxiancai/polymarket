@@ -129,3 +129,21 @@ Added local Web dashboard and one-click scripts.
     verification.
   - Local `--no-auto-scan` Web check confirmed `ETH 套利模拟` and `ETHStatusValue`
     render in the page HTML, with no `location.reload`.
+
+## 2026-06-27 Paper portfolio dashboard update
+
+- Added a Web `收益概览` block:
+  - default initial capital: `10000 USDT`;
+  - BTC default allocation: `70%`;
+  - ETH default allocation: `30%`;
+  - displays used capital, remaining capital, cumulative guaranteed profit, and
+    return rate.
+- Added a Web `纸面模拟持仓` block showing paper position legs, shares, cost,
+  minimum payout, guaranteed profit, and opened time.
+- Profit is calculated from executed paper trades' guaranteed profit. The page
+  does not mark unsettled positions to live market prices.
+- `paper_trades` now stores yes/no token ids and yes/no question text. Existing
+  SQLite databases are migrated in-place by `PaperStore.initialize()`.
+- `PAPER_INITIAL_CAPITAL_USDT` can override the default capital.
+- Verification:
+  - `python3 -m pytest -p no:cacheprovider tests -q`: 18 passed.

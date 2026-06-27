@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import sqlite3
 
 from polyarb.models import ArbOpportunity
 from polyarb.store import PaperStore
@@ -36,3 +37,33 @@ def test_paper_store_records_opportunity_and_trade(tmp_path):
     assert len(rows) == 1
     assert rows[0]["pair_key"] == "pair-1"
     assert rows[0]["guaranteed_profit"] == 9.0
+    assert rows[0]["yes_question"] == "Will Bitcoin reach $70,000 in June?"
+    assert rows[0]["no_question"] == "Will Bitcoin reach $70,000 June 22-28?"
+
+
+def test_paper_store_migrates_existing_trade_table(tmp_path):
+    db_path = tmp_path / "paper.sqlite3"
+    with sqlite3.connect(db_path) as conn:
+        conn.executescript(
+            """
+            create table paper_trades (
+                id integer primary key autoincrement,
+                pair_key text not null,
+                yes_market_id text not null,
+                no_market_id text not null,
+                shares real not null,
+                total_cost real not null,
+                min_payout real not null,
+                guaranteed_profit real not null,
+                detected_at text not null
+            );
+            """
+        )
+
+    store = PaperStore(db_path)
+    store.initialize()
+
+    with sqlite3.connect(db_path) as conn:
+        columns = {row[1] for row in conn.execute("pragma table_info(paper_trades)").fetchall()}
+
+    assert {"yes_token_id", "yes_question", "no_token_id", "no_question"}.issubset(columns)

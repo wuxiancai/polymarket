@@ -19,6 +19,7 @@ class Config:
     refresh_seconds: int = 30
     cooldown_seconds: int = 30
     websocket_url: str = "wss://ws-subscriptions-clob.polymarket.com/ws/market"
+    initial_capital_usdt: float = 10000.0
 
     @property
     def slippage_buffer(self) -> float:
@@ -42,6 +43,7 @@ class Config:
             refresh_seconds=_int_env("REFRESH_SECONDS", 30),
             cooldown_seconds=_int_env("COOLDOWN_SECONDS", 30),
             websocket_url=os.getenv("POLYMARKET_WS_URL", "wss://ws-subscriptions-clob.polymarket.com/ws/market"),
+            initial_capital_usdt=_float_env("PAPER_INITIAL_CAPITAL_USDT", 10000.0),
         )
 
 

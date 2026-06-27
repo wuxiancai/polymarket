@@ -41,7 +41,11 @@ class PaperStore:
                     id integer primary key autoincrement,
                     pair_key text not null,
                     yes_market_id text not null,
+                    yes_token_id text not null default '',
+                    yes_question text not null default '',
                     no_market_id text not null,
+                    no_token_id text not null default '',
+                    no_question text not null default '',
                     shares real not null,
                     total_cost real not null,
                     min_payout real not null,
@@ -52,6 +56,7 @@ class PaperStore:
                 create index if not exists idx_trades_detected_at on paper_trades(detected_at);
                 """
             )
+            self._ensure_paper_trade_columns(conn)
 
     def record_opportunity(self, opportunity: ArbOpportunity) -> None:
         with self._connect() as conn:
@@ -94,15 +99,20 @@ class PaperStore:
             conn.execute(
                 """
                 insert into paper_trades (
-                    pair_key, yes_market_id, no_market_id, shares, total_cost,
-                    min_payout, guaranteed_profit, detected_at
+                    pair_key, yes_market_id, yes_token_id, yes_question,
+                    no_market_id, no_token_id, no_question, shares,
+                    total_cost, min_payout, guaranteed_profit, detected_at
                 )
-                values (?, ?, ?, ?, ?, ?, ?, ?)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     opportunity.pair_key,
                     opportunity.yes_market_id,
+                    opportunity.yes_token_id,
+                    opportunity.yes_question,
                     opportunity.no_market_id,
+                    opportunity.no_token_id,
+                    opportunity.no_question,
                     opportunity.shares,
                     opportunity.total_cost,
                     opportunity.min_payout,
@@ -123,6 +133,9 @@ class PaperStore:
             ).fetchall()
         return [dict(row) for row in rows]
 
+    def latest_positions(self, limit: int = 50) -> List[Dict[str, object]]:
+        return self.latest_trades(limit)
+
     def latest_opportunities(self, limit: int = 20) -> List[Dict[str, object]]:
         with self._connect() as conn:
             rows = conn.execute(
@@ -139,3 +152,15 @@ class PaperStore:
         conn = sqlite3.connect(self.path)
         conn.row_factory = sqlite3.Row
         return conn
+
+    def _ensure_paper_trade_columns(self, conn: sqlite3.Connection) -> None:
+        existing = {row["name"] for row in conn.execute("pragma table_info(paper_trades)").fetchall()}
+        columns = {
+            "yes_token_id": "text not null default ''",
+            "yes_question": "text not null default ''",
+            "no_token_id": "text not null default ''",
+            "no_question": "text not null default ''",
+        }
+        for name, definition in columns.items():
+            if name not in existing:
+                conn.execute(f"alter table paper_trades add column {name} {definition}")

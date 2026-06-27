@@ -13,10 +13,11 @@ class AssetSpec:
     symbol: str
     tag_slug: str
     title_name: str
+    allocation_ratio: float
 
 
-BTC_ASSET = AssetSpec(symbol="BTC", tag_slug="bitcoin", title_name="Bitcoin")
-ETH_ASSET = AssetSpec(symbol="ETH", tag_slug="ethereum", title_name="Ethereum")
+BTC_ASSET = AssetSpec(symbol="BTC", tag_slug="bitcoin", title_name="Bitcoin", allocation_ratio=0.70)
+ETH_ASSET = AssetSpec(symbol="ETH", tag_slug="ethereum", title_name="Ethereum", allocation_ratio=0.30)
 DEFAULT_ASSETS = (BTC_ASSET, ETH_ASSET)
 
 

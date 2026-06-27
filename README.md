@@ -73,6 +73,8 @@ sudo systemctl stop polyarb
 页面会显示：
 
 - 当前扫描状态
+- 收益概览：默认初始本金、BTC/ETH 分配本金、已用本金、累计保证收益、收益率
+- 纸面模拟持仓：每笔纸面成交形成的两腿持仓、成本、最低赔付和保证收益
 - 已过滤后的 BTC / ETH 市场数量
 - 可分析的确定性交易对数量
 - 最近套利机会
@@ -122,6 +124,7 @@ MIN_ARBITRAGE_DEPTH_USD=100
 SLIPPAGE_BUFFER_CENTS=2
 MIN_INTERVAL_MINUTES=15
 ALLOW_CURRENT_MONTH_ONLY=true
+PAPER_INITIAL_CAPITAL_USDT=10000
 REFRESH_SECONDS=30
 POLYARB_DB=data/paper.sqlite3
 HOST=0.0.0.0
@@ -148,3 +151,5 @@ PORT=8888 SERVICE_NAME=polyarb bash start.sh
 - Web 页面使用 Python 标准库 HTTP 服务，不依赖前端框架。
 - Web 页面通过 `/api/dashboard` 局部更新数据，避免整页刷新抖动。
 - 纸面交易默认保存到 `data/paper.sqlite3`。
+- 收益统计默认初始本金为 `10000 USDT`，BTC 分配 `70%`，ETH 分配 `30%`。
+- 页面收益按已执行纸面成交的累计保证利润计算，不做未结算市值浮盈浮亏。
