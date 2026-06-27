@@ -79,3 +79,13 @@ Added local Web dashboard and one-click scripts.
 - Web dashboard `最近扫描` now displays standard second-precision Beijing time:
   `YYYY-MM-DD HH:MM:SS`.
 - Removed microseconds and ISO offset from the dashboard/API status timestamp.
+
+## 2026-06-27 Realtime market data update
+
+- Web dashboard background scanner now uses Polymarket CLOB WebSocket market
+  channel after REST bootstrapping.
+- REST is still used for market discovery and initial order book snapshots.
+- Web status now reports `实时监听中` while the WebSocket listener is active.
+- Dashboard/API expose `last_event_at` for the latest received order book event.
+- Added tests for WebSocket subscription payload and `price_change` order book
+  updates.

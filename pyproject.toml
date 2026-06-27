@@ -7,7 +7,7 @@ name = "polyarb"
 version = "0.1.0"
 description = "Polymarket BTC short-cycle arbitrage paper trading scanner"
 requires-python = ">=3.9"
-dependencies = []
+dependencies = ["websockets>=12"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]

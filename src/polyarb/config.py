@@ -18,6 +18,7 @@ class Config:
     database_path: Path = Path("data/paper.sqlite3")
     refresh_seconds: int = 30
     cooldown_seconds: int = 30
+    websocket_url: str = "wss://ws-subscriptions-clob.polymarket.com/ws/market"
 
     @property
     def slippage_buffer(self) -> float:
@@ -40,6 +41,7 @@ class Config:
             database_path=Path(os.getenv("POLYARB_DB", "data/paper.sqlite3")),
             refresh_seconds=_int_env("REFRESH_SECONDS", 30),
             cooldown_seconds=_int_env("COOLDOWN_SECONDS", 30),
+            websocket_url=os.getenv("POLYMARKET_WS_URL", "wss://ws-subscriptions-clob.polymarket.com/ws/market"),
         )
 
 

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import threading
-import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from html import escape
@@ -12,7 +12,7 @@ from typing import Optional
 from zoneinfo import ZoneInfo
 
 from .config import Config
-from .runner import PaperRunner, ScanResult
+from .runner import PaperRunner, RealtimePaperRunner, ScanResult
 from .store import PaperStore
 
 DISPLAY_TZ = ZoneInfo("Asia/Shanghai")
@@ -26,6 +26,8 @@ class WebState:
     latest_result: Optional[ScanResult] = None
     latest_error: Optional[str] = None
     running: bool = False
+    realtime: bool = False
+    last_event_at: Optional[datetime] = None
     lock: threading.Lock = field(default_factory=threading.Lock)
 
     def run_scan(self) -> None:
@@ -45,18 +47,55 @@ class WebState:
             with self.lock:
                 self.running = False
 
+    def run_realtime(self) -> None:
+        with self.lock:
+            if self.running:
+                return
+            self.running = True
+            self.realtime = True
+            self.latest_error = None
+        realtime_runner = RealtimePaperRunner(self.config)
+        self.runner = realtime_runner
+        try:
+            asyncio.run(
+                realtime_runner.run_forever(
+                    on_result=self.update_result,
+                    on_event=self.update_event,
+                )
+            )
+        except Exception as exc:
+            with self.lock:
+                self.latest_error = str(exc)
+                self.realtime = False
+        finally:
+            with self.lock:
+                self.running = False
+
+    def update_result(self, result: ScanResult) -> None:
+        with self.lock:
+            self.latest_result = result
+            self.latest_error = None
+
+    def update_event(self, event_at: datetime) -> None:
+        with self.lock:
+            self.last_event_at = event_at
+
     def snapshot(self) -> dict:
         with self.lock:
             result = self.latest_result
             error = self.latest_error
             running = self.running
+            realtime = self.realtime
+            last_event_at = self.last_event_at
         return {
             "running": running,
+            "realtime": realtime,
             "error": error,
             "markets": len(result.markets) if result else 0,
             "pairs": result.pairs if result else 0,
             "opportunities": len(result.opportunities) if result else 0,
             "scanned_at": format_standard_time(result.scanned_at) if result else None,
+            "last_event_at": format_standard_time(last_event_at) if last_event_at else None,
         }
 
 
@@ -66,7 +105,7 @@ def serve(config: Config, host: str = "127.0.0.1", port: int = 8787, auto_scan: 
     runner = PaperRunner(config)
     state = WebState(config=config, store=store, runner=runner)
     if auto_scan:
-        _start_background_loop(state)
+        _start_realtime_loop(state)
 
     class Handler(PolyarbHandler):
         web_state = state
@@ -76,13 +115,8 @@ def serve(config: Config, host: str = "127.0.0.1", port: int = 8787, auto_scan: 
     server.serve_forever()
 
 
-def _start_background_loop(state: WebState) -> None:
-    def loop() -> None:
-        while True:
-            state.run_scan()
-            time.sleep(state.config.refresh_seconds)
-
-    thread = threading.Thread(target=loop, name="polyarb-scanner", daemon=True)
+def _start_realtime_loop(state: WebState) -> None:
+    thread = threading.Thread(target=state.run_realtime, name="polyarb-realtime-scanner", daemon=True)
     thread.start()
 
 
@@ -139,7 +173,14 @@ def render_dashboard(state: WebState) -> str:
     snapshot = state.snapshot()
     trades = state.store.latest_trades(10)
     opportunities = state.store.latest_opportunities(10)
-    status_text = "扫描中" if snapshot["running"] else "等待/空闲"
+    if snapshot["running"] and snapshot["realtime"]:
+        status_text = "实时监听中"
+    elif snapshot["running"]:
+        status_text = "扫描中"
+    elif snapshot["error"]:
+        status_text = "监听异常"
+    else:
+        status_text = "未启动"
     error_html = f"<p class='error'>{escape(snapshot['error'])}</p>" if snapshot["error"] else ""
     return f"""<!doctype html>
 <html lang="zh-CN">
@@ -259,6 +300,7 @@ def render_dashboard(state: WebState) -> str:
       {_metric("机会", snapshot["opportunities"])}
     </div>
     <p>最近扫描：{escape(str(snapshot["scanned_at"] or "尚未完成"))}</p>
+    <p>最近盘口事件：{escape(str(snapshot["last_event_at"] or "尚未收到"))}</p>
     <section>
       <h2>最近套利机会</h2>
       {_opportunity_table(opportunities)}
@@ -278,9 +320,7 @@ def render_dashboard(state: WebState) -> str:
     }}
     document.getElementById('scanBtn').addEventListener('click', triggerScan);
     document.getElementById('refreshBtn').addEventListener('click', () => location.reload());
-    setInterval(() => fetch('/api/status').then(r => r.json()).then(s => {{
-      if (!s.running && s.scanned_at) location.reload();
-    }}).catch(() => {{}}), 30000);
+    setInterval(() => location.reload(), 5000);
   </script>
 </body>
 </html>"""

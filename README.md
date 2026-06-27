@@ -64,12 +64,13 @@ http://127.0.0.1:8787
 页面会显示：
 
 - 当前扫描状态
+- 最近盘口事件时间
 - 已过滤后的 BTC 市场数量
 - 可分析的确定性交易对数量
 - 最近套利机会
 - 纸面模拟成交记录
 
-页面上的“触发扫描”按钮会立即启动一次只读扫描；后台也会按 `REFRESH_SECONDS` 周期持续扫描。
+页面上的“触发扫描”按钮会立即启动一次只读扫描；后台默认使用 Polymarket CLOB WebSocket 实时监听盘口更新。
 
 ## 命令行用法
 
@@ -128,7 +129,7 @@ SLIPPAGE_BUFFER_CENTS=3 MIN_ARBITRAGE_DEPTH_USD=500 bash start.sh
 ## 当前实现
 
 - 市场发现使用 Polymarket Gamma events。
-- 盘口深度使用 Polymarket CLOB REST `/book`。
+- 启动时用 Polymarket CLOB REST `/book` 初始化盘口深度。
+- 启动后用 Polymarket CLOB WebSocket Market Channel 实时接收 `book` / `price_change` 盘口更新。
 - Web 页面使用 Python 标准库 HTTP 服务，不依赖前端框架。
-- 连续模式当前使用 REST 轮询；`src/polyarb/websocket.py` 已保留 WebSocket 订阅结构，后续可切换成实时流。
 - 纸面交易默认保存到 `data/paper.sqlite3`。

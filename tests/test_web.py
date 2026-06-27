@@ -20,6 +20,18 @@ def test_dashboard_renders_chinese_status(tmp_path):
     assert "暂无纸面成交" in html
 
 
+def test_dashboard_shows_realtime_listening_status(tmp_path):
+    config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
+    store = PaperStore(config.database_path)
+    store.initialize()
+    state = WebState(config=config, store=store, runner=PaperRunner(config), running=True, realtime=True)
+
+    html = render_dashboard(state)
+
+    assert "实时监听中" in html
+    assert "最近盘口事件" in html
+
+
 def test_standard_time_is_precise_to_seconds():
     value = datetime(2026, 6, 27, 12, 39, 35, 953435, tzinfo=timezone.utc)
 
