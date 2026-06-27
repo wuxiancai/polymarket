@@ -109,3 +109,23 @@ Added local Web dashboard and one-click scripts.
   - `sudo systemctl status polyarb`
   - `sudo journalctl -u polyarb -f`
   - `sudo systemctl restart polyarb`
+
+## 2026-06-27 ETH dashboard panel update
+
+- Web dashboard now renders two same-layout asset panels:
+  - `BTC 套利模拟`
+  - `ETH 套利模拟`
+- The Web runtime starts separate read-only realtime listeners for BTC and ETH.
+- Gamma market discovery is generalized from hard-coded Bitcoin to asset specs:
+  - BTC uses tag `bitcoin` and question prefix `Bitcoin`.
+  - ETH uses tag `ethereum` and question prefix `Ethereum`.
+- Parser now accepts Ethereum `Up or Down`, `reach`, and `dip` markets with the
+  same short-cycle filters and risk rules as BTC.
+- `/api/dashboard` now returns an `assets` array so the page can update BTC and
+  ETH sections independently without full-page refresh.
+- Verification:
+  - `python3 -m pytest -p no:cacheprovider tests -q`: 16 passed.
+  - Read-only Gamma check found BTC 32 markets and ETH 29 markets at the time of
+    verification.
+  - Local `--no-auto-scan` Web check confirmed `ETH 套利模拟` and `ETHStatusValue`
+    render in the page HTML, with no `location.reload`.

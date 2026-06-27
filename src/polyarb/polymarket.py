@@ -8,7 +8,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from .config import Config
-from .models import Market, OrderBook
+from .models import BTC_ASSET, AssetSpec, Market, OrderBook
 from .parser import parse_market
 
 
@@ -20,11 +20,11 @@ class GammaClient:
     def __init__(self, config: Config):
         self.config = config
 
-    def bitcoin_markets(self, now: Optional[datetime] = None) -> List[Market]:
+    def markets_for_asset(self, asset: AssetSpec, now: Optional[datetime] = None) -> List[Market]:
         now_utc = now or datetime.now(timezone.utc)
         params = urlencode(
             {
-                "tag_slug": "bitcoin",
+                "tag_slug": asset.tag_slug,
                 "closed": "false",
                 "active": "true",
                 "limit": "500",
@@ -34,12 +34,15 @@ class GammaClient:
         markets: List[Market] = []
         for event in events:
             for raw_market in event.get("markets") or []:
-                market = self._parse_market(event, raw_market, now_utc)
+                market = self._parse_market(event, raw_market, now_utc, asset)
                 if market is not None:
                     markets.append(market)
         return markets
 
-    def _parse_market(self, event: dict, raw: dict, now: datetime) -> Optional[Market]:
+    def bitcoin_markets(self, now: Optional[datetime] = None) -> List[Market]:
+        return self.markets_for_asset(BTC_ASSET, now)
+
+    def _parse_market(self, event: dict, raw: dict, now: datetime, asset: AssetSpec) -> Optional[Market]:
         if not (raw.get("active") is True and raw.get("closed") is False and raw.get("acceptingOrders") is True):
             return None
         try:
@@ -49,7 +52,7 @@ class GammaClient:
             return None
         if outcomes != ["Yes", "No"] or len(token_ids) != 2:
             return None
-        parsed = parse_market(raw.get("question") or "", raw.get("endDate") or "", now, self.config)
+        parsed = parse_market(raw.get("question") or "", raw.get("endDate") or "", now, self.config, asset.title_name)
         if parsed is None:
             return None
         volume = raw.get("volume24hr")

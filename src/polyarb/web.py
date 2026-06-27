@@ -8,10 +8,11 @@ from datetime import datetime, timezone
 from html import escape
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Optional
+from typing import Optional, Union
 from zoneinfo import ZoneInfo
 
 from .config import Config
+from .models import DEFAULT_ASSETS, AssetSpec
 from .runner import PaperRunner, RealtimePaperRunner, ScanResult
 from .store import PaperStore
 
@@ -22,6 +23,7 @@ DISPLAY_TZ = ZoneInfo("Asia/Shanghai")
 class WebState:
     config: Config
     store: PaperStore
+    asset: AssetSpec
     runner: PaperRunner
     latest_result: Optional[ScanResult] = None
     latest_error: Optional[str] = None
@@ -54,7 +56,7 @@ class WebState:
             self.running = True
             self.realtime = True
             self.latest_error = None
-        realtime_runner = RealtimePaperRunner(self.config)
+        realtime_runner = RealtimePaperRunner(self.config, self.asset)
         self.runner = realtime_runner
         try:
             asyncio.run(
@@ -88,6 +90,7 @@ class WebState:
             realtime = self.realtime
             last_event_at = self.last_event_at
         return {
+            "asset": self.asset.symbol,
             "running": running,
             "realtime": realtime,
             "error": error,
@@ -102,13 +105,16 @@ class WebState:
 def serve(config: Config, host: str = "127.0.0.1", port: int = 8787, auto_scan: bool = True) -> None:
     store = PaperStore(config.database_path)
     store.initialize()
-    runner = PaperRunner(config)
-    state = WebState(config=config, store=store, runner=runner)
+    states = [
+        WebState(config=config, store=store, asset=asset, runner=PaperRunner(config, asset))
+        for asset in DEFAULT_ASSETS
+    ]
     if auto_scan:
-        _start_realtime_loop(state)
+        for state in states:
+            _start_realtime_loop(state)
 
     class Handler(PolyarbHandler):
-        web_state = state
+        web_states = states
 
     server = ThreadingHTTPServer((host, port), Handler)
     print(f"Polyarb Web 已启动: http://{host}:{port}")
@@ -121,24 +127,24 @@ def _start_realtime_loop(state: WebState) -> None:
 
 
 class PolyarbHandler(BaseHTTPRequestHandler):
-    web_state: WebState
+    web_states: list[WebState]
 
     def do_GET(self) -> None:
         if self.path == "/" or self.path.startswith("/?"):
-            self._html(render_dashboard(self.web_state))
+            self._html(render_dashboard(self.web_states))
             return
         if self.path == "/api/status":
-            self._json(self.web_state.snapshot())
+            self._json({"assets": [state.snapshot() for state in self.web_states]})
             return
         if self.path == "/api/dashboard":
-            self._json(dashboard_payload(self.web_state))
+            self._json(dashboard_payload(self.web_states))
             return
         if self.path == "/api/report":
             self._json(
                 {
-                    "status": self.web_state.snapshot(),
-                    "trades": self.web_state.store.latest_trades(20),
-                    "opportunities": self.web_state.store.latest_opportunities(20),
+                    "status": {"assets": [state.snapshot() for state in self.web_states]},
+                    "trades": self.web_states[0].store.latest_trades(20),
+                    "opportunities": self.web_states[0].store.latest_opportunities(20),
                 }
             )
             return
@@ -146,8 +152,13 @@ class PolyarbHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         if self.path == "/api/scan":
-            thread = threading.Thread(target=self.web_state.run_scan, name="polyarb-manual-scan", daemon=True)
-            thread.start()
+            for state in self.web_states:
+                thread = threading.Thread(
+                    target=state.run_scan,
+                    name=f"polyarb-{state.asset.symbol.lower()}-manual-scan",
+                    daemon=True,
+                )
+                thread.start()
             self._json({"ok": True, "message": "扫描已触发"})
             return
         self.send_error(HTTPStatus.NOT_FOUND)
@@ -172,18 +183,16 @@ class PolyarbHandler(BaseHTTPRequestHandler):
         self.wfile.write(payload)
 
 
-def render_dashboard(state: WebState) -> str:
-    snapshot = state.snapshot()
-    trades = state.store.latest_trades(10)
-    opportunities = state.store.latest_opportunities(10)
-    status_text = status_label(snapshot)
-    error_html = f"<p class='error'>{escape(snapshot['error'])}</p>" if snapshot["error"] else ""
+def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
+    panels = _as_states(states)
+    error_html = _error_html(panels)
+    asset_sections = "\n".join(_asset_section(state) for state in panels)
     return f"""<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Polyarb BTC 套利模拟系统</title>
+  <title>Polyarb 套利模拟系统</title>
   <style>
     :root {{
       --bg: #f6f7f9;
@@ -242,6 +251,8 @@ def render_dashboard(state: WebState) -> str:
       gap: 12px;
       margin-bottom: 18px;
     }}
+    .asset-panel {{ margin-bottom: 56px; }}
+    .asset-title {{ margin: 0 0 14px; font-size: 22px; line-height: 1.2; }}
     .metric, section {{
       background: var(--panel);
       border: 1px solid var(--line);
@@ -279,7 +290,7 @@ def render_dashboard(state: WebState) -> str:
     <div class="wrap top">
       <div>
         <h1>Polyarb BTC 套利模拟系统</h1>
-        <p>只读 Polymarket 行情，执行纸面模拟交易；不连接钱包，不真实下单。</p>
+        <p>只读 Polymarket BTC / ETH 行情，执行纸面模拟交易；不连接钱包，不真实下单。</p>
       </div>
       <div class="toolbar">
         <button id="scanBtn">触发扫描</button>
@@ -289,20 +300,7 @@ def render_dashboard(state: WebState) -> str:
   </header>
   <main class="wrap">
     <div id="errorBox">{error_html}</div>
-    <div class="metrics">
-      {_metric("状态", status_text, "statusValue")}
-      {_metric("市场", snapshot["markets"], "marketsValue")}
-      {_metric("交易对", snapshot["pairs"], "pairsValue")}
-      {_metric("机会", snapshot["opportunities"], "opportunitiesValue")}
-    </div>
-    <section>
-      <h2>最近套利机会</h2>
-      <div id="opportunityTable">{_opportunity_table(opportunities)}</div>
-    </section>
-    <section>
-      <h2>纸面模拟成交</h2>
-      <div id="tradeTable">{_trade_table(trades)}</div>
-    </section>
+    {asset_sections}
   </main>
   <script>
     function setText(id, value) {{
@@ -311,13 +309,15 @@ def render_dashboard(state: WebState) -> str:
     async function refreshDashboard() {{
       const response = await fetch('/api/dashboard');
       const payload = await response.json();
-      setText('statusValue', payload.status_text);
-      setText('marketsValue', payload.status.markets);
-      setText('pairsValue', payload.status.pairs);
-      setText('opportunitiesValue', payload.status.opportunities);
       document.getElementById('errorBox').innerHTML = payload.error_html;
-      document.getElementById('opportunityTable').innerHTML = payload.opportunities_html;
-      document.getElementById('tradeTable').innerHTML = payload.trades_html;
+      for (const asset of payload.assets) {{
+        setText(asset.symbol + 'StatusValue', asset.status_text);
+        setText(asset.symbol + 'MarketsValue', asset.status.markets);
+        setText(asset.symbol + 'PairsValue', asset.status.pairs);
+        setText(asset.symbol + 'OpportunitiesValue', asset.status.opportunities);
+        document.getElementById(asset.symbol + 'OpportunityTable').innerHTML = asset.opportunities_html;
+        document.getElementById(asset.symbol + 'TradeTable').innerHTML = asset.trades_html;
+      }}
     }}
     async function triggerScan() {{
       const btn = document.getElementById('scanBtn');
@@ -338,18 +338,72 @@ def render_dashboard(state: WebState) -> str:
 </html>"""
 
 
-def dashboard_payload(state: WebState) -> dict:
-    snapshot = state.snapshot()
-    opportunities = state.store.latest_opportunities(10)
-    trades = state.store.latest_trades(10)
-    error_html = f"<p class='error'>{escape(snapshot['error'])}</p>" if snapshot["error"] else ""
+def dashboard_payload(states: Union[WebState, list[WebState]]) -> dict:
+    panels = _as_states(states)
     return {
+        "error_html": _error_html(panels),
+        "assets": [_asset_payload(state) for state in panels],
+    }
+
+
+def _as_states(states: Union[WebState, list[WebState]]) -> list[WebState]:
+    return states if isinstance(states, list) else [states]
+
+
+def _asset_section(state: WebState) -> str:
+    payload = _asset_payload(state)
+    symbol = state.asset.symbol
+    return f"""
+    <div class="asset-panel" id="{escape(symbol)}Panel">
+      <h2 class="asset-title">{escape(symbol)} 套利模拟</h2>
+      <div class="metrics">
+        {_metric("状态", payload["status_text"], f"{symbol}StatusValue")}
+        {_metric("市场", payload["status"]["markets"], f"{symbol}MarketsValue")}
+        {_metric("交易对", payload["status"]["pairs"], f"{symbol}PairsValue")}
+        {_metric("机会", payload["status"]["opportunities"], f"{symbol}OpportunitiesValue")}
+      </div>
+      <section>
+        <h2>最近套利机会</h2>
+        <div id="{escape(symbol)}OpportunityTable">{payload["opportunities_html"]}</div>
+      </section>
+      <section>
+        <h2>纸面模拟成交</h2>
+        <div id="{escape(symbol)}TradeTable">{payload["trades_html"]}</div>
+      </section>
+    </div>"""
+
+
+def _asset_payload(state: WebState) -> dict:
+    snapshot = state.snapshot()
+    opportunities = _filter_rows_by_asset(state.store.latest_opportunities(20), state.asset)[:10]
+    trades = _filter_rows_by_asset(state.store.latest_trades(20), state.asset)[:10]
+    return {
+        "symbol": state.asset.symbol,
         "status": snapshot,
         "status_text": status_label(snapshot),
-        "error_html": error_html,
         "opportunities_html": _opportunity_table(opportunities),
         "trades_html": _trade_table(trades),
     }
+
+
+def _filter_rows_by_asset(rows: list, asset: AssetSpec) -> list:
+    needle = asset.title_name.lower()
+    filtered = []
+    for row in rows:
+        yes_question = str(row.get("yes_question", "")).lower()
+        no_question = str(row.get("no_question", "")).lower()
+        if needle in yes_question or needle in no_question:
+            filtered.append(row)
+    return filtered
+
+
+def _error_html(states: list[WebState]) -> str:
+    errors = []
+    for state in states:
+        snapshot = state.snapshot()
+        if snapshot["error"]:
+            errors.append(f"<p class='error'>{escape(state.asset.symbol)}: {escape(snapshot['error'])}</p>")
+    return "".join(errors)
 
 
 def status_label(snapshot: dict) -> str:

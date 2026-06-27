@@ -9,7 +9,7 @@ from typing import Callable, Dict, List, Optional
 
 from .arbitrage import build_pairs, find_opportunities
 from .config import Config
-from .models import ArbOpportunity, Market, OrderBook
+from .models import BTC_ASSET, AssetSpec, ArbOpportunity, Market, OrderBook
 from .polymarket import ClobClient, GammaClient
 from .store import PaperStore
 from .websocket import apply_market_message, market_subscription_message
@@ -24,9 +24,13 @@ class ScanResult:
 
 
 def scan_once(config: Config) -> ScanResult:
+    return scan_asset_once(config, BTC_ASSET)
+
+
+def scan_asset_once(config: Config, asset: AssetSpec) -> ScanResult:
     gamma = GammaClient(config)
     clob = ClobClient(config)
-    markets = gamma.bitcoin_markets()
+    markets = gamma.markets_for_asset(asset)
     pairs = build_pairs(markets)
     token_ids = [token_id for pair in pairs for token_id in pair.token_ids]
     books = clob.order_books(token_ids)
@@ -40,8 +44,9 @@ def scan_once(config: Config) -> ScanResult:
 
 
 class PaperRunner:
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, asset: AssetSpec = BTC_ASSET):
         self.config = config
+        self.asset = asset
         self.store = PaperStore(config.database_path)
         self.last_execution: Dict[str, float] = {}
 
@@ -52,7 +57,7 @@ class PaperRunner:
             time.sleep(self.config.refresh_seconds)
 
     def run_iteration(self) -> ScanResult:
-        result = scan_once(self.config)
+        result = scan_asset_once(self.config, self.asset)
         for opportunity in result.opportunities:
             self.store.record_opportunity(opportunity)
             if self._should_execute(opportunity):
@@ -70,8 +75,8 @@ class PaperRunner:
 
 
 class RealtimePaperRunner(PaperRunner):
-    def __init__(self, config: Config):
-        super().__init__(config)
+    def __init__(self, config: Config, asset: AssetSpec = BTC_ASSET):
+        super().__init__(config, asset)
         self.gamma = GammaClient(config)
         self.clob = ClobClient(config)
         self.markets: List[Market] = []
@@ -111,7 +116,7 @@ class RealtimePaperRunner(PaperRunner):
                         on_result(result)
 
     def _bootstrap(self) -> None:
-        self.markets = self.gamma.bitcoin_markets()
+        self.markets = self.gamma.markets_for_asset(self.asset)
         pairs = build_pairs(self.markets)
         self.pairs = len(pairs)
         token_ids = [token_id for pair in pairs for token_id in pair.token_ids]

@@ -2,6 +2,7 @@ from pathlib import Path
 from datetime import datetime, timezone
 
 from polyarb.config import Config
+from polyarb.models import BTC_ASSET, ETH_ASSET
 from polyarb.runner import PaperRunner
 from polyarb.store import PaperStore
 from polyarb.web import WebState, dashboard_payload, format_standard_time, render_dashboard
@@ -11,11 +12,15 @@ def test_dashboard_renders_chinese_status(tmp_path):
     config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
     store = PaperStore(config.database_path)
     store.initialize()
-    state = WebState(config=config, store=store, runner=PaperRunner(config))
+    btc = WebState(config=config, store=store, asset=BTC_ASSET, runner=PaperRunner(config, BTC_ASSET))
+    eth = WebState(config=config, store=store, asset=ETH_ASSET, runner=PaperRunner(config, ETH_ASSET))
 
-    html = render_dashboard(state)
+    html = render_dashboard([btc, eth])
 
     assert "Polyarb BTC 套利模拟系统" in html
+    assert "BTC 套利模拟" in html
+    assert "ETH 套利模拟" in html
+    assert "ETHStatusValue" in html
     assert "触发扫描" in html
     assert "暂无纸面成交" in html
     assert "最近扫描" not in html
@@ -27,7 +32,14 @@ def test_dashboard_shows_realtime_listening_status(tmp_path):
     config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
     store = PaperStore(config.database_path)
     store.initialize()
-    state = WebState(config=config, store=store, runner=PaperRunner(config), running=True, realtime=True)
+    state = WebState(
+        config=config,
+        store=store,
+        asset=BTC_ASSET,
+        runner=PaperRunner(config, BTC_ASSET),
+        running=True,
+        realtime=True,
+    )
 
     html = render_dashboard(state)
 
@@ -38,12 +50,22 @@ def test_dashboard_payload_contains_fragments(tmp_path):
     config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
     store = PaperStore(config.database_path)
     store.initialize()
-    state = WebState(config=config, store=store, runner=PaperRunner(config), running=True, realtime=True)
+    btc = WebState(
+        config=config,
+        store=store,
+        asset=BTC_ASSET,
+        runner=PaperRunner(config, BTC_ASSET),
+        running=True,
+        realtime=True,
+    )
+    eth = WebState(config=config, store=store, asset=ETH_ASSET, runner=PaperRunner(config, ETH_ASSET))
 
-    payload = dashboard_payload(state)
+    payload = dashboard_payload([btc, eth])
 
-    assert payload["status_text"] == "实时监听中"
-    assert "暂无纸面成交" in payload["trades_html"]
+    assert payload["assets"][0]["symbol"] == "BTC"
+    assert payload["assets"][0]["status_text"] == "实时监听中"
+    assert payload["assets"][1]["symbol"] == "ETH"
+    assert "暂无纸面成交" in payload["assets"][1]["trades_html"]
 
 
 def test_standard_time_is_precise_to_seconds():

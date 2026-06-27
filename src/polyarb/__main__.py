@@ -24,7 +24,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     report_parser = subparsers.add_parser("report", help="show paper trades and recent opportunities")
     report_parser.add_argument("--limit", type=int, default=20)
 
-    web_parser = subparsers.add_parser("web", help="serve local web dashboard")
+    web_parser = subparsers.add_parser("web", help="serve BTC/ETH web dashboard")
     web_parser.add_argument("--host", default="127.0.0.1")
     web_parser.add_argument("--port", type=int, default=8787)
     web_parser.add_argument("--no-auto-scan", action="store_true", help="start UI without background scanner")

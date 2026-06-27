@@ -30,7 +30,7 @@ SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 mkdir -p data
 
 SERVICE_CONTENT="[Unit]
-Description=Polyarb Polymarket BTC paper arbitrage dashboard
+Description=Polyarb Polymarket BTC/ETH paper arbitrage dashboard
 After=network-online.target
 Wants=network-online.target
 

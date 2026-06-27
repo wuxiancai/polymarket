@@ -59,3 +59,30 @@ def test_parser_accepts_weekly_dip_window():
     assert parsed.kind == "dip"
     assert parsed.period == "week"
     assert parsed.threshold == 50000
+
+
+def test_parser_accepts_ethereum_intraday_market():
+    parsed = parse_market(
+        "Ethereum Up or Down - June 27, 8:00AM-8:15AM ET",
+        "2026-06-27T12:15:00Z",
+        NOW,
+        asset_name="Ethereum",
+    )
+
+    assert parsed is not None
+    assert parsed.kind == "updown"
+    assert parsed.duration_minutes == 15
+
+
+def test_parser_accepts_ethereum_weekly_reach_window():
+    parsed = parse_market(
+        "Will Ethereum reach $3,000 June 22-28?",
+        "2026-06-29T04:00:00Z",
+        NOW,
+        asset_name="Ethereum",
+    )
+
+    assert parsed is not None
+    assert parsed.kind == "reach"
+    assert parsed.period == "week"
+    assert parsed.threshold == 3000

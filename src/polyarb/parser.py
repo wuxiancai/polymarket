@@ -39,6 +39,7 @@ def parse_market(
     end_date: str,
     now: Optional[datetime] = None,
     config: Optional[Config] = None,
+    asset_name: str = "Bitcoin",
 ) -> Optional[ParsedMarket]:
     cfg = config or Config()
     now_utc = _ensure_utc(now or datetime.now(timezone.utc))
@@ -46,9 +47,9 @@ def parse_market(
     if end is None:
         return None
 
-    parsed = _parse_updown(question, end)
+    parsed = _parse_updown(question, end, asset_name)
     if parsed is None:
-        parsed = _parse_threshold(question, end, now_utc, cfg)
+        parsed = _parse_threshold(question, end, now_utc, cfg, asset_name)
     if parsed is None:
         return None
     if parsed.duration_minutes < cfg.min_interval_minutes:
@@ -56,11 +57,12 @@ def parse_market(
     return parsed
 
 
-def _parse_updown(question: str, end: datetime) -> Optional[ParsedMarket]:
-    if "Bitcoin Up or Down" not in question:
+def _parse_updown(question: str, end: datetime, asset_name: str) -> Optional[ParsedMarket]:
+    asset = re.escape(asset_name)
+    if f"{asset_name} Up or Down" not in question:
         return None
     range_match = re.search(
-        r"Bitcoin Up or Down - ([A-Za-z]+) (\d{1,2}), "
+        rf"{asset} Up or Down - ([A-Za-z]+) (\d{{1,2}}), "
         r"(\d{1,2})(?::(\d{2}))?([AP]M)-(\d{1,2})(?::(\d{2}))?([AP]M) ET",
         question,
     )
@@ -73,7 +75,7 @@ def _parse_updown(question: str, end: datetime) -> Optional[ParsedMarket]:
             end_et += timedelta(days=1)
         return _parsed("updown", None, "intraday", start_et.astimezone(timezone.utc), end_et.astimezone(timezone.utc))
 
-    hourly_match = re.search(r"Bitcoin Up or Down - ([A-Za-z]+) (\d{1,2}), (\d{1,2})([AP]M) ET", question)
+    hourly_match = re.search(rf"{asset} Up or Down - ([A-Za-z]+) (\d{{1,2}}), (\d{{1,2}})([AP]M) ET", question)
     if hourly_match:
         month_name, day, hour, ap = hourly_match.groups()
         year = end.astimezone(ET).year
@@ -82,11 +84,18 @@ def _parse_updown(question: str, end: datetime) -> Optional[ParsedMarket]:
     return None
 
 
-def _parse_threshold(question: str, end: datetime, now: datetime, cfg: Config) -> Optional[ParsedMarket]:
+def _parse_threshold(
+    question: str,
+    end: datetime,
+    now: datetime,
+    cfg: Config,
+    asset_name: str,
+) -> Optional[ParsedMarket]:
     kind = None
     amount = None
-    reach = re.search(r"Will Bitcoin (?:reach|hit) \$([0-9,]+|[0-9]+k) ", question, re.IGNORECASE)
-    dip = re.search(r"Will Bitcoin dip to \$([0-9,]+|[0-9]+k) ", question, re.IGNORECASE)
+    asset = re.escape(asset_name)
+    reach = re.search(rf"Will {asset} (?:reach|hit) \$([0-9,]+|[0-9]+k) ", question, re.IGNORECASE)
+    dip = re.search(rf"Will {asset} dip to \$([0-9,]+|[0-9]+k) ", question, re.IGNORECASE)
     if reach:
         kind = "reach"
         amount = _parse_amount(reach.group(1))

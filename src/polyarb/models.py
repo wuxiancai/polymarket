@@ -9,6 +9,18 @@ Level = Tuple[float, float]
 
 
 @dataclass(frozen=True)
+class AssetSpec:
+    symbol: str
+    tag_slug: str
+    title_name: str
+
+
+BTC_ASSET = AssetSpec(symbol="BTC", tag_slug="bitcoin", title_name="Bitcoin")
+ETH_ASSET = AssetSpec(symbol="ETH", tag_slug="ethereum", title_name="Ethereum")
+DEFAULT_ASSETS = (BTC_ASSET, ETH_ASSET)
+
+
+@dataclass(frozen=True)
 class Predicate:
     kind: str
     threshold: Optional[int]

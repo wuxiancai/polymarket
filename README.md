@@ -1,6 +1,6 @@
 # Polyarb
 
-Polyarb 是一个 Polymarket BTC 短周期套利扫描与纸面模拟交易系统。
+Polyarb 是一个 Polymarket BTC / ETH 短周期套利扫描与纸面模拟交易系统。
 
 系统只读取公开行情并执行本地模拟交易：
 
@@ -13,9 +13,9 @@ Polyarb 是一个 Polymarket BTC 短周期套利扫描与纸面模拟交易系�
 
 纳入市场：
 
-- BTC `15m` 及以上的短周期 `Up or Down` 市场
+- BTC / ETH `15m` 及以上的短周期 `Up or Down` 市场
 - 小时单、日单、周单
-- 当前自然月的 BTC `reach/dip` 月单
+- 当前自然月的 BTC / ETH `reach/dip` 月单
 
 排除市场：
 
@@ -73,12 +73,12 @@ sudo systemctl stop polyarb
 页面会显示：
 
 - 当前扫描状态
-- 已过滤后的 BTC 市场数量
+- 已过滤后的 BTC / ETH 市场数量
 - 可分析的确定性交易对数量
 - 最近套利机会
 - 纸面模拟成交记录
 
-页面上的“触发扫描”按钮会立即启动一次只读扫描；后台默认使用 Polymarket CLOB WebSocket 实时监听盘口更新。页面每 5 秒局部刷新指标和表格，不会整页刷新。
+页面会按 BTC、ETH 分成两个相同排版的面板展示。页面上的“触发扫描”按钮会立即启动一次只读扫描；后台默认分别为 BTC、ETH 使用 Polymarket CLOB WebSocket 实时监听盘口更新。页面每 5 秒局部刷新指标和表格，不会整页刷新。
 
 ## 命令行用法
 
