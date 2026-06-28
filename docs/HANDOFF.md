@@ -348,3 +348,22 @@ Added local Web dashboard and one-click scripts.
 - Verification:
   - Added regression checks that dashboard HTML, portfolio fragments, position
     rows, trade rows, and opportunity rows do not include `USDT`.
+
+## 2026-06-28 Legacy settlement time backfill update
+
+- CLOB WebSocket market messages are used for order-book updates (`book` and
+  `price_change`) and are not the source of settlement time.
+- Settlement time should come from Gamma market metadata `endDate`, which is
+  saved into `yes_end_date` / `no_end_date` for new paper trades.
+- For old paper trades that were created before end dates were stored:
+  - `PaperStore.initialize()` now first backfills end dates from the matching
+    `opportunities` row using `pair_key + detected_at`.
+  - If the matching opportunity also lacks end dates, it infers common weekly
+    and monthly settlement times from question text such as
+    `June 22-28?` or `in June?`, using the trade timestamp year and New York
+    market calendar boundaries.
+- This also improves settled-position filtering because old rows can now gain
+  real `yes_end_date` / `no_end_date` values instead of staying visible forever.
+- Verification:
+  - Added regression coverage for an old `paper_trades` row with empty end
+    dates and question `Will Ethereum dip to $1,500 June 22-28?`.

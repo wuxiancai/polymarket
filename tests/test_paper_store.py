@@ -171,6 +171,50 @@ def test_paper_store_backfills_existing_trade_prices_from_matching_opportunity(t
     assert row["no_avg_price"] == 0.5769
 
 
+def test_paper_store_backfills_existing_trade_end_dates_from_weekly_question(tmp_path):
+    db_path = tmp_path / "paper.sqlite3"
+    with sqlite3.connect(db_path) as conn:
+        conn.executescript(
+            """
+            create table paper_trades (
+                id integer primary key autoincrement,
+                pair_key text not null,
+                yes_market_id text not null,
+                yes_token_id text not null default '',
+                yes_question text not null default '',
+                yes_end_date text not null default '',
+                no_market_id text not null,
+                no_token_id text not null default '',
+                no_question text not null default '',
+                no_end_date text not null default '',
+                shares real not null,
+                total_cost real not null,
+                min_payout real not null,
+                guaranteed_profit real not null,
+                detected_at text not null
+            );
+            insert into paper_trades (
+                pair_key, yes_market_id, yes_token_id, yes_question, yes_end_date,
+                no_market_id, no_token_id, no_question, no_end_date, shares,
+                total_cost, min_payout, guaranteed_profit, detected_at
+            )
+            values (
+                'same:2636444', '2636444', 'yes-token',
+                'Will Ethereum dip to $1,500 June 22-28?', '',
+                '2636444', 'no-token', 'Will Ethereum dip to $1,500 June 22-28?', '',
+                538.62, 526.18, 538.62, 12.43544, '2026-06-28T08:10:13.548760+00:00'
+            );
+            """
+        )
+
+    store = PaperStore(db_path)
+    store.initialize()
+    row = store.latest_trades(limit=1)[0]
+
+    assert row["yes_end_date"] == "2026-06-29T04:00:00+00:00"
+    assert row["no_end_date"] == "2026-06-29T04:00:00+00:00"
+
+
 def test_latest_positions_excludes_settled_trades(tmp_path):
     db_path = tmp_path / "paper.sqlite3"
     store = PaperStore(db_path)

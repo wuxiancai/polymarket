@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+import calendar
+import re
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
+from zoneinfo import ZoneInfo
 
 from .models import ArbOpportunity
+
+ET = ZoneInfo("America/New_York")
+MONTHS = {name.lower(): i for i, name in enumerate(calendar.month_name) if name}
 
 
 class PaperStore:
@@ -193,6 +199,7 @@ class PaperStore:
             if name not in existing_opportunity:
                 conn.execute(f"alter table opportunities add column {name} text not null default ''")
         self._backfill_paper_trade_prices(conn)
+        self._backfill_paper_trade_end_dates(conn)
 
     def _backfill_paper_trade_prices(self, conn: sqlite3.Connection) -> None:
         conn.execute(
@@ -230,6 +237,57 @@ class PaperStore:
             """
         )
 
+    def _backfill_paper_trade_end_dates(self, conn: sqlite3.Connection) -> None:
+        conn.execute(
+            """
+            update paper_trades
+            set yes_end_date = coalesce(
+                    nullif(yes_end_date, ''),
+                    nullif((
+                        select opportunities.yes_end_date
+                        from opportunities
+                        where opportunities.pair_key = paper_trades.pair_key
+                          and opportunities.detected_at = paper_trades.detected_at
+                        order by opportunities.id desc
+                        limit 1
+                    ), ''),
+                    yes_end_date
+                ),
+                no_end_date = coalesce(
+                    nullif(no_end_date, ''),
+                    nullif((
+                        select opportunities.no_end_date
+                        from opportunities
+                        where opportunities.pair_key = paper_trades.pair_key
+                          and opportunities.detected_at = paper_trades.detected_at
+                        order by opportunities.id desc
+                        limit 1
+                    ), ''),
+                    no_end_date
+                )
+            where yes_end_date = '' or no_end_date = ''
+            """
+        )
+        rows = conn.execute(
+            """
+            select id, yes_question, no_question, yes_end_date, no_end_date, detected_at
+            from paper_trades
+            where yes_end_date = '' or no_end_date = ''
+            """
+        ).fetchall()
+        for row in rows:
+            yes_end = row["yes_end_date"] or _infer_end_date(row["yes_question"], row["detected_at"])
+            no_end = row["no_end_date"] or _infer_end_date(row["no_question"], row["detected_at"])
+            if yes_end or no_end:
+                conn.execute(
+                    """
+                    update paper_trades
+                    set yes_end_date = ?, no_end_date = ?
+                    where id = ?
+                    """,
+                    (yes_end or row["yes_end_date"], no_end or row["no_end_date"], row["id"]),
+                )
+
 
 def _is_settled(row: Dict[str, object], now: datetime) -> bool:
     dates = [_parse_datetime(row.get("yes_end_date")), _parse_datetime(row.get("no_end_date"))]
@@ -245,3 +303,31 @@ def _parse_datetime(value: object) -> Optional[datetime]:
         return datetime.fromisoformat(text.replace("Z", "+00:00")).astimezone(timezone.utc)
     except ValueError:
         return None
+
+
+def _infer_end_date(question: object, detected_at: object) -> str:
+    detected = _parse_datetime(detected_at)
+    if detected is None:
+        return ""
+    text = str(question or "")
+    weekly = re.search(r"\b([A-Za-z]+) (\d{1,2})-(\d{1,2})\?", text)
+    if weekly:
+        month_name, _start_day, end_day = weekly.groups()
+        month = MONTHS.get(month_name.lower())
+        if month is None:
+            return ""
+        year = detected.astimezone(ET).year
+        end_et = datetime(year, month, int(end_day), tzinfo=ET) + timedelta(days=1)
+        return end_et.astimezone(timezone.utc).isoformat()
+    monthly = re.search(r"\bin ([A-Za-z]+)\?", text)
+    if monthly:
+        month = MONTHS.get(monthly.group(1).lower())
+        if month is None:
+            return ""
+        year = detected.astimezone(ET).year
+        if month == 12:
+            end_et = datetime(year + 1, 1, 1, tzinfo=ET)
+        else:
+            end_et = datetime(year, month + 1, 1, tzinfo=ET)
+        return end_et.astimezone(timezone.utc).isoformat()
+    return ""
