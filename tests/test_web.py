@@ -138,8 +138,10 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "3,000.00" in payload["portfolio"]["summary_html"]
     assert "USDT" not in payload["portfolio"]["summary_html"]
     assert "pair-btc" in payload["portfolio"]["positions_html"]
-    assert "Will Bitcoin reach $70,000 in June?" in payload["portfolio"]["positions_html"]
+    assert "Will Bitcoin reach $70,000 in June?" not in payload["portfolio"]["positions_html"]
     assert "https://polymarket.com/event/what-price-will-bitcoin-hit-in-june" in payload["portfolio"]["positions_html"]
+    assert "事件：What price will Bitcoin hit in June?" in payload["portfolio"]["positions_html"]
+    assert "条件：↑ 70,000" in payload["portfolio"]["positions_html"]
     assert "YES 数量" in payload["portfolio"]["positions_html"]
     assert "YES 价格" in payload["portfolio"]["positions_html"]
     assert "YES 金额" in payload["portfolio"]["positions_html"]
@@ -164,6 +166,8 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
 
     trade_html = payload["assets"][0]["trades_html"]
     assert "https://polymarket.com/event/what-price-will-bitcoin-hit-in-june" in trade_html
+    assert "事件：What price will Bitcoin hit in June?" in trade_html
+    assert "条件：↑ 70,000" in trade_html
     assert "YES 数量" in trade_html
     assert "YES 价格" in trade_html
     assert "YES 金额" in trade_html
@@ -223,6 +227,39 @@ def test_opportunity_table_hides_internal_english_reason(tmp_path):
     assert "9.00" in html
     assert "9.0</td>" not in html
     assert "executable" not in html
+
+
+def test_dashboard_infers_event_link_and_condition_for_legacy_rows(tmp_path):
+    config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
+    store = PaperStore(config.database_path)
+    store.initialize()
+    with store._connect() as conn:
+        conn.execute(
+            """
+            insert into paper_trades (
+                pair_key, yes_market_id, yes_token_id, yes_question, yes_event_slug,
+                yes_end_date, yes_avg_price, no_market_id, no_token_id, no_question,
+                no_event_slug, no_end_date, no_avg_price, shares, total_cost,
+                min_payout, guaranteed_profit, detected_at
+            )
+            values (
+                'same:2636444', '2636444', 'yes-token',
+                'Will Ethereum dip to $1,500 June 22-28?', '',
+                '2026-06-29T04:00:00+00:00', 0.07,
+                '2636444', 'no-token', 'Will Ethereum dip to $1,500 June 22-28?', '',
+                '2026-06-29T04:00:00+00:00', 0.91,
+                538.62, 526.18, 538.62, 12.43544, '2026-06-28T08:10:13+00:00'
+            )
+            """
+        )
+    state = WebState(config=config, store=store, asset=ETH_ASSET, runner=PaperRunner(config, ETH_ASSET))
+
+    payload = dashboard_payload([state])
+    html = payload["portfolio"]["positions_html"]
+
+    assert "https://polymarket.com/event/what-price-will-ethereum-hit-june-22-28-2026" in html
+    assert "事件：What price will Ethereum hit June 22-28?" in html
+    assert "条件：↓ 1,500" in html
 
 
 def test_dashboard_hides_settled_positions(tmp_path):

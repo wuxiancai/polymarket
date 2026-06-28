@@ -388,3 +388,24 @@ Added local Web dashboard and one-click scripts.
 - Verification:
   - Added regression checks that positions, trades, and opportunities include
     direct Polymarket event links when event slugs are present.
+
+## 2026-06-28 Event title and condition label update
+
+- Dashboard market cells no longer rely on the raw Gamma question text such as
+  `Will Ethereum dip to $1,500 June 22-28?`, because that exact text is hard to
+  find with Polymarket's website search.
+- Market cells now render:
+  - `事件：What price will <Asset> hit <period>?`
+  - `条件：↑ <threshold>` for reach/hit markets or `条件：↓ <threshold>` for dip
+    markets.
+- If an old row has no stored event slug, the UI infers the common crypto price
+  event slug from the question text, e.g. `Will Ethereum dip to $1,500 June
+  22-28?` links to `what-price-will-ethereum-hit-june-22-28-2026`.
+- Interpretation:
+  - The Polymarket event page in the browser may be correct, but the selected
+    row must match the dashboard condition label. For the example above, the
+    event is `What price will Ethereum hit June 22-28?` and the exact market row
+    is `↓ 1,500`, not another row such as `↑ 2,400`.
+- Verification:
+  - Added regression coverage for inferred legacy event links and `↓ 1,500`
+    condition labels.

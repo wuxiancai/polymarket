@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -529,12 +530,68 @@ def _asset_symbol_for_row(row: dict, states: list[WebState]) -> str:
 
 
 def _market_link(text: object, event_slug: object) -> str:
-    label = escape(str(text or ""))
-    slug = str(event_slug or "").strip()
+    question = str(text or "")
+    label = escape(question)
+    event_title = _event_title(question)
+    condition = _condition_label(question)
+    slug = str(event_slug or "").strip() or _infer_event_slug(question)
+    if event_title or condition:
+        parts = []
+        if event_title:
+            parts.append(f"<div>事件：{escape(event_title)}</div>")
+        if condition:
+            parts.append(f"<div>条件：{escape(condition)}</div>")
+        label = "".join(parts)
     if not slug:
         return label
     href = f"https://polymarket.com/event/{slug}"
     return f"<a href='{escape(href)}' target='_blank' rel='noopener noreferrer'>{label}</a>"
+
+
+def _event_title(question: str) -> str:
+    parsed = _parse_market_question(question)
+    if parsed is None:
+        return question
+    asset, _direction, _threshold, period = parsed
+    return f"What price will {asset} hit {period}?"
+
+
+def _condition_label(question: str) -> str:
+    parsed = _parse_market_question(question)
+    if parsed is None:
+        return ""
+    _asset, direction, threshold, _period = parsed
+    arrow = "↓" if direction == "dip" else "↑"
+    return f"{arrow} {threshold}"
+
+
+def _infer_event_slug(question: str) -> str:
+    title = _event_title(question)
+    if not title or title == question:
+        return ""
+    slug = title.lower().replace("?", "")
+    slug = re.sub(r"[$,]", "", slug)
+    slug = re.sub(r"[^a-z0-9]+", "-", slug).strip("-")
+    if re.search(r"\b\d{1,2}-\d{1,2}\b", title):
+        slug = f"{slug}-2026"
+    return slug
+
+
+def _parse_market_question(question: str) -> Optional[tuple[str, str, str, str]]:
+    match = re.search(
+        r"Will ([A-Za-z]+) (dip to|reach|hit) \$([0-9,]+) (.+)\?",
+        question,
+        re.IGNORECASE,
+    )
+    if not match:
+        return None
+    asset, verb, threshold, period = match.groups()
+    direction = "dip" if verb.lower() == "dip to" else "hit"
+    if period.startswith("in "):
+        period_text = period
+    else:
+        period_text = period
+    return asset, direction, threshold, period_text
 
 
 def _asset_section(state: WebState) -> str:
