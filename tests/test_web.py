@@ -140,6 +140,10 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "pair-btc" in payload["portfolio"]["positions_html"]
     assert "Will Bitcoin reach $70,000 in June?" not in payload["portfolio"]["positions_html"]
     assert "https://polymarket.com/event/what-price-will-bitcoin-hit-in-june" in payload["portfolio"]["positions_html"]
+    assert "class='trade-table" in payload["portfolio"]["positions_html"]
+    assert "class='market-card" in payload["portfolio"]["positions_html"]
+    assert "class='market-event'" in payload["portfolio"]["positions_html"]
+    assert "class='market-condition'" in payload["portfolio"]["positions_html"]
     assert "事件：What price will Bitcoin hit in June?" in payload["portfolio"]["positions_html"]
     assert "条件：↑ 70,000" in payload["portfolio"]["positions_html"]
     assert "YES 数量" in payload["portfolio"]["positions_html"]
@@ -166,6 +170,8 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
 
     trade_html = payload["assets"][0]["trades_html"]
     assert "https://polymarket.com/event/what-price-will-bitcoin-hit-in-june" in trade_html
+    assert "class='trade-table" in trade_html
+    assert "class='market-card" in trade_html
     assert "事件：What price will Bitcoin hit in June?" in trade_html
     assert "条件：↑ 70,000" in trade_html
     assert "YES 数量" in trade_html

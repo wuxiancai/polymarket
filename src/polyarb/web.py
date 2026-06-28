@@ -294,14 +294,14 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
     .metric {{ padding: 14px; }}
     .label {{ color: var(--muted); font-size: 13px; }}
     .value {{ margin-top: 6px; font-size: 24px; font-weight: 800; }}
-    section {{ margin-top: 16px; overflow: hidden; }}
+    section {{ margin-top: 16px; overflow-x: auto; overflow-y: hidden; }}
     section h2 {{
       margin: 0;
       padding: 13px 14px;
       font-size: 17px;
       border-bottom: 1px solid var(--line);
     }}
-    table {{ width: 100%; border-collapse: collapse; font-size: 14px; }}
+    table {{ width: 100%; border-collapse: collapse; font-size: 14px; table-layout: auto; }}
     th, td {{ padding: 11px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }}
     th {{ color: var(--muted); font-weight: 700; background: #fbfcfd; }}
     tr:last-child td {{ border-bottom: 0; }}
@@ -312,7 +312,24 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
     .watch {{ color: var(--warn); }}
     .profit-positive {{ color: var(--accent); }}
     .profit-negative {{ color: var(--danger); }}
-    .market-text {{ max-width: 260px; overflow-wrap: anywhere; line-height: 1.35; }}
+    .wide-table {{ min-width: 1180px; }}
+    .position-table {{ min-width: 1420px; }}
+    .wide-table th, .wide-table td {{ white-space: nowrap; }}
+    .market-text {{ width: 220px; min-width: 220px; max-width: 260px; white-space: normal; overflow-wrap: break-word; word-break: normal; line-height: 1.35; }}
+    .market-card {{ display: block; color: var(--ink); text-decoration: none; }}
+    a.market-card:hover .market-event {{ text-decoration: underline; }}
+    .market-event {{ display: block; font-weight: 700; }}
+    .market-condition {{
+      display: inline-block;
+      margin-top: 6px;
+      padding: 2px 8px;
+      border: 1px solid #b9d9cf;
+      border-radius: 999px;
+      background: #f2fbf7;
+      color: var(--accent);
+      font-weight: 700;
+    }}
+    .time-cell {{ white-space: nowrap; }}
     .log-table td:first-child {{ white-space: nowrap; color: var(--muted); }}
     .log-level {{ font-weight: 700; }}
     .log-ok {{ color: var(--accent); }}
@@ -322,7 +339,6 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
       .metrics {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
       .portfolio-grid {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
       table {{ min-width: 760px; }}
-      section {{ overflow-x: auto; }}
     }}
   </style>
 </head>
@@ -507,12 +523,12 @@ def _position_table(rows: list, states: list[WebState]) -> str:
             f"<td>{_money(row.get('total_cost', 0))}</td>"
             f"<td>{_money(row.get('min_payout', 0))}</td>"
             f"<td>{_profit_text(_signed_money(row.get('guaranteed_profit', 0)), row.get('guaranteed_profit', 0))}</td>"
-            f"<td>{escape(_format_time_value(row.get('detected_at', '')))}</td>"
-            f"<td>{escape(_settlement_time(row))}</td>"
+            f"<td class='time-cell'>{escape(_format_time_value(row.get('detected_at', '')))}</td>"
+            f"<td class='time-cell'>{escape(_settlement_time(row))}</td>"
             "</tr>"
         )
     return (
-        "<table><thead><tr><th>币种</th><th>交易对</th><th>YES 持仓腿</th><th>YES 数量</th><th>YES 价格</th><th>YES 金额</th>"
+        "<table class='trade-table wide-table position-table'><thead><tr><th>币种</th><th>交易对</th><th>YES 持仓腿</th><th>YES 数量</th><th>YES 价格</th><th>YES 金额</th>"
         "<th>NO 持仓腿</th><th>NO 数量</th><th>NO 价格</th><th>NO 金额</th><th>成本</th><th>最低赔付</th><th>预估收益</th><th>开仓时间</th><th>结算时间</th></tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table>"
@@ -538,14 +554,14 @@ def _market_link(text: object, event_slug: object) -> str:
     if event_title or condition:
         parts = []
         if event_title:
-            parts.append(f"<div>事件：{escape(event_title)}</div>")
+            parts.append(f"<span class='market-event'>事件：{escape(event_title)}</span>")
         if condition:
-            parts.append(f"<div>条件：{escape(condition)}</div>")
+            parts.append(f"<span class='market-condition'>条件：{escape(condition)}</span>")
         label = "".join(parts)
     if not slug:
-        return label
+        return f"<span class='market-card'>{label}</span>"
     href = f"https://polymarket.com/event/{slug}"
-    return f"<a href='{escape(href)}' target='_blank' rel='noopener noreferrer'>{label}</a>"
+    return f"<a class='market-card' href='{escape(href)}' target='_blank' rel='noopener noreferrer'>{label}</a>"
 
 
 def _event_title(question: str) -> str:
@@ -849,7 +865,7 @@ def _opportunity_table(rows: list) -> str:
             f"<td>{_number(row.get('shares', 0))}</td>"
             f"<td class='market-text'>{_market_link(row.get('no_question', ''), row.get('no_event_slug', ''))}</td>"
             f"<td>{_number(row.get('shares', 0))}</td>"
-            f"<td>{escape(_format_time_value(row.get('detected_at', '')))}</td>"
+            f"<td class='time-cell'>{escape(_format_time_value(row.get('detected_at', '')))}</td>"
             "</tr>"
         )
     return (
@@ -893,12 +909,12 @@ def _trade_table(rows: list) -> str:
             f"<td>{_money(_leg_amount(row, 'no_avg_price'))}</td>"
             f"<td>{_money(row.get('total_cost', 0))}</td>"
             f"<td>{_profit_text(_signed_money(row.get('guaranteed_profit', 0)), row.get('guaranteed_profit', 0))}</td>"
-            f"<td>{escape(_format_time_value(row.get('detected_at', '')))}</td>"
-            f"<td>{escape(_settlement_time(row))}</td>"
+            f"<td class='time-cell'>{escape(_format_time_value(row.get('detected_at', '')))}</td>"
+            f"<td class='time-cell'>{escape(_settlement_time(row))}</td>"
             "</tr>"
         )
     return (
-        "<table><thead><tr><th>交易对</th><th>YES 持仓腿</th><th>YES 数量</th><th>YES 价格</th><th>YES 金额</th>"
+        "<table class='trade-table wide-table'><thead><tr><th>交易对</th><th>YES 持仓腿</th><th>YES 数量</th><th>YES 价格</th><th>YES 金额</th>"
         "<th>NO 持仓腿</th><th>NO 数量</th><th>NO 价格</th><th>NO 金额</th><th>成本</th><th>预估收益</th><th>时间</th><th>结算时间</th></tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table>"

@@ -1,5 +1,21 @@
 # Handoff
 
+## 2026-06-28 Trade table layout polish
+
+- `模拟持仓` and `模拟成交` now use dedicated wide table classes instead of
+  letting all columns compress equally.
+- Wide tables scroll horizontally inside their panel when needed; the rest of
+  the page layout stays stable.
+- YES/NO market legs now render as a compact market card:
+  - first line: inferred event title;
+  - second line: condition badge such as `条件：↑ 70,000`.
+- Market cells use normal word wrapping and a fixed readable width, avoiding the
+  previous vertical one-word-per-line appearance.
+- Time cells stay on one line for readability.
+- Verification:
+  - `python3 -m pytest -p no:cacheprovider tests -q`: 31 passed.
+  - `bash -n start.sh deploy.sh && git diff --check`: passed.
+
 ## 2026-06-27
 
 Implemented a Python Polymarket BTC short-cycle arbitrage paper trading scanner
