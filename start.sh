@@ -14,7 +14,26 @@ if ! command -v systemctl >/dev/null 2>&1; then
   exit 1
 fi
 
-POLYARB_DB="${POLYARB_DB:-${ROOT_DIR}/data/paper.sqlite3}"
+SERVICE_NAME="${SERVICE_NAME:-polyarb}"
+SERVICE_USER="${SERVICE_USER:-$(id -un)}"
+SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
+
+existing_service_db() {
+  systemctl show "$SERVICE_NAME" -p Environment 2>/dev/null \
+    | tr ' ' '\n' \
+    | sed -n 's/^Environment=POLYARB_DB=//p; s/^POLYARB_DB=//p' \
+    | head -n 1
+}
+
+if [[ -z "${POLYARB_DB:-}" ]]; then
+  EXISTING_POLYARB_DB="$(existing_service_db || true)"
+  if [[ -n "$EXISTING_POLYARB_DB" && -e "$EXISTING_POLYARB_DB" ]]; then
+    POLYARB_DB="$EXISTING_POLYARB_DB"
+    echo "沿用已有 systemd 数据库：${POLYARB_DB}"
+  else
+    POLYARB_DB="${ROOT_DIR}/data/paper.sqlite3"
+  fi
+fi
 MIN_24H_VOLUME_USD="${MIN_24H_VOLUME_USD:-1000}"
 MIN_ARBITRAGE_DEPTH_USD="${MIN_ARBITRAGE_DEPTH_USD:-100}"
 SLIPPAGE_BUFFER_CENTS="${SLIPPAGE_BUFFER_CENTS:-2}"
@@ -24,9 +43,6 @@ PAPER_INITIAL_CAPITAL_USDT="${PAPER_INITIAL_CAPITAL_USDT:-10000}"
 REFRESH_SECONDS="${REFRESH_SECONDS:-30}"
 HOST="${HOST:-0.0.0.0}"
 PORT="${PORT:-8787}"
-SERVICE_NAME="${SERVICE_NAME:-polyarb}"
-SERVICE_USER="${SERVICE_USER:-$(id -un)}"
-SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 
 mkdir -p data
 

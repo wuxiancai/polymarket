@@ -263,3 +263,29 @@ Added local Web dashboard and one-click scripts.
   - Local no-auto-scan Web smoke check on `http://127.0.0.1:8787` confirmed
     `累计预估收益` / `预估收益率` render in HTML and `/api/dashboard`, with no raw
     ISO timestamp match in the checked output.
+
+## 2026-06-28 start.sh database path preservation update
+
+- Diagnosis for "data disappeared after `start.sh`":
+  - `start.sh` did not delete SQLite files, but it rewrote the systemd unit with
+    `POLYARB_DB=${ROOT_DIR}/data/paper.sqlite3`.
+  - If an existing `polyarb.service` had been using another SQLite path, rerunning
+    `start.sh` from a different checkout/path made the dashboard point at a new
+    empty database, which looked like historical data was gone.
+  - On the local checkout, `data/paper.sqlite3` currently exists but has
+    `opportunities=0` and `paper_trades=0`; no alternate local sqlite file was
+    found under the project directory.
+- Fix:
+  - If `POLYARB_DB` is not explicitly set, `start.sh` now reads the existing
+    `polyarb.service` environment and reuses its `POLYARB_DB` when that file
+    still exists.
+  - Explicit `POLYARB_DB=/path/to/paper.sqlite3 bash start.sh` still switches
+    the database intentionally.
+- Recovery tip for Ubuntu:
+  - Run `sudo systemctl show polyarb -p Environment` to see the current DB path.
+  - Search old sqlite files with `find ~/ -name '*.sqlite3' -o -name '*.db'`.
+  - Once the old DB is found, restart with
+    `POLYARB_DB=/old/path/paper.sqlite3 bash start.sh`.
+- Verification:
+  - Added `tests/test_start_script.py` covering preservation of an existing
+    systemd `POLYARB_DB`.

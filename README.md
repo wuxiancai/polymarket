@@ -61,6 +61,8 @@ bash start.sh
 http://<服务器IP>:8787
 ```
 
+`start.sh` 默认会沿用已有 `polyarb.service` 里的 `POLYARB_DB` 数据库路径，避免重新启动时切到当前目录下的新空库。只有显式指定 `POLYARB_DB=... bash start.sh` 时，才会切换数据库。
+
 常用服务命令：
 
 ```bash
@@ -73,8 +75,8 @@ sudo systemctl stop polyarb
 页面会显示：
 
 - 当前扫描状态
-- 收益概览：默认初始本金、BTC/ETH 分配本金、已用本金、累计收益、收益率
-- 模拟持仓：每笔模拟成交形成的两腿持仓、成本、最低赔付和收益
+- 收益概览：默认初始本金、BTC/ETH 分配本金、已用本金、累计预估收益、预估收益率
+- 模拟持仓：每笔未结算模拟成交形成的 YES/NO 两腿持仓、成本、最低赔付和预估收益
 - 已过滤后的 BTC / ETH 市场数量
 - 可分析的确定性交易对数量
 - 最近套利机会
@@ -129,6 +131,12 @@ REFRESH_SECONDS=30
 POLYARB_DB=data/paper.sqlite3
 HOST=0.0.0.0
 PORT=8787
+```
+
+如果系统已存在 `polyarb.service` 且旧数据库文件还在，`POLYARB_DB` 留空会自动复用旧路径。需要主动迁移数据库时，先复制旧 sqlite 文件，再用新路径启动：
+
+```bash
+POLYARB_DB=/path/to/paper.sqlite3 bash start.sh
 ```
 
 示例：
