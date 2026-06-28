@@ -137,6 +137,20 @@ PORT=8787
 SLIPPAGE_BUFFER_CENTS=3 MIN_ARBITRAGE_DEPTH_USD=500 bash start.sh
 ```
 
+如果服务器访问 Polymarket 需要本机代理，先导出代理再启动。`start.sh` 会把代理变量写入 systemd 服务，避免终端关闭后服务丢失代理环境：
+
+```bash
+export http_proxy="http://127.0.0.1:7890"
+export https_proxy="http://127.0.0.1:7890"
+bash start.sh
+```
+
+脚本会同时传递大小写代理变量，并为 WebSocket 派生 `ws_proxy` / `wss_proxy`。重启后可检查：
+
+```bash
+sudo systemctl show polyarb -p Environment
+```
+
 如果要换端口或服务名：
 
 ```bash

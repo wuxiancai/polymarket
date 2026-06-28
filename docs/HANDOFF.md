@@ -185,3 +185,22 @@ Added local Web dashboard and one-click scripts.
     present in HTML and `/api/dashboard`.
   - Local live read-only scan passed with `markets=32`, `pairs=219`,
     `opportunities=0`.
+
+## 2026-06-28 systemd proxy startup update
+
+- Root cause for Ubuntu proxy mismatch:
+  - `export http_proxy=...` and `export https_proxy=...` in an SSH shell do not
+    automatically apply to a systemd service.
+  - `start.sh` previously wrote only Polyarb business configuration into
+    `polyarb.service`, so the dashboard service could still report
+    `Network is unreachable` even when manual `curl` worked through the proxy.
+- `start.sh` now copies proxy environment variables into the generated systemd
+  unit:
+  - lowercase and uppercase HTTP(S)/FTP/ALL/NO proxy variables;
+  - derived `ws_proxy` / `wss_proxy` and uppercase variants for WebSocket
+    clients when HTTP(S) proxy is present.
+- Server usage:
+  - `export http_proxy="http://127.0.0.1:7890"`
+  - `export https_proxy="http://127.0.0.1:7890"`
+  - `bash start.sh`
+  - verify with `sudo systemctl show polyarb -p Environment`.

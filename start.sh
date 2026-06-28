@@ -30,6 +30,41 @@ SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 
 mkdir -p data
 
+systemd_env_line() {
+  local name="$1"
+  local value="${!name:-}"
+  if [[ -z "$value" ]]; then
+    return
+  fi
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  value="${value//%/%%}"
+  printf 'Environment="%s=%s"\n' "$name" "$value"
+}
+
+if [[ -n "${http_proxy:-}" && -z "${ws_proxy:-}" ]]; then
+  ws_proxy="$http_proxy"
+fi
+if [[ -n "${https_proxy:-}" && -z "${wss_proxy:-}" ]]; then
+  wss_proxy="$https_proxy"
+fi
+if [[ -n "${HTTP_PROXY:-}" && -z "${WS_PROXY:-}" ]]; then
+  WS_PROXY="$HTTP_PROXY"
+fi
+if [[ -n "${HTTPS_PROXY:-}" && -z "${WSS_PROXY:-}" ]]; then
+  WSS_PROXY="$HTTPS_PROXY"
+fi
+
+PROXY_ENV_LINES=""
+for env_name in \
+  http_proxy https_proxy ftp_proxy all_proxy no_proxy ws_proxy wss_proxy \
+  HTTP_PROXY HTTPS_PROXY FTP_PROXY ALL_PROXY NO_PROXY WS_PROXY WSS_PROXY; do
+  line="$(systemd_env_line "$env_name")"
+  if [[ -n "$line" ]]; then
+    PROXY_ENV_LINES+="${line}"$'\n'
+  fi
+done
+
 SERVICE_CONTENT="[Unit]
 Description=Polyarb Polymarket BTC/ETH paper arbitrage dashboard
 After=network-online.target
@@ -47,6 +82,7 @@ Environment=MIN_INTERVAL_MINUTES=${MIN_INTERVAL_MINUTES}
 Environment=ALLOW_CURRENT_MONTH_ONLY=${ALLOW_CURRENT_MONTH_ONLY}
 Environment=PAPER_INITIAL_CAPITAL_USDT=${PAPER_INITIAL_CAPITAL_USDT}
 Environment=REFRESH_SECONDS=${REFRESH_SECONDS}
+${PROXY_ENV_LINES}
 ExecStart=${ROOT_DIR}/.venv/bin/python -m polyarb web --host ${HOST} --port ${PORT}
 Restart=always
 RestartSec=5
