@@ -304,3 +304,19 @@ Added local Web dashboard and one-click scripts.
 - Verification:
   - Added regression coverage for the table headers and leg amounts, e.g.
     `300 * 0.40 = 120.00 USDT` and `300 * 0.57 = 171.00 USDT`.
+
+## 2026-06-28 Legacy paper trade price backfill update
+
+- Issue:
+  - Paper trades created before `yes_avg_price` / `no_avg_price` were added to
+    `paper_trades` rendered `0.0000` prices and `0.00 USDT` leg amounts.
+- Fix:
+  - `PaperStore.initialize()` now backfills zero paper-trade leg prices from
+    the matching `opportunities` row using `pair_key + detected_at`.
+  - This handles old records because paper execution records the opportunity
+    first and then records the paper trade with the same timestamp.
+  - If no matching opportunity exists, prices stay `0` rather than inventing an
+    unsafe split from total cost.
+- Verification:
+  - Added regression coverage for an old `paper_trades` schema and a matching
+    opportunity row, confirming prices are restored after initialization.

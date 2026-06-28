@@ -192,6 +192,43 @@ class PaperStore:
         for name in ("yes_end_date", "no_end_date"):
             if name not in existing_opportunity:
                 conn.execute(f"alter table opportunities add column {name} text not null default ''")
+        self._backfill_paper_trade_prices(conn)
+
+    def _backfill_paper_trade_prices(self, conn: sqlite3.Connection) -> None:
+        conn.execute(
+            """
+            update paper_trades
+            set yes_avg_price = coalesce(
+                    (
+                        select opportunities.yes_avg_price
+                        from opportunities
+                        where opportunities.pair_key = paper_trades.pair_key
+                          and opportunities.detected_at = paper_trades.detected_at
+                        order by opportunities.id desc
+                        limit 1
+                    ),
+                    yes_avg_price
+                ),
+                no_avg_price = coalesce(
+                    (
+                        select opportunities.no_avg_price
+                        from opportunities
+                        where opportunities.pair_key = paper_trades.pair_key
+                          and opportunities.detected_at = paper_trades.detected_at
+                        order by opportunities.id desc
+                        limit 1
+                    ),
+                    no_avg_price
+                )
+            where (yes_avg_price = 0 or no_avg_price = 0)
+              and exists (
+                  select 1
+                  from opportunities
+                  where opportunities.pair_key = paper_trades.pair_key
+                    and opportunities.detected_at = paper_trades.detected_at
+              )
+            """
+        )
 
 
 def _is_settled(row: Dict[str, object], now: datetime) -> bool:
