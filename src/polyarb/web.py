@@ -667,7 +667,7 @@ def _money(value: object) -> str:
         number = float(value)
     except (TypeError, ValueError):
         number = 0.0
-    return f"{number:,.2f} USDT"
+    return f"{number:,.2f}"
 
 
 def _signed_money(value: object) -> str:
@@ -676,7 +676,7 @@ def _signed_money(value: object) -> str:
     except (TypeError, ValueError):
         number = 0.0
     sign = "+" if number >= 0 else "-"
-    return f"{sign}{abs(number):,.2f} USDT"
+    return f"{sign}{abs(number):,.2f}"
 
 
 def _profit_text(text: str, value: object) -> str:
@@ -778,7 +778,7 @@ def _opportunity_table(rows: list) -> str:
         body.append(
             "<tr>"
             f"<td><span class='pill {cls}'>{state}</span>{detail}</td>"
-            f"<td>{escape(str(row.get('guaranteed_profit', '')))}</td>"
+            f"<td>{escape(_money(row.get('guaranteed_profit', 0)))}</td>"
             f"<td class='market-text'>{escape(str(row.get('yes_question', '')))}</td>"
             f"<td>{_number(row.get('shares', 0))}</td>"
             f"<td class='market-text'>{escape(str(row.get('no_question', '')))}</td>"

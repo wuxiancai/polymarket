@@ -296,14 +296,14 @@ Added local Web dashboard and one-click scripts.
 - Each YES/NO leg now shows:
   - `数量`: contract/share count;
   - `价格`: average entry price for that leg;
-  - `金额`: `数量 * 价格`, rendered as USDT.
+  - `金额`: `数量 * 价格`.
 - `paper_trades` now stores `yes_avg_price` and `no_avg_price` so historical
   paper trade rows can render leg prices and amounts after migration. Existing
   SQLite files are migrated in-place with `0` defaults for older rows that lack
   price data.
 - Verification:
   - Added regression coverage for the table headers and leg amounts, e.g.
-    `300 * 0.40 = 120.00 USDT` and `300 * 0.57 = 171.00 USDT`.
+    `300 * 0.40 = 120.00` and `300 * 0.57 = 171.00`.
 
 ## 2026-06-28 Legacy paper trade price backfill update
 
@@ -325,8 +325,9 @@ Added local Web dashboard and one-click scripts.
 
 - `模拟持仓` and `模拟成交` now include `结算时间`, computed as the later known
   YES/NO leg end date and displayed in Beijing time.
-- Price display now uses 2 decimals across the position/trade tables. Amount
-  fields already use 2 decimals and continue to render as USDT.
+- Price and amount display now uses 2 decimals across the dashboard.
+- Dashboard amount fields no longer append `USDT`; the column label provides
+  the context and keeps table rows compact.
 - The recent opportunity status cell no longer prints the internal English
   reason `executable`; non-executable reasons are translated for common volume
   and depth blocks.
@@ -335,3 +336,15 @@ Added local Web dashboard and one-click scripts.
 - Verification:
   - Added regression coverage for settlement time, 2-decimal prices, and hiding
     the internal `executable` reason.
+
+## 2026-06-28 Dashboard amount formatting update
+
+- All dashboard amount fields now render with exactly 2 decimals and without the
+  `USDT` suffix:
+  - portfolio summary and asset allocation rows;
+  - position/trade leg amounts, costs, payouts, and estimated profit;
+  - recent opportunity guaranteed profit.
+- Percentage fields remain unchanged.
+- Verification:
+  - Added regression checks that dashboard HTML, portfolio fragments, position
+    rows, trade rows, and opportunity rows do not include `USDT`.

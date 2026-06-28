@@ -30,7 +30,8 @@ def test_dashboard_renders_chinese_status(tmp_path):
     assert "纸面模拟成交" not in html
     assert "Polymarket 连接日志" in html
     assert "暂无连接日志" in html
-    assert "10,000.00 USDT" in html
+    assert "10,000.00" in html
+    assert "USDT" not in html
     assert "累计预估收益" in html
     assert "累计保证收益" not in html
     assert "暂无成交" in html
@@ -129,10 +130,11 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
 
     payload = dashboard_payload([btc, eth])
 
-    assert "+9.00 USDT" in payload["portfolio"]["summary_html"]
+    assert "+9.00" in payload["portfolio"]["summary_html"]
     assert "0.09%" in payload["portfolio"]["summary_html"]
-    assert "7,000.00 USDT" in payload["portfolio"]["summary_html"]
-    assert "3,000.00 USDT" in payload["portfolio"]["summary_html"]
+    assert "7,000.00" in payload["portfolio"]["summary_html"]
+    assert "3,000.00" in payload["portfolio"]["summary_html"]
+    assert "USDT" not in payload["portfolio"]["summary_html"]
     assert "pair-btc" in payload["portfolio"]["positions_html"]
     assert "Will Bitcoin reach $70,000 in June?" in payload["portfolio"]["positions_html"]
     assert "YES 数量" in payload["portfolio"]["positions_html"]
@@ -149,8 +151,9 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "0.57" in payload["portfolio"]["positions_html"]
     assert "0.4000" not in payload["portfolio"]["positions_html"]
     assert "0.5700" not in payload["portfolio"]["positions_html"]
-    assert "120.00 USDT" in payload["portfolio"]["positions_html"]
-    assert "171.00 USDT" in payload["portfolio"]["positions_html"]
+    assert "120.00" in payload["portfolio"]["positions_html"]
+    assert "171.00" in payload["portfolio"]["positions_html"]
+    assert "USDT" not in payload["portfolio"]["positions_html"]
     assert "预估收益" in payload["portfolio"]["positions_html"]
     assert "2026-06-27 20:00:00" in payload["portfolio"]["positions_html"]
     assert "2026-07-01 08:00:00" in payload["portfolio"]["positions_html"]
@@ -171,8 +174,9 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "0.57" in trade_html
     assert "0.4000" not in trade_html
     assert "0.5700" not in trade_html
-    assert "120.00 USDT" in trade_html
-    assert "171.00 USDT" in trade_html
+    assert "120.00" in trade_html
+    assert "171.00" in trade_html
+    assert "USDT" not in trade_html
     assert "2026-07-01 08:00:00" in trade_html
 
 
@@ -209,6 +213,8 @@ def test_opportunity_table_hides_internal_english_reason(tmp_path):
 
     html = payload["assets"][0]["opportunities_html"]
     assert "可模拟成交" in html
+    assert "9.00" in html
+    assert "9.0</td>" not in html
     assert "executable" not in html
 
 
