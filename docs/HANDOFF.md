@@ -204,3 +204,19 @@ Added local Web dashboard and one-click scripts.
   - `export https_proxy="http://127.0.0.1:7890"`
   - `bash start.sh`
   - verify with `sudo systemctl show polyarb -p Environment`.
+
+## 2026-06-28 Dashboard wording and profit color update
+
+- Dashboard browser-comment cleanup:
+  - main page title changed from `Polyarb 套利模拟系统` to
+    `Polymarket 套利模拟系统`;
+  - `纸面模拟持仓` changed to `模拟持仓`;
+  - `纸面模拟成交` changed to `模拟成交`;
+  - related empty states now say `暂无持仓。` / `暂无成交。`.
+- Profit and return-rate values now use win/loss coloring:
+  - non-negative values use the green accent class;
+  - negative values use the red danger class.
+- Verification:
+  - `python3 -m pytest -p no:cacheprovider tests -q`: 21 passed.
+  - Local `--no-auto-scan` Web smoke check confirmed the title, section labels,
+    and green non-negative profit classes render in HTML and `/api/dashboard`.

@@ -217,7 +217,7 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Polyarb 套利模拟系统</title>
+  <title>Polymarket 套利模拟系统</title>
   <style>
     :root {{
       --bg: #f6f7f9;
@@ -309,6 +309,8 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
     .pill {{ display: inline-block; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); }}
     .exec {{ color: var(--accent); }}
     .watch {{ color: var(--warn); }}
+    .profit-positive {{ color: var(--accent); }}
+    .profit-negative {{ color: var(--danger); }}
     .log-table td:first-child {{ white-space: nowrap; color: var(--muted); }}
     .log-level {{ font-weight: 700; }}
     .log-ok {{ color: var(--accent); }}
@@ -326,7 +328,7 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
   <header>
     <div class="wrap top">
       <div>
-        <h1>Polyarb 套利模拟系统</h1>
+        <h1>Polymarket 套利模拟系统</h1>
         <p>只读 Polymarket BTC / ETH 行情，执行纸面模拟交易；不连接钱包，不真实下单。</p>
       </div>
       <div class="toolbar">
@@ -342,7 +344,7 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
       <div id="portfolioSummary">{portfolio["summary_html"]}</div>
     </section>
     <section>
-      <h2>纸面模拟持仓</h2>
+      <h2>模拟持仓</h2>
       <div id="positionTable">{portfolio["positions_html"]}</div>
     </section>
     {asset_sections}
@@ -408,7 +410,7 @@ def _portfolio_payload(states: list[WebState]) -> dict:
     if not states:
         return {
             "summary_html": "<div class='empty'>暂无资产配置。</div>",
-            "positions_html": "<div class='empty'>暂无纸面持仓。</div>",
+            "positions_html": "<div class='empty'>暂无持仓。</div>",
         }
     store = states[0].store
     positions = store.latest_positions(100)
@@ -454,8 +456,8 @@ def _portfolio_summary_html(summary: dict) -> str:
         "<div class='portfolio-grid'>"
         f"{_metric('初始本金', _money(summary['initial_capital']), 'initialCapitalValue')}"
         f"{_metric('已用本金', _money(summary['used']), 'usedCapitalValue')}"
-        f"{_metric('累计收益', _signed_money(summary['profit']), 'profitValue')}"
-        f"{_metric('收益率', _percent(summary['return_rate']), 'returnRateValue')}"
+        f"{_metric('累计收益', _signed_money(summary['profit']), 'profitValue', _profit_class(summary['profit']))}"
+        f"{_metric('收益率', _percent(summary['return_rate']), 'returnRateValue', _profit_class(summary['return_rate']))}"
         "</div>"
     )
     body = []
@@ -466,8 +468,8 @@ def _portfolio_summary_html(summary: dict) -> str:
             f"<td>{_money(asset['allocation'])}</td>"
             f"<td>{_money(asset['used'])}</td>"
             f"<td>{_money(asset['available'])}</td>"
-            f"<td>{_signed_money(asset['profit'])}</td>"
-            f"<td>{_percent(asset['return_rate'])}</td>"
+            f"<td>{_profit_text(_signed_money(asset['profit']), asset['profit'])}</td>"
+            f"<td>{_profit_text(_percent(asset['return_rate']), asset['return_rate'])}</td>"
             f"<td>{escape(str(asset['positions']))}</td>"
             "</tr>"
         )
@@ -484,7 +486,7 @@ def _portfolio_summary_html(summary: dict) -> str:
 
 def _position_table(rows: list, states: list[WebState]) -> str:
     if not rows:
-        return "<div class='empty'>暂无纸面持仓。</div>"
+        return "<div class='empty'>暂无持仓。</div>"
     body = []
     for row in rows:
         asset = _asset_symbol_for_row(row, states)
@@ -496,7 +498,7 @@ def _position_table(rows: list, states: list[WebState]) -> str:
             f"<td>{_number(row.get('shares', 0))}</td>"
             f"<td>{_money(row.get('total_cost', 0))}</td>"
             f"<td>{_money(row.get('min_payout', 0))}</td>"
-            f"<td>{_signed_money(row.get('guaranteed_profit', 0))}</td>"
+            f"<td>{_profit_text(_signed_money(row.get('guaranteed_profit', 0)), row.get('guaranteed_profit', 0))}</td>"
             f"<td>{escape(str(row.get('detected_at', '')))}</td>"
             "</tr>"
         )
@@ -535,7 +537,7 @@ def _asset_section(state: WebState) -> str:
         <div id="{escape(symbol)}OpportunityTable">{payload["opportunities_html"]}</div>
       </section>
       <section>
-        <h2>纸面模拟成交</h2>
+        <h2>模拟成交</h2>
         <div id="{escape(symbol)}TradeTable">{payload["trades_html"]}</div>
       </section>
     </div>"""
@@ -628,10 +630,13 @@ def status_label(snapshot: dict) -> str:
     return "未启动"
 
 
-def _metric(label: str, value: object, element_id: str) -> str:
+def _metric(label: str, value: object, element_id: str, value_class: str = "") -> str:
+    classes = "value"
+    if value_class:
+        classes += f" {value_class}"
     return (
         f"<div class='metric'><div class='label'>{escape(label)}</div>"
-        f"<div class='value' id='{escape(element_id)}'>{escape(str(value))}</div></div>"
+        f"<div class='{escape(classes)}' id='{escape(element_id)}'>{escape(str(value))}</div></div>"
     )
 
 
@@ -664,6 +669,18 @@ def _signed_money(value: object) -> str:
         number = 0.0
     sign = "+" if number >= 0 else "-"
     return f"{sign}{abs(number):,.2f} USDT"
+
+
+def _profit_text(text: str, value: object) -> str:
+    return f"<span class='{_profit_class(value)}'>{escape(text)}</span>"
+
+
+def _profit_class(value: object) -> str:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        number = 0.0
+    return "profit-negative" if number < 0 else "profit-positive"
 
 
 def _percent(value: object) -> str:
@@ -707,7 +724,7 @@ def _opportunity_table(rows: list) -> str:
 
 def _trade_table(rows: list) -> str:
     if not rows:
-        return "<div class='empty'>暂无纸面成交。</div>"
+        return "<div class='empty'>暂无成交。</div>"
     body = []
     for row in rows:
         body.append(
@@ -716,7 +733,7 @@ def _trade_table(rows: list) -> str:
             f"<td>YES: {escape(str(row.get('yes_question', '')))}<br>NO: {escape(str(row.get('no_question', '')))}</td>"
             f"<td>{_number(row.get('shares', 0))}</td>"
             f"<td>{_money(row.get('total_cost', 0))}</td>"
-            f"<td>{_signed_money(row.get('guaranteed_profit', 0))}</td>"
+            f"<td>{_profit_text(_signed_money(row.get('guaranteed_profit', 0)), row.get('guaranteed_profit', 0))}</td>"
             f"<td>{escape(str(row.get('detected_at', '')))}</td>"
             "</tr>"
         )
