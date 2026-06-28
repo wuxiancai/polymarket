@@ -141,15 +141,19 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "NO 数量" in payload["portfolio"]["positions_html"]
     assert "NO 价格" in payload["portfolio"]["positions_html"]
     assert "NO 金额" in payload["portfolio"]["positions_html"]
+    assert "结算时间" in payload["portfolio"]["positions_html"]
     assert "YES 份额" not in payload["portfolio"]["positions_html"]
     assert "NO 份额" not in payload["portfolio"]["positions_html"]
     assert "300.0000" in payload["portfolio"]["positions_html"]
-    assert "0.4000" in payload["portfolio"]["positions_html"]
-    assert "0.5700" in payload["portfolio"]["positions_html"]
+    assert "0.40" in payload["portfolio"]["positions_html"]
+    assert "0.57" in payload["portfolio"]["positions_html"]
+    assert "0.4000" not in payload["portfolio"]["positions_html"]
+    assert "0.5700" not in payload["portfolio"]["positions_html"]
     assert "120.00 USDT" in payload["portfolio"]["positions_html"]
     assert "171.00 USDT" in payload["portfolio"]["positions_html"]
     assert "预估收益" in payload["portfolio"]["positions_html"]
     assert "2026-06-27 20:00:00" in payload["portfolio"]["positions_html"]
+    assert "2026-07-01 08:00:00" in payload["portfolio"]["positions_html"]
     assert "2026-06-27T12:00:00+00:00" not in payload["portfolio"]["positions_html"]
 
     trade_html = payload["assets"][0]["trades_html"]
@@ -159,13 +163,53 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "NO 数量" in trade_html
     assert "NO 价格" in trade_html
     assert "NO 金额" in trade_html
+    assert "结算时间" in trade_html
     assert "YES 份额" not in trade_html
     assert "NO 份额" not in trade_html
     assert "300.0000" in trade_html
-    assert "0.4000" in trade_html
-    assert "0.5700" in trade_html
+    assert "0.40" in trade_html
+    assert "0.57" in trade_html
+    assert "0.4000" not in trade_html
+    assert "0.5700" not in trade_html
     assert "120.00 USDT" in trade_html
     assert "171.00 USDT" in trade_html
+    assert "2026-07-01 08:00:00" in trade_html
+
+
+def test_opportunity_table_hides_internal_english_reason(tmp_path):
+    config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
+    store = PaperStore(config.database_path)
+    store.initialize()
+    opportunity = ArbOpportunity(
+        pair_key="pair-btc",
+        kind="same_market",
+        yes_market_id="m1",
+        yes_token_id="y1",
+        yes_question="Will Bitcoin reach $70,000 in June?",
+        no_market_id="m1",
+        no_token_id="n1",
+        no_question="Will Bitcoin reach $70,000 in June?",
+        yes_end_date="2026-07-01T00:00:00+00:00",
+        no_end_date="2026-07-01T00:00:00+00:00",
+        shares=300.0,
+        yes_avg_price=0.40,
+        no_avg_price=0.57,
+        total_cost=291.0,
+        min_payout=300.0,
+        guaranteed_profit=9.0,
+        edge_per_share=0.03,
+        executable=True,
+        reason="executable",
+        detected_at=datetime(2026, 6, 27, 12, 0, tzinfo=timezone.utc),
+    )
+    store.record_opportunity(opportunity)
+    state = WebState(config=config, store=store, asset=BTC_ASSET, runner=PaperRunner(config, BTC_ASSET))
+
+    payload = dashboard_payload([state])
+
+    html = payload["assets"][0]["opportunities_html"]
+    assert "可模拟成交" in html
+    assert "executable" not in html
 
 
 def test_dashboard_hides_settled_positions(tmp_path):

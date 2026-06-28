@@ -320,3 +320,18 @@ Added local Web dashboard and one-click scripts.
 - Verification:
   - Added regression coverage for an old `paper_trades` schema and a matching
     opportunity row, confirming prices are restored after initialization.
+
+## 2026-06-28 Settlement time and table readability update
+
+- `模拟持仓` and `模拟成交` now include `结算时间`, computed as the later known
+  YES/NO leg end date and displayed in Beijing time.
+- Price display now uses 2 decimals across the position/trade tables. Amount
+  fields already use 2 decimals and continue to render as USDT.
+- The recent opportunity status cell no longer prints the internal English
+  reason `executable`; non-executable reasons are translated for common volume
+  and depth blocks.
+- Long market text cells now use a constrained wrapping style so English market
+  titles do not make the narrow UI look broken.
+- Verification:
+  - Added regression coverage for settlement time, 2-decimal prices, and hiding
+    the internal `executable` reason.
