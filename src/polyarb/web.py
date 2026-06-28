@@ -495,11 +495,11 @@ def _position_table(rows: list, states: list[WebState]) -> str:
             "<tr>"
             f"<td>{escape(asset)}</td>"
             f"<td>{escape(str(row.get('pair_key', '')))}</td>"
-            f"<td class='market-text'>{escape(str(row.get('yes_question', '')))}</td>"
+            f"<td class='market-text'>{_market_link(row.get('yes_question', ''), row.get('yes_event_slug', ''))}</td>"
             f"<td>{_number(row.get('shares', 0))}</td>"
             f"<td>{_price(row.get('yes_avg_price', 0))}</td>"
             f"<td>{_money(_leg_amount(row, 'yes_avg_price'))}</td>"
-            f"<td class='market-text'>{escape(str(row.get('no_question', '')))}</td>"
+            f"<td class='market-text'>{_market_link(row.get('no_question', ''), row.get('no_event_slug', ''))}</td>"
             f"<td>{_number(row.get('shares', 0))}</td>"
             f"<td>{_price(row.get('no_avg_price', 0))}</td>"
             f"<td>{_money(_leg_amount(row, 'no_avg_price'))}</td>"
@@ -526,6 +526,15 @@ def _asset_symbol_for_row(row: dict, states: list[WebState]) -> str:
         if needle in yes_question or needle in no_question:
             return state.asset.symbol
     return "-"
+
+
+def _market_link(text: object, event_slug: object) -> str:
+    label = escape(str(text or ""))
+    slug = str(event_slug or "").strip()
+    if not slug:
+        return label
+    href = f"https://polymarket.com/event/{slug}"
+    return f"<a href='{escape(href)}' target='_blank' rel='noopener noreferrer'>{label}</a>"
 
 
 def _asset_section(state: WebState) -> str:
@@ -779,9 +788,9 @@ def _opportunity_table(rows: list) -> str:
             "<tr>"
             f"<td><span class='pill {cls}'>{state}</span>{detail}</td>"
             f"<td>{escape(_money(row.get('guaranteed_profit', 0)))}</td>"
-            f"<td class='market-text'>{escape(str(row.get('yes_question', '')))}</td>"
+            f"<td class='market-text'>{_market_link(row.get('yes_question', ''), row.get('yes_event_slug', ''))}</td>"
             f"<td>{_number(row.get('shares', 0))}</td>"
-            f"<td class='market-text'>{escape(str(row.get('no_question', '')))}</td>"
+            f"<td class='market-text'>{_market_link(row.get('no_question', ''), row.get('no_event_slug', ''))}</td>"
             f"<td>{_number(row.get('shares', 0))}</td>"
             f"<td>{escape(_format_time_value(row.get('detected_at', '')))}</td>"
             "</tr>"
@@ -817,11 +826,11 @@ def _trade_table(rows: list) -> str:
         body.append(
             "<tr>"
             f"<td>{escape(str(row.get('pair_key', '')))}</td>"
-            f"<td class='market-text'>{escape(str(row.get('yes_question', '')))}</td>"
+            f"<td class='market-text'>{_market_link(row.get('yes_question', ''), row.get('yes_event_slug', ''))}</td>"
             f"<td>{_number(row.get('shares', 0))}</td>"
             f"<td>{_price(row.get('yes_avg_price', 0))}</td>"
             f"<td>{_money(_leg_amount(row, 'yes_avg_price'))}</td>"
-            f"<td class='market-text'>{escape(str(row.get('no_question', '')))}</td>"
+            f"<td class='market-text'>{_market_link(row.get('no_question', ''), row.get('no_event_slug', ''))}</td>"
             f"<td>{_number(row.get('shares', 0))}</td>"
             f"<td>{_price(row.get('no_avg_price', 0))}</td>"
             f"<td>{_money(_leg_amount(row, 'no_avg_price'))}</td>"

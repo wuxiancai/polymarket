@@ -111,6 +111,8 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
         no_market_id="week70",
         no_token_id="n-week",
         no_question="Will Bitcoin reach $70,000 June 22-28?",
+        yes_event_slug="what-price-will-bitcoin-hit-in-june",
+        no_event_slug="what-price-will-bitcoin-hit-june-22-28-2026",
         yes_end_date="2026-07-01T00:00:00+00:00",
         no_end_date="2026-06-29T00:00:00+00:00",
         shares=300.0,
@@ -137,6 +139,7 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "USDT" not in payload["portfolio"]["summary_html"]
     assert "pair-btc" in payload["portfolio"]["positions_html"]
     assert "Will Bitcoin reach $70,000 in June?" in payload["portfolio"]["positions_html"]
+    assert "https://polymarket.com/event/what-price-will-bitcoin-hit-in-june" in payload["portfolio"]["positions_html"]
     assert "YES 数量" in payload["portfolio"]["positions_html"]
     assert "YES 价格" in payload["portfolio"]["positions_html"]
     assert "YES 金额" in payload["portfolio"]["positions_html"]
@@ -160,6 +163,7 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "2026-06-27T12:00:00+00:00" not in payload["portfolio"]["positions_html"]
 
     trade_html = payload["assets"][0]["trades_html"]
+    assert "https://polymarket.com/event/what-price-will-bitcoin-hit-in-june" in trade_html
     assert "YES 数量" in trade_html
     assert "YES 价格" in trade_html
     assert "YES 金额" in trade_html
@@ -193,6 +197,8 @@ def test_opportunity_table_hides_internal_english_reason(tmp_path):
         no_market_id="m1",
         no_token_id="n1",
         no_question="Will Bitcoin reach $70,000 in June?",
+        yes_event_slug="what-price-will-bitcoin-hit-in-june",
+        no_event_slug="what-price-will-bitcoin-hit-in-june",
         yes_end_date="2026-07-01T00:00:00+00:00",
         no_end_date="2026-07-01T00:00:00+00:00",
         shares=300.0,
@@ -213,6 +219,7 @@ def test_opportunity_table_hides_internal_english_reason(tmp_path):
 
     html = payload["assets"][0]["opportunities_html"]
     assert "可模拟成交" in html
+    assert "https://polymarket.com/event/what-price-will-bitcoin-hit-in-june" in html
     assert "9.00" in html
     assert "9.0</td>" not in html
     assert "executable" not in html
@@ -232,6 +239,8 @@ def test_dashboard_hides_settled_positions(tmp_path):
         no_market_id="m1",
         no_token_id="n1",
         no_question="Will Bitcoin reach $70,000 in June?",
+        yes_event_slug="what-price-will-bitcoin-hit-in-june",
+        no_event_slug="what-price-will-bitcoin-hit-in-june",
         yes_end_date=settled_at.isoformat(),
         no_end_date=settled_at.isoformat(),
         shares=100.0,

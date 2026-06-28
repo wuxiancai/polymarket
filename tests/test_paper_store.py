@@ -18,6 +18,8 @@ def test_paper_store_records_opportunity_and_trade(tmp_path):
         no_market_id="week70",
         no_token_id="n-week",
         no_question="Will Bitcoin reach $70,000 June 22-28?",
+        yes_event_slug="what-price-will-bitcoin-hit-in-june",
+        no_event_slug="what-price-will-bitcoin-hit-june-22-28-2026",
         yes_end_date="2026-07-01T00:00:00+00:00",
         no_end_date="2026-06-29T00:00:00+00:00",
         shares=300.0,
@@ -41,6 +43,8 @@ def test_paper_store_records_opportunity_and_trade(tmp_path):
     assert rows[0]["guaranteed_profit"] == 9.0
     assert rows[0]["yes_question"] == "Will Bitcoin reach $70,000 in June?"
     assert rows[0]["no_question"] == "Will Bitcoin reach $70,000 June 22-28?"
+    assert rows[0]["yes_event_slug"] == "what-price-will-bitcoin-hit-in-june"
+    assert rows[0]["no_event_slug"] == "what-price-will-bitcoin-hit-june-22-28-2026"
     assert rows[0]["yes_end_date"] == "2026-07-01T00:00:00+00:00"
     assert rows[0]["no_end_date"] == "2026-06-29T00:00:00+00:00"
     assert rows[0]["yes_avg_price"] == 0.40
@@ -75,10 +79,12 @@ def test_paper_store_migrates_existing_trade_table(tmp_path):
     assert {
         "yes_token_id",
         "yes_question",
+        "yes_event_slug",
         "yes_end_date",
         "yes_avg_price",
         "no_token_id",
         "no_question",
+        "no_event_slug",
         "no_end_date",
         "no_avg_price",
     }.issubset(columns)
@@ -228,6 +234,8 @@ def test_latest_positions_excludes_settled_trades(tmp_path):
         no_market_id="m1",
         no_token_id="n1",
         no_question="Will Bitcoin reach $70,000 in June?",
+        yes_event_slug="what-price-will-bitcoin-hit-in-june",
+        no_event_slug="what-price-will-bitcoin-hit-in-june",
         yes_end_date="2026-06-01T00:00:00+00:00",
         no_end_date="2026-06-01T00:00:00+00:00",
         shares=100.0,

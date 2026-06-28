@@ -101,6 +101,8 @@ class ArbOpportunity:
     no_market_id: str
     no_token_id: str
     no_question: str
+    yes_event_slug: str
+    no_event_slug: str
     yes_end_date: str
     no_end_date: str
     shares: float
@@ -124,6 +126,8 @@ class ArbOpportunity:
             "no_market_id": self.no_market_id,
             "no_token_id": self.no_token_id,
             "no_question": self.no_question,
+            "yes_event_slug": self.yes_event_slug,
+            "no_event_slug": self.no_event_slug,
             "yes_end_date": self.yes_end_date,
             "no_end_date": self.no_end_date,
             "shares": self.shares,

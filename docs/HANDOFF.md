@@ -367,3 +367,24 @@ Added local Web dashboard and one-click scripts.
 - Verification:
   - Added regression coverage for an old `paper_trades` row with empty end
     dates and question `Will Ethereum dip to $1,500 June 22-28?`.
+
+## 2026-06-28 Polymarket market link update
+
+- Diagnosis for "cannot find the traded pair in Polymarket search":
+  - Paper trades are simulated only; they do not appear as real Polymarket
+    account trades.
+  - Dashboard rows display Gamma market question text such as
+    `Will Ethereum dip to $1,500 June 22-28?`.
+  - Polymarket's website search often indexes/returns the broader event title,
+    such as `What price will Ethereum hit June 22-28?`, rather than the exact
+    market question text shown by Gamma.
+- Fix:
+  - `ArbOpportunity` now carries `yes_event_slug` and `no_event_slug`.
+  - `opportunities` and `paper_trades` store these slugs for new records.
+  - Dashboard market text in recent opportunities, positions, and trades becomes
+    a direct `https://polymarket.com/event/<event_slug>` link when the slug is
+    known.
+  - Old rows without slugs still render as plain text.
+- Verification:
+  - Added regression checks that positions, trades, and opportunities include
+    direct Polymarket event links when event slugs are present.

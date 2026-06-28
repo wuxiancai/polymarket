@@ -30,10 +30,12 @@ class PaperStore:
                     yes_market_id text not null,
                     yes_token_id text not null,
                     yes_question text not null,
+                    yes_event_slug text not null default '',
                     yes_end_date text not null default '',
                     no_market_id text not null,
                     no_token_id text not null,
                     no_question text not null,
+                    no_event_slug text not null default '',
                     no_end_date text not null default '',
                     shares real not null,
                     yes_avg_price real not null,
@@ -52,11 +54,13 @@ class PaperStore:
                     yes_market_id text not null,
                     yes_token_id text not null default '',
                     yes_question text not null default '',
+                    yes_event_slug text not null default '',
                     yes_end_date text not null default '',
                     yes_avg_price real not null default 0,
                     no_market_id text not null,
                     no_token_id text not null default '',
                     no_question text not null default '',
+                    no_event_slug text not null default '',
                     no_end_date text not null default '',
                     no_avg_price real not null default 0,
                     shares real not null,
@@ -76,12 +80,12 @@ class PaperStore:
             conn.execute(
                 """
                 insert into opportunities (
-                    pair_key, kind, yes_market_id, yes_token_id, yes_question, yes_end_date,
-                    no_market_id, no_token_id, no_question, no_end_date, shares, yes_avg_price,
+                    pair_key, kind, yes_market_id, yes_token_id, yes_question, yes_event_slug, yes_end_date,
+                    no_market_id, no_token_id, no_question, no_event_slug, no_end_date, shares, yes_avg_price,
                     no_avg_price, total_cost, min_payout, guaranteed_profit,
                     edge_per_share, executable, reason, detected_at
                 )
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     opportunity.pair_key,
@@ -89,10 +93,12 @@ class PaperStore:
                     opportunity.yes_market_id,
                     opportunity.yes_token_id,
                     opportunity.yes_question,
+                    opportunity.yes_event_slug,
                     opportunity.yes_end_date,
                     opportunity.no_market_id,
                     opportunity.no_token_id,
                     opportunity.no_question,
+                    opportunity.no_event_slug,
                     opportunity.no_end_date,
                     opportunity.shares,
                     opportunity.yes_avg_price,
@@ -114,22 +120,24 @@ class PaperStore:
             conn.execute(
                 """
                 insert into paper_trades (
-                    pair_key, yes_market_id, yes_token_id, yes_question, yes_end_date, yes_avg_price,
-                    no_market_id, no_token_id, no_question, no_end_date, no_avg_price, shares,
+                    pair_key, yes_market_id, yes_token_id, yes_question, yes_event_slug, yes_end_date, yes_avg_price,
+                    no_market_id, no_token_id, no_question, no_event_slug, no_end_date, no_avg_price, shares,
                     total_cost, min_payout, guaranteed_profit, detected_at
                 )
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     opportunity.pair_key,
                     opportunity.yes_market_id,
                     opportunity.yes_token_id,
                     opportunity.yes_question,
+                    opportunity.yes_event_slug,
                     opportunity.yes_end_date,
                     opportunity.yes_avg_price,
                     opportunity.no_market_id,
                     opportunity.no_token_id,
                     opportunity.no_question,
+                    opportunity.no_event_slug,
                     opportunity.no_end_date,
                     opportunity.no_avg_price,
                     opportunity.shares,
@@ -184,10 +192,12 @@ class PaperStore:
         columns = {
             "yes_token_id": "text not null default ''",
             "yes_question": "text not null default ''",
+            "yes_event_slug": "text not null default ''",
             "yes_end_date": "text not null default ''",
             "yes_avg_price": "real not null default 0",
             "no_token_id": "text not null default ''",
             "no_question": "text not null default ''",
+            "no_event_slug": "text not null default ''",
             "no_end_date": "text not null default ''",
             "no_avg_price": "real not null default 0",
         }
@@ -195,7 +205,7 @@ class PaperStore:
             if name not in existing:
                 conn.execute(f"alter table paper_trades add column {name} {definition}")
         existing_opportunity = {row["name"] for row in conn.execute("pragma table_info(opportunities)").fetchall()}
-        for name in ("yes_end_date", "no_end_date"):
+        for name in ("yes_event_slug", "no_event_slug", "yes_end_date", "no_end_date"):
             if name not in existing_opportunity:
                 conn.execute(f"alter table opportunities add column {name} text not null default ''")
         self._backfill_paper_trade_prices(conn)
