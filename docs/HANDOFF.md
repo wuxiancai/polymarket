@@ -220,3 +220,15 @@ Added local Web dashboard and one-click scripts.
   - `python3 -m pytest -p no:cacheprovider tests -q`: 21 passed.
   - Local `--no-auto-scan` Web smoke check confirmed the title, section labels,
     and green non-negative profit classes render in HTML and `/api/dashboard`.
+
+## 2026-06-28 WebSocket reconnect update
+
+- Realtime Polymarket listeners no longer stop after WebSocket/network errors.
+- `RealtimePaperRunner.run_forever()` now logs the failure, waits 10 seconds,
+  then starts the next REST bootstrap + WebSocket subscription cycle.
+- This is intended for unstable server networks: BTC and ETH listeners should
+  keep retrying indefinitely instead of changing the dashboard to a stopped
+  realtime state after keepalive timeout errors.
+- Verification:
+  - Added a regression test that simulates a WebSocket keepalive failure and
+    confirms the runner waits 10 seconds before entering the next bootstrap.

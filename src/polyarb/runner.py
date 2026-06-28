@@ -14,6 +14,8 @@ from .polymarket import ClobClient, GammaClient
 from .store import PaperStore
 from .websocket import apply_market_message, market_subscription_message
 
+WEBSOCKET_RECONNECT_DELAY_SECONDS = 10
+
 
 @dataclass
 class ScanResult:
@@ -120,7 +122,8 @@ class RealtimePaperRunner(PaperRunner):
                             on_result(result)
             except Exception as exc:
                 self._log(on_log, "error", f"Polymarket 连接失败：{exc}")
-                raise
+                self._log(on_log, "info", f"{WEBSOCKET_RECONNECT_DELAY_SECONDS} 秒后重新连接 Polymarket")
+                await asyncio.sleep(WEBSOCKET_RECONNECT_DELAY_SECONDS)
 
     def _bootstrap(self, on_log: Optional[Callable[[str, str], None]] = None) -> None:
         self._log(on_log, "info", f"Gamma API 正在拉取 {self.asset.symbol} 市场")
