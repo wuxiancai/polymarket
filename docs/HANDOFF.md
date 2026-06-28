@@ -159,3 +159,29 @@ Added local Web dashboard and one-click scripts.
 - `Network is unreachable` means the server cannot reach Polymarket's API from
   its outbound network path; check Ubuntu DNS, gateway, proxy, firewall, or ISP
   reachability.
+
+## 2026-06-28 Polymarket connection log update
+
+- Added a bottom-of-page `Polymarket 连接日志` panel to the Web dashboard.
+- `/api/dashboard` now includes `connection_log_html`, refreshed by the existing
+  5-second partial update loop.
+- Realtime runners now log the actual read-only行情链路:
+  - Gamma REST market bootstrap;
+  - CLOB REST order book bootstrap;
+  - CLOB WebSocket connect and subscription;
+  - manual scan start/success/failure;
+  - realtime listener failure.
+- Diagnosis note:
+  - `curl -i polymarket.com` only proves the main site HTTP entry is reachable.
+  - The dashboard depends on `https://gamma-api.polymarket.com/events`,
+    `https://clob.polymarket.com/book`, and
+    `wss://ws-subscriptions-clob.polymarket.com/ws/market`.
+  - `[Errno 101] Network is unreachable` is an outbound network/path/proxy
+    problem from the running service environment, not a normal Polymarket API
+    4xx/5xx response.
+- Verification:
+  - `python3 -m pytest -p no:cacheprovider tests -q`: 20 passed.
+  - Local `--no-auto-scan` Web smoke check confirmed the connection log block is
+    present in HTML and `/api/dashboard`.
+  - Local live read-only scan passed with `markets=32`, `pairs=219`,
+    `opportunities=0`.

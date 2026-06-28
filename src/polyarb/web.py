@@ -30,6 +30,7 @@ class WebState:
     running: bool = False
     realtime: bool = False
     last_event_at: Optional[datetime] = None
+    connection_logs: list[dict] = field(default_factory=list)
     lock: threading.Lock = field(default_factory=threading.Lock)
 
     def run_scan(self) -> None:
@@ -37,14 +38,20 @@ class WebState:
             if self.running:
                 return
             self.running = True
+        self.add_connection_log("info", "手动扫描已触发")
         try:
             result = self.runner.run_iteration()
             with self.lock:
                 self.latest_result = result
                 self.latest_error = None
+            self.add_connection_log(
+                "ok",
+                f"手动扫描完成：市场 {len(result.markets)}，交易对 {result.pairs}，机会 {len(result.opportunities)}",
+            )
         except Exception as exc:
             with self.lock:
                 self.latest_error = str(exc)
+            self.add_connection_log("error", f"手动扫描失败：{exc}")
         finally:
             with self.lock:
                 self.running = False
@@ -56,6 +63,7 @@ class WebState:
             self.running = True
             self.realtime = True
             self.latest_error = None
+        self.add_connection_log("info", "实时监听启动")
         realtime_runner = RealtimePaperRunner(self.config, self.asset)
         self.runner = realtime_runner
         try:
@@ -63,12 +71,14 @@ class WebState:
                 realtime_runner.run_forever(
                     on_result=self.update_result,
                     on_event=self.update_event,
+                    on_log=self.add_connection_log,
                 )
             )
         except Exception as exc:
             with self.lock:
                 self.latest_error = str(exc)
                 self.realtime = False
+            self.add_connection_log("error", f"实时监听已停止：{exc}")
         finally:
             with self.lock:
                 self.running = False
@@ -82,6 +92,18 @@ class WebState:
         with self.lock:
             self.last_event_at = event_at
 
+    def add_connection_log(self, level: str, message: str) -> None:
+        with self.lock:
+            self.connection_logs.append(
+                {
+                    "asset": self.asset.symbol,
+                    "level": level,
+                    "message": message,
+                    "time": datetime.now(timezone.utc),
+                }
+            )
+            self.connection_logs = self.connection_logs[-80:]
+
     def snapshot(self) -> dict:
         with self.lock:
             result = self.latest_result
@@ -89,6 +111,7 @@ class WebState:
             running = self.running
             realtime = self.realtime
             last_event_at = self.last_event_at
+            connection_logs = list(self.connection_logs)
         return {
             "asset": self.asset.symbol,
             "running": running,
@@ -99,6 +122,7 @@ class WebState:
             "opportunities": len(result.opportunities) if result else 0,
             "scanned_at": format_standard_time(result.scanned_at) if result else None,
             "last_event_at": format_standard_time(last_event_at) if last_event_at else None,
+            "connection_logs": connection_logs,
         }
 
 
@@ -285,6 +309,10 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
     .pill {{ display: inline-block; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); }}
     .exec {{ color: var(--accent); }}
     .watch {{ color: var(--warn); }}
+    .log-table td:first-child {{ white-space: nowrap; color: var(--muted); }}
+    .log-level {{ font-weight: 700; }}
+    .log-ok {{ color: var(--accent); }}
+    .log-error {{ color: var(--danger); }}
     @media (max-width: 760px) {{
       .top {{ align-items: flex-start; flex-direction: column; padding: 18px 0; }}
       .metrics {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
@@ -318,6 +346,10 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
       <div id="positionTable">{portfolio["positions_html"]}</div>
     </section>
     {asset_sections}
+    <section>
+      <h2>Polymarket 连接日志</h2>
+      <div id="connectionLog">{_connection_log_html(panels)}</div>
+    </section>
   </main>
   <script>
     function setText(id, value) {{
@@ -329,6 +361,7 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
       document.getElementById('errorBox').innerHTML = payload.error_html;
       document.getElementById('portfolioSummary').innerHTML = payload.portfolio.summary_html;
       document.getElementById('positionTable').innerHTML = payload.portfolio.positions_html;
+      document.getElementById('connectionLog').innerHTML = payload.connection_log_html;
       for (const asset of payload.assets) {{
         setText(asset.symbol + 'StatusValue', asset.status_text);
         setText(asset.symbol + 'MarketsValue', asset.status.markets);
@@ -363,6 +396,7 @@ def dashboard_payload(states: Union[WebState, list[WebState]]) -> dict:
         "error_html": _error_html(panels),
         "portfolio": _portfolio_payload(panels),
         "assets": [_asset_payload(state) for state in panels],
+        "connection_log_html": _connection_log_html(panels),
     }
 
 
@@ -538,6 +572,40 @@ def _error_html(states: list[WebState]) -> str:
         if snapshot["error"]:
             errors.append(f"<p class='error'>{escape(state.asset.symbol)}: {escape(_friendly_error(snapshot['error']))}</p>")
     return "".join(errors)
+
+
+def _connection_log_html(states: list[WebState]) -> str:
+    logs = []
+    for state in states:
+        for entry in state.snapshot()["connection_logs"]:
+            logs.append(entry)
+    if not logs:
+        return "<div class='empty'>暂无连接日志。</div>"
+    logs.sort(key=lambda entry: entry["time"], reverse=True)
+    rows = []
+    for entry in logs[:40]:
+        level = str(entry.get("level") or "info")
+        rows.append(
+            "<tr>"
+            f"<td>{escape(format_standard_time(entry['time']))}</td>"
+            f"<td>{escape(str(entry.get('asset') or '-'))}</td>"
+            f"<td><span class='log-level log-{escape(level)}'>{escape(_log_level_label(level))}</span></td>"
+            f"<td>{escape(_friendly_error(str(entry.get('message') or '')))}</td>"
+            "</tr>"
+        )
+    return (
+        "<table class='log-table'><thead><tr><th>时间</th><th>资产</th><th>级别</th><th>事件</th></tr></thead><tbody>"
+        + "".join(rows)
+        + "</tbody></table>"
+    )
+
+
+def _log_level_label(level: str) -> str:
+    if level == "ok":
+        return "正常"
+    if level == "error":
+        return "错误"
+    return "信息"
 
 
 def _friendly_error(error: str) -> str:

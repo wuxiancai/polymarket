@@ -25,6 +25,8 @@ def test_dashboard_renders_chinese_status(tmp_path):
     assert "触发扫描" in html
     assert "收益概览" in html
     assert "纸面模拟持仓" in html
+    assert "Polymarket 连接日志" in html
+    assert "暂无连接日志" in html
     assert "10,000.00 USDT" in html
     assert "累计收益" in html
     assert "累计保证收益" not in html
@@ -73,6 +75,22 @@ def test_dashboard_payload_contains_fragments(tmp_path):
     assert payload["assets"][1]["symbol"] == "ETH"
     assert "暂无纸面成交" in payload["assets"][1]["trades_html"]
     assert "summary_html" in payload["portfolio"]
+    assert "connection_log_html" in payload
+
+
+def test_dashboard_connection_log_updates(tmp_path):
+    config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
+    store = PaperStore(config.database_path)
+    store.initialize()
+    state = WebState(config=config, store=store, asset=BTC_ASSET, runner=PaperRunner(config, BTC_ASSET))
+    state.add_connection_log("info", "Gamma API 正在拉取 BTC 市场")
+    state.add_connection_log("error", "request failed: https://gamma-api.polymarket.com/events: [Errno 101] Network is unreachable")
+
+    payload = dashboard_payload(state)
+
+    assert "Gamma API 正在拉取 BTC 市场" in payload["connection_log_html"]
+    assert "行情源连接失败" in payload["connection_log_html"]
+    assert "BTC" in payload["connection_log_html"]
 
 
 def test_dashboard_shows_profit_and_positions(tmp_path):

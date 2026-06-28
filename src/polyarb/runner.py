@@ -88,39 +88,49 @@ class RealtimePaperRunner(PaperRunner):
         self,
         on_result: Optional[Callable[[ScanResult], None]] = None,
         on_event: Optional[Callable[[datetime], None]] = None,
+        on_log: Optional[Callable[[str, str], None]] = None,
     ) -> None:
         import websockets
 
         self.store.initialize()
         while True:
-            self._bootstrap()
-            initial_result = self._evaluate_current_books()
-            self._record_result(initial_result)
-            if on_result:
-                on_result(initial_result)
+            try:
+                self._bootstrap(on_log=on_log)
+                initial_result = self._evaluate_current_books()
+                self._record_result(initial_result)
+                if on_result:
+                    on_result(initial_result)
 
-            token_ids = sorted(set(self.books))
-            async with websockets.connect(self.config.websocket_url, ping_interval=10, ping_timeout=20) as websocket:
-                await websocket.send(json.dumps(market_subscription_message(token_ids)))
-                async for raw_message in websocket:
-                    message = json.loads(raw_message)
-                    updates = apply_market_message(self.books, message)
-                    if updates == 0:
-                        continue
-                    self.last_event_at = datetime.now(timezone.utc)
-                    result = self._evaluate_current_books()
-                    self._record_result(result)
-                    if on_event:
-                        on_event(self.last_event_at)
-                    if on_result:
-                        on_result(result)
+                token_ids = sorted(set(self.books))
+                self._log(on_log, "info", f"WebSocket 正在连接 {self.config.websocket_url}")
+                async with websockets.connect(self.config.websocket_url, ping_interval=10, ping_timeout=20) as websocket:
+                    await websocket.send(json.dumps(market_subscription_message(token_ids)))
+                    self._log(on_log, "ok", f"WebSocket 已订阅 {len(token_ids)} 个 token")
+                    async for raw_message in websocket:
+                        message = json.loads(raw_message)
+                        updates = apply_market_message(self.books, message)
+                        if updates == 0:
+                            continue
+                        self.last_event_at = datetime.now(timezone.utc)
+                        result = self._evaluate_current_books()
+                        self._record_result(result)
+                        if on_event:
+                            on_event(self.last_event_at)
+                        if on_result:
+                            on_result(result)
+            except Exception as exc:
+                self._log(on_log, "error", f"Polymarket 连接失败：{exc}")
+                raise
 
-    def _bootstrap(self) -> None:
+    def _bootstrap(self, on_log: Optional[Callable[[str, str], None]] = None) -> None:
+        self._log(on_log, "info", f"Gamma API 正在拉取 {self.asset.symbol} 市场")
         self.markets = self.gamma.markets_for_asset(self.asset)
         pairs = build_pairs(self.markets)
         self.pairs = len(pairs)
         token_ids = [token_id for pair in pairs for token_id in pair.token_ids]
+        self._log(on_log, "info", f"CLOB REST 正在拉取 {len(set(token_ids))} 个 token 盘口")
         self.books = self.clob.order_books(token_ids)
+        self._log(on_log, "ok", f"REST 引导完成：市场 {len(self.markets)}，交易对 {self.pairs}，盘口 {len(self.books)}")
 
     def _evaluate_current_books(self) -> ScanResult:
         opportunities = find_opportunities(self.markets, self.books, self.config)
@@ -137,6 +147,10 @@ class RealtimePaperRunner(PaperRunner):
             if self._should_execute(opportunity):
                 self.store.record_paper_trade(opportunity)
                 self.last_execution[opportunity.pair_key] = time.time()
+
+    def _log(self, callback: Optional[Callable[[str, str], None]], level: str, message: str) -> None:
+        if callback:
+            callback(level, message)
 
 
 def format_opportunities(result: ScanResult, limit: int = 20) -> str:
