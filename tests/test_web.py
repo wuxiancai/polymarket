@@ -135,12 +135,37 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "3,000.00 USDT" in payload["portfolio"]["summary_html"]
     assert "pair-btc" in payload["portfolio"]["positions_html"]
     assert "Will Bitcoin reach $70,000 in June?" in payload["portfolio"]["positions_html"]
-    assert "YES 份额" in payload["portfolio"]["positions_html"]
-    assert "NO 份额" in payload["portfolio"]["positions_html"]
+    assert "YES 数量" in payload["portfolio"]["positions_html"]
+    assert "YES 价格" in payload["portfolio"]["positions_html"]
+    assert "YES 金额" in payload["portfolio"]["positions_html"]
+    assert "NO 数量" in payload["portfolio"]["positions_html"]
+    assert "NO 价格" in payload["portfolio"]["positions_html"]
+    assert "NO 金额" in payload["portfolio"]["positions_html"]
+    assert "YES 份额" not in payload["portfolio"]["positions_html"]
+    assert "NO 份额" not in payload["portfolio"]["positions_html"]
     assert "300.0000" in payload["portfolio"]["positions_html"]
+    assert "0.4000" in payload["portfolio"]["positions_html"]
+    assert "0.5700" in payload["portfolio"]["positions_html"]
+    assert "120.00 USDT" in payload["portfolio"]["positions_html"]
+    assert "171.00 USDT" in payload["portfolio"]["positions_html"]
     assert "预估收益" in payload["portfolio"]["positions_html"]
     assert "2026-06-27 20:00:00" in payload["portfolio"]["positions_html"]
     assert "2026-06-27T12:00:00+00:00" not in payload["portfolio"]["positions_html"]
+
+    trade_html = payload["assets"][0]["trades_html"]
+    assert "YES 数量" in trade_html
+    assert "YES 价格" in trade_html
+    assert "YES 金额" in trade_html
+    assert "NO 数量" in trade_html
+    assert "NO 价格" in trade_html
+    assert "NO 金额" in trade_html
+    assert "YES 份额" not in trade_html
+    assert "NO 份额" not in trade_html
+    assert "300.0000" in trade_html
+    assert "0.4000" in trade_html
+    assert "0.5700" in trade_html
+    assert "120.00 USDT" in trade_html
+    assert "171.00 USDT" in trade_html
 
 
 def test_dashboard_hides_settled_positions(tmp_path):

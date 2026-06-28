@@ -47,10 +47,12 @@ class PaperStore:
                     yes_token_id text not null default '',
                     yes_question text not null default '',
                     yes_end_date text not null default '',
+                    yes_avg_price real not null default 0,
                     no_market_id text not null,
                     no_token_id text not null default '',
                     no_question text not null default '',
                     no_end_date text not null default '',
+                    no_avg_price real not null default 0,
                     shares real not null,
                     total_cost real not null,
                     min_payout real not null,
@@ -106,11 +108,11 @@ class PaperStore:
             conn.execute(
                 """
                 insert into paper_trades (
-                    pair_key, yes_market_id, yes_token_id, yes_question, yes_end_date,
-                    no_market_id, no_token_id, no_question, no_end_date, shares,
+                    pair_key, yes_market_id, yes_token_id, yes_question, yes_end_date, yes_avg_price,
+                    no_market_id, no_token_id, no_question, no_end_date, no_avg_price, shares,
                     total_cost, min_payout, guaranteed_profit, detected_at
                 )
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     opportunity.pair_key,
@@ -118,10 +120,12 @@ class PaperStore:
                     opportunity.yes_token_id,
                     opportunity.yes_question,
                     opportunity.yes_end_date,
+                    opportunity.yes_avg_price,
                     opportunity.no_market_id,
                     opportunity.no_token_id,
                     opportunity.no_question,
                     opportunity.no_end_date,
+                    opportunity.no_avg_price,
                     opportunity.shares,
                     opportunity.total_cost,
                     opportunity.min_payout,
@@ -175,9 +179,11 @@ class PaperStore:
             "yes_token_id": "text not null default ''",
             "yes_question": "text not null default ''",
             "yes_end_date": "text not null default ''",
+            "yes_avg_price": "real not null default 0",
             "no_token_id": "text not null default ''",
             "no_question": "text not null default ''",
             "no_end_date": "text not null default ''",
+            "no_avg_price": "real not null default 0",
         }
         for name, definition in columns.items():
             if name not in existing:

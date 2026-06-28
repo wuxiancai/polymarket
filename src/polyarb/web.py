@@ -496,8 +496,12 @@ def _position_table(rows: list, states: list[WebState]) -> str:
             f"<td>{escape(str(row.get('pair_key', '')))}</td>"
             f"<td>{escape(str(row.get('yes_question', '')))}</td>"
             f"<td>{_number(row.get('shares', 0))}</td>"
+            f"<td>{_price(row.get('yes_avg_price', 0))}</td>"
+            f"<td>{_money(_leg_amount(row, 'yes_avg_price'))}</td>"
             f"<td>{escape(str(row.get('no_question', '')))}</td>"
             f"<td>{_number(row.get('shares', 0))}</td>"
+            f"<td>{_price(row.get('no_avg_price', 0))}</td>"
+            f"<td>{_money(_leg_amount(row, 'no_avg_price'))}</td>"
             f"<td>{_money(row.get('total_cost', 0))}</td>"
             f"<td>{_money(row.get('min_payout', 0))}</td>"
             f"<td>{_profit_text(_signed_money(row.get('guaranteed_profit', 0)), row.get('guaranteed_profit', 0))}</td>"
@@ -505,8 +509,8 @@ def _position_table(rows: list, states: list[WebState]) -> str:
             "</tr>"
         )
     return (
-        "<table><thead><tr><th>币种</th><th>交易对</th><th>YES 持仓腿</th><th>YES 份额</th>"
-        "<th>NO 持仓腿</th><th>NO 份额</th><th>成本</th><th>最低赔付</th><th>预估收益</th><th>开仓时间</th></tr></thead><tbody>"
+        "<table><thead><tr><th>币种</th><th>交易对</th><th>YES 持仓腿</th><th>YES 数量</th><th>YES 价格</th><th>YES 金额</th>"
+        "<th>NO 持仓腿</th><th>NO 数量</th><th>NO 价格</th><th>NO 金额</th><th>成本</th><th>最低赔付</th><th>预估收益</th><th>开仓时间</th></tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table>"
     )
@@ -701,6 +705,23 @@ def _number(value: object) -> str:
     return f"{number:,.4f}"
 
 
+def _price(value: object) -> str:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        number = 0.0
+    return f"{number:.4f}"
+
+
+def _leg_amount(row: dict, price_key: str) -> float:
+    try:
+        shares = float(row.get("shares") or 0)
+        price = float(row.get(price_key) or 0)
+    except (TypeError, ValueError):
+        return 0.0
+    return shares * price
+
+
 def format_standard_time(value: datetime) -> str:
     return value.astimezone(DISPLAY_TZ).replace(microsecond=0).strftime("%Y-%m-%d %H:%M:%S")
 
@@ -756,16 +777,20 @@ def _trade_table(rows: list) -> str:
             f"<td>{escape(str(row.get('pair_key', '')))}</td>"
             f"<td>{escape(str(row.get('yes_question', '')))}</td>"
             f"<td>{_number(row.get('shares', 0))}</td>"
+            f"<td>{_price(row.get('yes_avg_price', 0))}</td>"
+            f"<td>{_money(_leg_amount(row, 'yes_avg_price'))}</td>"
             f"<td>{escape(str(row.get('no_question', '')))}</td>"
             f"<td>{_number(row.get('shares', 0))}</td>"
+            f"<td>{_price(row.get('no_avg_price', 0))}</td>"
+            f"<td>{_money(_leg_amount(row, 'no_avg_price'))}</td>"
             f"<td>{_money(row.get('total_cost', 0))}</td>"
             f"<td>{_profit_text(_signed_money(row.get('guaranteed_profit', 0)), row.get('guaranteed_profit', 0))}</td>"
             f"<td>{escape(_format_time_value(row.get('detected_at', '')))}</td>"
             "</tr>"
         )
     return (
-        "<table><thead><tr><th>交易对</th><th>YES 持仓腿</th><th>YES 份额</th><th>NO 持仓腿</th>"
-        "<th>NO 份额</th><th>成本</th><th>预估收益</th><th>时间</th></tr></thead><tbody>"
+        "<table><thead><tr><th>交易对</th><th>YES 持仓腿</th><th>YES 数量</th><th>YES 价格</th><th>YES 金额</th>"
+        "<th>NO 持仓腿</th><th>NO 数量</th><th>NO 价格</th><th>NO 金额</th><th>成本</th><th>预估收益</th><th>时间</th></tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table>"
     )

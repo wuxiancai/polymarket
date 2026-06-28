@@ -289,3 +289,18 @@ Added local Web dashboard and one-click scripts.
 - Verification:
   - Added `tests/test_start_script.py` covering preservation of an existing
     systemd `POLYARB_DB`.
+
+## 2026-06-28 Position and trade quantity/price/amount display update
+
+- Dashboard `模拟持仓` and `模拟成交` no longer label leg size as `份额`.
+- Each YES/NO leg now shows:
+  - `数量`: contract/share count;
+  - `价格`: average entry price for that leg;
+  - `金额`: `数量 * 价格`, rendered as USDT.
+- `paper_trades` now stores `yes_avg_price` and `no_avg_price` so historical
+  paper trade rows can render leg prices and amounts after migration. Existing
+  SQLite files are migrated in-place with `0` defaults for older rows that lack
+  price data.
+- Verification:
+  - Added regression coverage for the table headers and leg amounts, e.g.
+    `300 * 0.40 = 120.00 USDT` and `300 * 0.57 = 171.00 USDT`.
