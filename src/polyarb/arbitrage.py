@@ -78,6 +78,8 @@ def evaluate_pair(pair: ArbPair, books: Dict[str, OrderBook], config: Config) ->
         no_market_id=pair.no_market.id,
         no_token_id=pair.no_token_id,
         no_question=pair.no_market.question,
+        yes_end_date=pair.yes_market.end_date,
+        no_end_date=pair.no_market.end_date,
         shares=shares,
         yes_avg_price=yes_avg,
         no_avg_price=no_avg,

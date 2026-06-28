@@ -1,5 +1,5 @@
 from pathlib import Path
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from polyarb.config import Config
 from polyarb.models import BTC_ASSET, ETH_ASSET, ArbOpportunity
@@ -31,7 +31,7 @@ def test_dashboard_renders_chinese_status(tmp_path):
     assert "Polymarket 连接日志" in html
     assert "暂无连接日志" in html
     assert "10,000.00 USDT" in html
-    assert "累计收益" in html
+    assert "累计预估收益" in html
     assert "累计保证收益" not in html
     assert "暂无成交" in html
     assert "最近扫描" not in html
@@ -110,6 +110,8 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
         no_market_id="week70",
         no_token_id="n-week",
         no_question="Will Bitcoin reach $70,000 June 22-28?",
+        yes_end_date="2026-07-01T00:00:00+00:00",
+        no_end_date="2026-06-29T00:00:00+00:00",
         shares=300.0,
         yes_avg_price=0.40,
         no_avg_price=0.57,
@@ -133,6 +135,48 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "3,000.00 USDT" in payload["portfolio"]["summary_html"]
     assert "pair-btc" in payload["portfolio"]["positions_html"]
     assert "Will Bitcoin reach $70,000 in June?" in payload["portfolio"]["positions_html"]
+    assert "YES 份额" in payload["portfolio"]["positions_html"]
+    assert "NO 份额" in payload["portfolio"]["positions_html"]
+    assert "300.0000" in payload["portfolio"]["positions_html"]
+    assert "预估收益" in payload["portfolio"]["positions_html"]
+    assert "2026-06-27 20:00:00" in payload["portfolio"]["positions_html"]
+    assert "2026-06-27T12:00:00+00:00" not in payload["portfolio"]["positions_html"]
+
+
+def test_dashboard_hides_settled_positions(tmp_path):
+    config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
+    store = PaperStore(config.database_path)
+    store.initialize()
+    settled_at = datetime.now(timezone.utc) - timedelta(days=1)
+    opportunity = ArbOpportunity(
+        pair_key="settled-btc",
+        kind="same_market",
+        yes_market_id="m1",
+        yes_token_id="y1",
+        yes_question="Will Bitcoin reach $70,000 in June?",
+        no_market_id="m1",
+        no_token_id="n1",
+        no_question="Will Bitcoin reach $70,000 in June?",
+        yes_end_date=settled_at.isoformat(),
+        no_end_date=settled_at.isoformat(),
+        shares=100.0,
+        yes_avg_price=0.40,
+        no_avg_price=0.57,
+        total_cost=97.0,
+        min_payout=100.0,
+        guaranteed_profit=3.0,
+        edge_per_share=0.03,
+        executable=True,
+        reason="executable",
+        detected_at=datetime(2026, 6, 27, 12, 0, tzinfo=timezone.utc),
+    )
+    store.record_paper_trade(opportunity)
+    btc = WebState(config=config, store=store, asset=BTC_ASSET, runner=PaperRunner(config, BTC_ASSET))
+
+    payload = dashboard_payload([btc])
+
+    assert "暂无持仓" in payload["portfolio"]["positions_html"]
+    assert "settled-btc" not in payload["portfolio"]["positions_html"]
 
 
 def test_dashboard_shortens_network_error(tmp_path):

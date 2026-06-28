@@ -99,6 +99,8 @@ def test_marginal_depth_stops_before_unprofitable_level():
 
     assert opportunity is not None
     assert opportunity.executable is True
+    assert opportunity.yes_end_date == "2026-07-01T00:00:00+00:00"
+    assert opportunity.no_end_date == "2026-06-29T00:00:00+00:00"
     assert opportunity.shares == 300.0
     assert round(opportunity.total_cost, 2) == 291.00
     assert round(opportunity.guaranteed_profit, 2) == 9.00

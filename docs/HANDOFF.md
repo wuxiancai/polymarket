@@ -232,3 +232,34 @@ Added local Web dashboard and one-click scripts.
 - Verification:
   - Added a regression test that simulates a WebSocket keepalive failure and
     confirms the runner waits 10 seconds before entering the next bootstrap.
+
+## 2026-06-28 Position leg display, settlement filtering, and sizing update
+
+- Dashboard tables now display YES and NO legs separately:
+  - `模拟持仓`: `YES 持仓腿` / `YES 份额` and `NO 持仓腿` / `NO 份额`;
+  - `模拟成交`: the same split leg/share layout;
+  - `最近套利机会`: separate YES/NO market and share columns.
+- Dashboard trade/opportunity/position timestamps now render as standard
+  Beijing time: `YYYY-MM-DD HH:MM:SS`; raw ISO offsets are no longer shown in
+  these tables.
+- Unsettled paper positions use `预估收益` wording:
+  - portfolio summary labels are `累计预估收益` and `预估收益率`;
+  - position/trade tables use `预估收益`.
+- Paper trades and opportunities now store YES/NO market end dates. Existing
+  SQLite files are migrated in-place with empty defaults for historical rows.
+- `latest_positions()` filters out paper trades whose known YES and NO legs have
+  both reached their end dates, so settled pairs no longer appear in
+  `模拟持仓`. Historical rows without end dates remain visible to avoid hiding
+  data that cannot be classified.
+- Paper execution sizing now uses profit-rate tiers based on
+  `guaranteed_profit / total_cost`:
+  - `>= 3%`: use 100% of the asset's remaining allocation, capped by available
+    executable depth;
+  - `>= 2%`: use 50%;
+  - `>= 1%`: use 30%;
+  - below `1%`: do not write a paper trade.
+- Verification:
+  - `python3 -m pytest -p no:cacheprovider tests -q`: 25 passed.
+  - Local no-auto-scan Web smoke check on `http://127.0.0.1:8787` confirmed
+    `累计预估收益` / `预估收益率` render in HTML and `/api/dashboard`, with no raw
+    ISO timestamp match in the checked output.

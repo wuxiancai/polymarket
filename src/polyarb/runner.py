@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from typing import Callable, Dict, List, Optional
 
@@ -63,7 +63,10 @@ class PaperRunner:
         for opportunity in result.opportunities:
             self.store.record_opportunity(opportunity)
             if self._should_execute(opportunity):
-                self.store.record_paper_trade(opportunity)
+                sized = self._sized_opportunity(opportunity)
+                if sized is None:
+                    continue
+                self.store.record_paper_trade(sized)
                 self.last_execution[opportunity.pair_key] = time.time()
         return result
 
@@ -74,6 +77,48 @@ class PaperRunner:
         if last is None:
             return True
         return time.time() - last >= self.config.cooldown_seconds
+
+    def _sized_opportunity(self, opportunity: ArbOpportunity) -> Optional[ArbOpportunity]:
+        if opportunity.total_cost <= 0:
+            return None
+        profit_rate = opportunity.guaranteed_profit / opportunity.total_cost
+        if profit_rate >= 0.03:
+            position_ratio = 1.0
+        elif profit_rate >= 0.02:
+            position_ratio = 0.5
+        elif profit_rate >= 0.01:
+            position_ratio = 0.3
+        else:
+            return None
+
+        allocation = self.config.initial_capital_usdt * self.asset.allocation_ratio
+        used = self._used_capital()
+        available = max(0.0, allocation - used)
+        budget = min(opportunity.total_cost, available * position_ratio)
+        if budget <= 0:
+            return None
+        scale = budget / opportunity.total_cost
+        return replace(
+            opportunity,
+            shares=opportunity.shares * scale,
+            total_cost=opportunity.total_cost * scale,
+            min_payout=opportunity.min_payout * scale,
+            guaranteed_profit=opportunity.guaranteed_profit * scale,
+        )
+
+    def _used_capital(self) -> float:
+        total = 0.0
+        needle = self.asset.title_name.lower()
+        for row in self.store.latest_positions(500):
+            yes_question = str(row.get("yes_question", "")).lower()
+            no_question = str(row.get("no_question", "")).lower()
+            if needle not in yes_question and needle not in no_question:
+                continue
+            try:
+                total += float(row.get("total_cost") or 0)
+            except (TypeError, ValueError):
+                continue
+        return total
 
 
 class RealtimePaperRunner(PaperRunner):
@@ -148,7 +193,10 @@ class RealtimePaperRunner(PaperRunner):
         for opportunity in result.opportunities:
             self.store.record_opportunity(opportunity)
             if self._should_execute(opportunity):
-                self.store.record_paper_trade(opportunity)
+                sized = self._sized_opportunity(opportunity)
+                if sized is None:
+                    continue
+                self.store.record_paper_trade(sized)
                 self.last_execution[opportunity.pair_key] = time.time()
 
     def _log(self, callback: Optional[Callable[[str, str], None]], level: str, message: str) -> None:

@@ -456,8 +456,8 @@ def _portfolio_summary_html(summary: dict) -> str:
         "<div class='portfolio-grid'>"
         f"{_metric('初始本金', _money(summary['initial_capital']), 'initialCapitalValue')}"
         f"{_metric('已用本金', _money(summary['used']), 'usedCapitalValue')}"
-        f"{_metric('累计收益', _signed_money(summary['profit']), 'profitValue', _profit_class(summary['profit']))}"
-        f"{_metric('收益率', _percent(summary['return_rate']), 'returnRateValue', _profit_class(summary['return_rate']))}"
+        f"{_metric('累计预估收益', _signed_money(summary['profit']), 'profitValue', _profit_class(summary['profit']))}"
+        f"{_metric('预估收益率', _percent(summary['return_rate']), 'returnRateValue', _profit_class(summary['return_rate']))}"
         "</div>"
     )
     body = []
@@ -476,7 +476,7 @@ def _portfolio_summary_html(summary: dict) -> str:
     detail = (
         "<div class='portfolio-detail'><table><thead><tr>"
         "<th>币种</th><th>分配本金</th><th>已用本金</th><th>剩余本金</th>"
-        "<th>收益</th><th>收益率</th><th>持仓数</th>"
+        "<th>预估收益</th><th>预估收益率</th><th>持仓数</th>"
         "</tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table></div>"
@@ -494,17 +494,19 @@ def _position_table(rows: list, states: list[WebState]) -> str:
             "<tr>"
             f"<td>{escape(asset)}</td>"
             f"<td>{escape(str(row.get('pair_key', '')))}</td>"
-            f"<td>YES: {escape(str(row.get('yes_question', '')))}<br>NO: {escape(str(row.get('no_question', '')))}</td>"
+            f"<td>{escape(str(row.get('yes_question', '')))}</td>"
+            f"<td>{_number(row.get('shares', 0))}</td>"
+            f"<td>{escape(str(row.get('no_question', '')))}</td>"
             f"<td>{_number(row.get('shares', 0))}</td>"
             f"<td>{_money(row.get('total_cost', 0))}</td>"
             f"<td>{_money(row.get('min_payout', 0))}</td>"
             f"<td>{_profit_text(_signed_money(row.get('guaranteed_profit', 0)), row.get('guaranteed_profit', 0))}</td>"
-            f"<td>{escape(str(row.get('detected_at', '')))}</td>"
+            f"<td>{escape(_format_time_value(row.get('detected_at', '')))}</td>"
             "</tr>"
         )
     return (
-        "<table><thead><tr><th>币种</th><th>交易对</th><th>持仓腿</th><th>份额</th>"
-        "<th>成本</th><th>最低赔付</th><th>收益</th><th>开仓时间</th></tr></thead><tbody>"
+        "<table><thead><tr><th>币种</th><th>交易对</th><th>YES 持仓腿</th><th>YES 份额</th>"
+        "<th>NO 持仓腿</th><th>NO 份额</th><th>成本</th><th>最低赔付</th><th>预估收益</th><th>开仓时间</th></tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table>"
     )
@@ -703,6 +705,21 @@ def format_standard_time(value: datetime) -> str:
     return value.astimezone(DISPLAY_TZ).replace(microsecond=0).strftime("%Y-%m-%d %H:%M:%S")
 
 
+def _format_time_value(value: object) -> str:
+    if isinstance(value, datetime):
+        return format_standard_time(value)
+    text = str(value or "")
+    if not text:
+        return ""
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return text
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return format_standard_time(parsed)
+
+
 def _opportunity_table(rows: list) -> str:
     if not rows:
         return "<div class='empty'>暂无记录。系统只会在发现正收益组合时写入机会。</div>"
@@ -714,12 +731,19 @@ def _opportunity_table(rows: list) -> str:
             "<tr>"
             f"<td><span class='pill {cls}'>{state}</span><br>{escape(str(row.get('reason', '')))}</td>"
             f"<td>{escape(str(row.get('guaranteed_profit', '')))}</td>"
-            f"<td>{escape(str(row.get('shares', '')))}</td>"
-            f"<td>YES: {escape(str(row.get('yes_question', '')))}<br>NO: {escape(str(row.get('no_question', '')))}</td>"
-            f"<td>{escape(str(row.get('detected_at', '')))}</td>"
+            f"<td>{escape(str(row.get('yes_question', '')))}</td>"
+            f"<td>{_number(row.get('shares', 0))}</td>"
+            f"<td>{escape(str(row.get('no_question', '')))}</td>"
+            f"<td>{_number(row.get('shares', 0))}</td>"
+            f"<td>{escape(_format_time_value(row.get('detected_at', '')))}</td>"
             "</tr>"
         )
-    return "<table><thead><tr><th>状态</th><th>保证利润</th><th>份额</th><th>交易对</th><th>时间</th></tr></thead><tbody>" + "".join(body) + "</tbody></table>"
+    return (
+        "<table><thead><tr><th>状态</th><th>保证利润</th><th>YES 交易对</th><th>YES 份额</th>"
+        "<th>NO 交易对</th><th>NO 份额</th><th>时间</th></tr></thead><tbody>"
+        + "".join(body)
+        + "</tbody></table>"
+    )
 
 
 def _trade_table(rows: list) -> str:
@@ -730,16 +754,18 @@ def _trade_table(rows: list) -> str:
         body.append(
             "<tr>"
             f"<td>{escape(str(row.get('pair_key', '')))}</td>"
-            f"<td>YES: {escape(str(row.get('yes_question', '')))}<br>NO: {escape(str(row.get('no_question', '')))}</td>"
+            f"<td>{escape(str(row.get('yes_question', '')))}</td>"
+            f"<td>{_number(row.get('shares', 0))}</td>"
+            f"<td>{escape(str(row.get('no_question', '')))}</td>"
             f"<td>{_number(row.get('shares', 0))}</td>"
             f"<td>{_money(row.get('total_cost', 0))}</td>"
             f"<td>{_profit_text(_signed_money(row.get('guaranteed_profit', 0)), row.get('guaranteed_profit', 0))}</td>"
-            f"<td>{escape(str(row.get('detected_at', '')))}</td>"
+            f"<td>{escape(_format_time_value(row.get('detected_at', '')))}</td>"
             "</tr>"
         )
     return (
-        "<table><thead><tr><th>交易对</th><th>持仓腿</th><th>份额</th><th>成本</th>"
-        "<th>收益</th><th>时间</th></tr></thead><tbody>"
+        "<table><thead><tr><th>交易对</th><th>YES 持仓腿</th><th>YES 份额</th><th>NO 持仓腿</th>"
+        "<th>NO 份额</th><th>成本</th><th>预估收益</th><th>时间</th></tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table>"
     )
