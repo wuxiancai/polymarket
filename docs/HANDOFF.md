@@ -1,5 +1,13 @@
 # Handoff
 
+## 2026-06-29 Position profit column order update
+
+- In the `模拟持仓` table, `预估收益` now appears immediately after `币种`.
+- The row cells, table header, and column group order were changed together so
+  fixed column widths still align with the rendered data.
+- Verification:
+  - `python3 -m pytest -p no:cacheprovider tests -q`: 31 passed.
+
 ## 2026-06-29 Price display unit update
 
 - Polymarket CLOB/WebSocket prices are stored and processed as dollar
