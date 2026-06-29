@@ -525,6 +525,7 @@ def _position_table(rows: list, states: list[WebState]) -> str:
             f"<td>{escape(asset)}</td>"
             f"<td>{_profit_text(_signed_money(row.get('guaranteed_profit', 0)), row.get('guaranteed_profit', 0))}</td>"
             f"<td>{_spread(row)}</td>"
+            f"<td class='time-cell'>{_time_html(_settlement_time(row))}</td>"
             f"<td class='market-text'>{_market_link(row.get('yes_question', ''), row.get('yes_event_slug', ''))}</td>"
             f"<td>{_number(row.get('shares', 0))}</td>"
             f"<td>{_price(row.get('yes_avg_price', 0))}</td>"
@@ -536,16 +537,15 @@ def _position_table(rows: list, states: list[WebState]) -> str:
             f"<td>{_money(row.get('total_cost', 0))}</td>"
             f"<td>{_money(row.get('min_payout', 0))}</td>"
             f"<td class='time-cell'>{_time_html(_format_time_value(row.get('detected_at', '')))}</td>"
-            f"<td class='time-cell'>{_time_html(_settlement_time(row))}</td>"
             "</tr>"
         )
     return (
         "<table class='trade-table wide-table position-table'>"
-        "<colgroup><col class='asset-col'><col class='profit-col'><col class='spread-col'><col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'>"
+        "<colgroup><col class='asset-col'><col class='profit-col'><col class='spread-col'><col class='time-col'><col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'>"
         "<col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'><col class='money-col'>"
-        "<col class='money-col'><col class='time-col'><col class='time-col'></colgroup>"
-        "<thead><tr><th>币种</th><th>预估收益</th><th>价差</th><th>YES 持仓腿</th><th>YES 数量</th><th>YES 价格</th><th>YES 金额</th>"
-        "<th>NO 持仓腿</th><th>NO 数量</th><th>NO 价格</th><th>NO 金额</th><th>成本</th><th>最低赔付</th><th>开仓时间</th><th>结算时间</th></tr></thead><tbody>"
+        "<col class='money-col'><col class='time-col'></colgroup>"
+        "<thead><tr><th>币种</th><th>预估收益</th><th>价差</th><th>结算时间UTC+8</th><th>YES 持仓腿</th><th>YES 数量</th><th>YES 价格</th><th>YES 金额</th>"
+        "<th>NO 持仓腿</th><th>NO 数量</th><th>NO 价格</th><th>NO 金额</th><th>成本</th><th>最低赔付</th><th>开仓时间</th></tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table>"
     )

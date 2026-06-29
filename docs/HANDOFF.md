@@ -1,5 +1,13 @@
 # Handoff
 
+## 2026-06-29 Position settlement column update
+
+- In `模拟持仓`, settlement time now appears immediately after `价差`.
+- The settlement header is now `结算时间UTC+8`, matching `模拟成交`.
+- Opening time remains near the end as `开仓时间`.
+- Verification:
+  - `python3 -m pytest -p no:cacheprovider tests -q`: 32 passed.
+
 ## 2026-06-29 Trade table lead columns update
 
 - In `模拟成交`, `预估收益` and settlement time now appear immediately after

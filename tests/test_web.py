@@ -175,7 +175,9 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     position_html = payload["portfolio"]["positions_html"]
     assert position_html.index("<th>币种</th>") < position_html.index("<th>预估收益</th>")
     assert position_html.index("<th>预估收益</th>") < position_html.index("<th>价差</th>")
-    assert position_html.index("<th>价差</th>") < position_html.index("<th>YES 持仓腿</th>")
+    assert position_html.index("<th>价差</th>") < position_html.index("<th>结算时间UTC+8</th>")
+    assert position_html.index("<th>结算时间UTC+8</th>") < position_html.index("<th>YES 持仓腿</th>")
+    assert "<th>结算时间</th>" not in position_html
     assert "pair-btc" not in payload["portfolio"]["positions_html"]
     assert "<th>交易对</th>" not in payload["portfolio"]["positions_html"]
     assert "Will Bitcoin reach $70,000 in June?" not in payload["portfolio"]["positions_html"]
