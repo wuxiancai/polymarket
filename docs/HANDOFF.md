@@ -1,5 +1,15 @@
 # Handoff
 
+## 2026-06-29 Table time wrapping update
+
+- Dashboard trade table time cells now render date and clock on separate lines.
+- This affects table cells such as `时间`, `开仓时间`, and `结算时间`.
+- `format_standard_time()` still returns the standard one-line
+  `YYYY-MM-DD HH:MM:SS` string for non-table uses; only the table HTML renderer
+  splits it into date and clock spans.
+- Verification:
+  - `python3 -m pytest -p no:cacheprovider tests -q`: 32 passed.
+
 ## 2026-06-29 Spread column update
 
 - `模拟持仓` and `模拟成交` now include a `价差` column.

@@ -207,8 +207,10 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "171.00" in payload["portfolio"]["positions_html"]
     assert "USDT" not in payload["portfolio"]["positions_html"]
     assert "预估收益" in payload["portfolio"]["positions_html"]
-    assert "2026-06-27 20:00:00" in payload["portfolio"]["positions_html"]
-    assert "2099-07-01 08:00:00" in payload["portfolio"]["positions_html"]
+    assert "<span class='time-date'>2026-06-27</span><span class='time-clock'>20:00:00</span>" in payload["portfolio"]["positions_html"]
+    assert "<span class='time-date'>2099-07-01</span><span class='time-clock'>08:00:00</span>" in payload["portfolio"]["positions_html"]
+    assert "2026-06-27 20:00:00" not in payload["portfolio"]["positions_html"]
+    assert "2099-07-01 08:00:00" not in payload["portfolio"]["positions_html"]
     assert "2026-06-27T12:00:00+00:00" not in payload["portfolio"]["positions_html"]
 
     trade_html = payload["assets"][0]["trades_html"]
@@ -240,7 +242,8 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "120.00" in trade_html
     assert "171.00" in trade_html
     assert "USDT" not in trade_html
-    assert "2099-07-01 08:00:00" in trade_html
+    assert "<span class='time-date'>2099-07-01</span><span class='time-clock'>08:00:00</span>" in trade_html
+    assert "2099-07-01 08:00:00" not in trade_html
 
 
 def test_opportunity_table_hides_internal_english_reason(tmp_path):

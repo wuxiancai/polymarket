@@ -338,7 +338,8 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
       color: var(--accent);
       font-weight: 700;
     }}
-    .time-cell {{ white-space: nowrap; }}
+    .time-cell {{ white-space: normal; line-height: 1.35; }}
+    .time-date, .time-clock {{ display: block; white-space: nowrap; }}
     .log-table td:first-child {{ white-space: nowrap; color: var(--muted); }}
     .log-level {{ font-weight: 700; }}
     .log-ok {{ color: var(--accent); }}
@@ -534,8 +535,8 @@ def _position_table(rows: list, states: list[WebState]) -> str:
             f"<td>{_money(_leg_amount(row, 'no_avg_price'))}</td>"
             f"<td>{_money(row.get('total_cost', 0))}</td>"
             f"<td>{_money(row.get('min_payout', 0))}</td>"
-            f"<td class='time-cell'>{escape(_format_time_value(row.get('detected_at', '')))}</td>"
-            f"<td class='time-cell'>{escape(_settlement_time(row))}</td>"
+            f"<td class='time-cell'>{_time_html(_format_time_value(row.get('detected_at', '')))}</td>"
+            f"<td class='time-cell'>{_time_html(_settlement_time(row))}</td>"
             "</tr>"
         )
     return (
@@ -850,6 +851,13 @@ def _format_time_value(value: object) -> str:
     return format_standard_time(parsed)
 
 
+def _time_html(value: str) -> str:
+    date, separator, clock = str(value or "").partition(" ")
+    if not separator:
+        return escape(date)
+    return f"<span class='time-date'>{escape(date)}</span><span class='time-clock'>{escape(clock)}</span>"
+
+
 def _settlement_time(row: dict) -> str:
     dates = [_parse_time_value(row.get("yes_end_date")), _parse_time_value(row.get("no_end_date"))]
     known_dates = [value for value in dates if value is not None]
@@ -890,7 +898,7 @@ def _opportunity_table(rows: list) -> str:
             f"<td>{_number(row.get('shares', 0))}</td>"
             f"<td class='market-text'>{_market_link(row.get('no_question', ''), row.get('no_event_slug', ''))}</td>"
             f"<td>{_number(row.get('shares', 0))}</td>"
-            f"<td class='time-cell'>{escape(_format_time_value(row.get('detected_at', '')))}</td>"
+            f"<td class='time-cell'>{_time_html(_format_time_value(row.get('detected_at', '')))}</td>"
             "</tr>"
         )
     return (
@@ -934,8 +942,8 @@ def _trade_table(rows: list) -> str:
             f"<td>{_money(_leg_amount(row, 'no_avg_price'))}</td>"
             f"<td>{_money(row.get('total_cost', 0))}</td>"
             f"<td>{_profit_text(_signed_money(row.get('guaranteed_profit', 0)), row.get('guaranteed_profit', 0))}</td>"
-            f"<td class='time-cell'>{escape(_format_time_value(row.get('detected_at', '')))}</td>"
-            f"<td class='time-cell'>{escape(_settlement_time(row))}</td>"
+            f"<td class='time-cell'>{_time_html(_format_time_value(row.get('detected_at', '')))}</td>"
+            f"<td class='time-cell'>{_time_html(_settlement_time(row))}</td>"
             "</tr>"
         )
     return (
