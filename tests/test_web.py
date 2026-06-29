@@ -159,10 +159,10 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "NO 份额" not in payload["portfolio"]["positions_html"]
     assert "300.00" in payload["portfolio"]["positions_html"]
     assert "300.0000" not in payload["portfolio"]["positions_html"]
-    assert "0.40" in payload["portfolio"]["positions_html"]
-    assert "0.57" in payload["portfolio"]["positions_html"]
-    assert "0.4000" not in payload["portfolio"]["positions_html"]
-    assert "0.5700" not in payload["portfolio"]["positions_html"]
+    assert "40.00¢" in payload["portfolio"]["positions_html"]
+    assert "57.00¢" in payload["portfolio"]["positions_html"]
+    assert "0.40" not in payload["portfolio"]["positions_html"]
+    assert "0.57" not in payload["portfolio"]["positions_html"]
     assert "120.00" in payload["portfolio"]["positions_html"]
     assert "171.00" in payload["portfolio"]["positions_html"]
     assert "USDT" not in payload["portfolio"]["positions_html"]
@@ -191,10 +191,10 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "NO 份额" not in trade_html
     assert "300.00" in trade_html
     assert "300.0000" not in trade_html
-    assert "0.40" in trade_html
-    assert "0.57" in trade_html
-    assert "0.4000" not in trade_html
-    assert "0.5700" not in trade_html
+    assert "40.00¢" in trade_html
+    assert "57.00¢" in trade_html
+    assert "0.40" not in trade_html
+    assert "0.57" not in trade_html
     assert "120.00" in trade_html
     assert "171.00" in trade_html
     assert "USDT" not in trade_html

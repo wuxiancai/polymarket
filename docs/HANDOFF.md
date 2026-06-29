@@ -1,5 +1,17 @@
 # Handoff
 
+## 2026-06-29 Price display unit update
+
+- Polymarket CLOB/WebSocket prices are stored and processed as dollar
+  probability units from `0.00` to `1.00`.
+- The dashboard now renders prices in Polymarket-style cents by multiplying the
+  stored price by `100` and appending `¢`, e.g. stored `0.409` displays as
+  `40.90¢`.
+- Only display changed. Arbitrage math, paper trade storage, cost, payout, and
+  profit calculations continue to use the original `0-1` dollar unit.
+- Verification:
+  - `python3 -m pytest -p no:cacheprovider tests -q`: 31 passed.
+
 ## 2026-06-29 Quantity precision update
 
 - Dashboard quantity/share values now display with 2 decimal places instead of
