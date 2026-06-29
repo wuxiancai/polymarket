@@ -170,6 +170,16 @@ class PaperStore:
                 break
         return rows
 
+    def latest_settled_trades(self, limit: int = 100, now: Optional[datetime] = None) -> List[Dict[str, object]]:
+        current = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+        rows = []
+        for row in self.latest_trades(limit=limit * 2):
+            if _is_settled(row, current):
+                rows.append(row)
+            if len(rows) >= limit:
+                break
+        return rows
+
     def latest_opportunities(self, limit: int = 20) -> List[Dict[str, object]]:
         with self._connect() as conn:
             rows = conn.execute(

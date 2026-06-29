@@ -440,13 +440,15 @@ def _portfolio_payload(states: list[WebState]) -> dict:
         }
     store = states[0].store
     positions = store.latest_positions(100)
+    settled_trades = store.latest_settled_trades(100)
     asset_summaries = []
     total_cost = 0.0
     total_profit = 0.0
     for state in states:
         rows = _filter_rows_by_asset(positions, state.asset)
+        settled_rows = _filter_rows_by_asset(settled_trades, state.asset)
         cost = _sum_float(rows, "total_cost")
-        profit = _sum_float(rows, "guaranteed_profit")
+        profit = _sum_float(settled_rows, "guaranteed_profit")
         allocation = state.config.initial_capital_usdt * state.asset.allocation_ratio
         asset_summaries.append(
             {
@@ -482,8 +484,8 @@ def _portfolio_summary_html(summary: dict) -> str:
         "<div class='portfolio-grid'>"
         f"{_metric('初始本金', _money(summary['initial_capital']), 'initialCapitalValue')}"
         f"{_metric('已用本金', _money(summary['used']), 'usedCapitalValue')}"
-        f"{_metric('累计预估收益', _signed_money(summary['profit']), 'profitValue', _profit_class(summary['profit']))}"
-        f"{_metric('预估收益率', _percent(summary['return_rate']), 'returnRateValue', _profit_class(summary['return_rate']))}"
+        f"{_metric('累计收益', _signed_money(summary['profit']), 'profitValue', _profit_class(summary['profit']))}"
+        f"{_metric('收益率', _percent(summary['return_rate']), 'returnRateValue', _profit_class(summary['return_rate']))}"
         "</div>"
     )
     body = []
@@ -502,7 +504,7 @@ def _portfolio_summary_html(summary: dict) -> str:
     detail = (
         "<div class='portfolio-detail'><table><thead><tr>"
         "<th>币种</th><th>分配本金</th><th>已用本金</th><th>剩余本金</th>"
-        "<th>预估收益</th><th>预估收益率</th><th>持仓数</th>"
+        "<th>收益</th><th>收益率</th><th>持仓数</th>"
         "</tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table></div>"

@@ -1,5 +1,20 @@
 # Handoff
 
+## 2026-06-29 Portfolio realized profit wording update
+
+- `收益概览` now reports realized settled profit:
+  - labels changed from `累计预估收益` / `预估收益率` to `累计收益` / `收益率`;
+  - asset summary table columns changed from `预估收益` / `预估收益率` to
+    `收益` / `收益率`.
+- `PaperStore.latest_settled_trades()` was added so the portfolio summary can
+  aggregate only trades whose YES and NO legs have both reached settlement
+  time.
+- Open positions still drive `已用本金`, `剩余本金`, and `持仓数`.
+- `模拟持仓` and `模拟成交` keep `预估收益` wording for unsettled or historical
+  trade rows.
+- Verification:
+  - `python3 -m pytest -p no:cacheprovider tests -q`: 32 passed.
+
 ## 2026-06-29 Position profit column order update
 
 - In the `模拟持仓` table, `预估收益` now appears immediately after `币种`.
@@ -302,9 +317,7 @@ Added local Web dashboard and one-click scripts.
 - Dashboard trade/opportunity/position timestamps now render as standard
   Beijing time: `YYYY-MM-DD HH:MM:SS`; raw ISO offsets are no longer shown in
   these tables.
-- Unsettled paper positions use `预估收益` wording:
-  - portfolio summary labels are `累计预估收益` and `预估收益率`;
-  - position/trade tables use `预估收益`.
+- Unsettled paper positions use `预估收益` wording in position/trade tables.
 - Paper trades and opportunities now store YES/NO market end dates. Existing
   SQLite files are migrated in-place with empty defaults for historical rows.
 - `latest_positions()` filters out paper trades whose known YES and NO legs have
@@ -321,8 +334,10 @@ Added local Web dashboard and one-click scripts.
 - Verification:
   - `python3 -m pytest -p no:cacheprovider tests -q`: 25 passed.
   - Local no-auto-scan Web smoke check on `http://127.0.0.1:8787` confirmed
-    `累计预估收益` / `预估收益率` render in HTML and `/api/dashboard`, with no raw
-    ISO timestamp match in the checked output.
+    the then-current portfolio summary labels rendered in HTML and
+    `/api/dashboard`, with no raw ISO timestamp match in the checked output.
+    Current summary labels were later changed by the 2026-06-29 realized profit
+    wording update.
 
 ## 2026-06-28 start.sh database path preservation update
 

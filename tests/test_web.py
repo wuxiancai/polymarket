@@ -32,7 +32,10 @@ def test_dashboard_renders_chinese_status(tmp_path):
     assert "暂无连接日志" in html
     assert "10,000.00" in html
     assert "USDT" not in html
-    assert "累计预估收益" in html
+    assert "累计收益" in html
+    assert "累计预估收益" not in html
+    assert "收益率" in html
+    assert "预估收益率" not in html
     assert "累计保证收益" not in html
     assert "暂无成交" in html
     assert "最近扫描" not in html
@@ -113,8 +116,8 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
         no_question="Will Bitcoin reach $70,000 June 22-28?",
         yes_event_slug="what-price-will-bitcoin-hit-in-june",
         no_event_slug="what-price-will-bitcoin-hit-june-22-28-2026",
-        yes_end_date="2026-07-01T00:00:00+00:00",
-        no_end_date="2026-06-29T00:00:00+00:00",
+        yes_end_date="2099-07-01T00:00:00+00:00",
+        no_end_date="2099-06-29T00:00:00+00:00",
         shares=300.0,
         yes_avg_price=0.40,
         no_avg_price=0.57,
@@ -127,13 +130,45 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
         detected_at=datetime(2026, 6, 27, 12, 0, tzinfo=timezone.utc),
     )
     store.record_paper_trade(opportunity)
+    settled_opportunity = ArbOpportunity(
+        pair_key="settled-btc",
+        kind="implication",
+        yes_market_id="settled-month70",
+        yes_token_id="settled-y-month",
+        yes_question="Will Bitcoin reach $70,000 in June?",
+        no_market_id="settled-week70",
+        no_token_id="settled-n-week",
+        no_question="Will Bitcoin reach $70,000 June 22-28?",
+        yes_event_slug="what-price-will-bitcoin-hit-in-june",
+        no_event_slug="what-price-will-bitcoin-hit-june-22-28-2026",
+        yes_end_date="2020-06-28T00:00:00+00:00",
+        no_end_date="2020-06-28T00:00:00+00:00",
+        shares=200.0,
+        yes_avg_price=0.40,
+        no_avg_price=0.575,
+        total_cost=195.0,
+        min_payout=200.0,
+        guaranteed_profit=5.0,
+        edge_per_share=0.025,
+        executable=True,
+        reason="executable",
+        detected_at=datetime(2026, 6, 27, 11, 0, tzinfo=timezone.utc),
+    )
+    store.record_paper_trade(settled_opportunity)
     btc = WebState(config=config, store=store, asset=BTC_ASSET, runner=PaperRunner(config, BTC_ASSET))
     eth = WebState(config=config, store=store, asset=ETH_ASSET, runner=PaperRunner(config, ETH_ASSET))
 
     payload = dashboard_payload([btc, eth])
 
-    assert "+9.00" in payload["portfolio"]["summary_html"]
-    assert "0.09%" in payload["portfolio"]["summary_html"]
+    assert "+5.00" in payload["portfolio"]["summary_html"]
+    assert "+9.00" not in payload["portfolio"]["summary_html"]
+    assert "0.05%" in payload["portfolio"]["summary_html"]
+    assert "累计收益" in payload["portfolio"]["summary_html"]
+    assert "累计预估收益" not in payload["portfolio"]["summary_html"]
+    assert "<th>收益</th>" in payload["portfolio"]["summary_html"]
+    assert "<th>收益率</th>" in payload["portfolio"]["summary_html"]
+    assert "<th>预估收益</th>" not in payload["portfolio"]["summary_html"]
+    assert "<th>预估收益率</th>" not in payload["portfolio"]["summary_html"]
     assert "7,000.00" in payload["portfolio"]["summary_html"]
     assert "3,000.00" in payload["portfolio"]["summary_html"]
     assert "USDT" not in payload["portfolio"]["summary_html"]
@@ -171,7 +206,7 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "USDT" not in payload["portfolio"]["positions_html"]
     assert "预估收益" in payload["portfolio"]["positions_html"]
     assert "2026-06-27 20:00:00" in payload["portfolio"]["positions_html"]
-    assert "2026-07-01 08:00:00" in payload["portfolio"]["positions_html"]
+    assert "2099-07-01 08:00:00" in payload["portfolio"]["positions_html"]
     assert "2026-06-27T12:00:00+00:00" not in payload["portfolio"]["positions_html"]
 
     trade_html = payload["assets"][0]["trades_html"]
@@ -201,7 +236,7 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "120.00" in trade_html
     assert "171.00" in trade_html
     assert "USDT" not in trade_html
-    assert "2026-07-01 08:00:00" in trade_html
+    assert "2099-07-01 08:00:00" in trade_html
 
 
 def test_opportunity_table_hides_internal_english_reason(tmp_path):
