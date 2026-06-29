@@ -1,5 +1,22 @@
 # Handoff
 
+## 2026-06-29 Settled position profit panel update
+
+- Dashboard now adds an `已结束持仓收益` section immediately below `模拟持仓`.
+- The new panel uses `PaperStore.latest_settled_trades()` and renders each
+  ended paper position separately from open positions.
+- Columns include asset, realized `收益`, single-position `收益率`, spread,
+  Beijing settlement/end time, YES/NO legs, cost, minimum payout, and opening
+  time.
+- Dashboard partial refresh now updates the new settled-position table through
+  `payload.portfolio.settled_positions_html`.
+- Test fixture `test_dashboard_infers_event_link_and_condition_for_legacy_rows`
+  now uses a 2099 settlement date so it remains an open-position fixture after
+  2026-06-29.
+- Verification:
+  - `python3 -m pytest -p no:cacheprovider tests -q`: 33 passed.
+  - `bash -n start.sh deploy.sh && git diff --check`: passed.
+
 ## 2026-06-29 Opportunity table spread/status update
 
 - `最近套利机会` now includes a `价差` column immediately after `状态`.

@@ -376,6 +376,10 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
       <h2>模拟持仓</h2>
       <div id="positionTable">{portfolio["positions_html"]}</div>
     </section>
+    <section>
+      <h2>已结束持仓收益</h2>
+      <div id="settledPositionTable">{portfolio["settled_positions_html"]}</div>
+    </section>
     {asset_sections}
     <section>
       <h2>Polymarket 连接日志</h2>
@@ -392,6 +396,7 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
       document.getElementById('errorBox').innerHTML = payload.error_html;
       document.getElementById('portfolioSummary').innerHTML = payload.portfolio.summary_html;
       document.getElementById('positionTable').innerHTML = payload.portfolio.positions_html;
+      document.getElementById('settledPositionTable').innerHTML = payload.portfolio.settled_positions_html;
       document.getElementById('connectionLog').innerHTML = payload.connection_log_html;
       for (const asset of payload.assets) {{
         setText(asset.symbol + 'StatusValue', asset.status_text);
@@ -440,6 +445,7 @@ def _portfolio_payload(states: list[WebState]) -> dict:
         return {
             "summary_html": "<div class='empty'>暂无资产配置。</div>",
             "positions_html": "<div class='empty'>暂无持仓。</div>",
+            "settled_positions_html": "<div class='empty'>暂无已结束持仓。</div>",
         }
     store = states[0].store
     positions = store.latest_positions(100)
@@ -479,6 +485,7 @@ def _portfolio_payload(states: list[WebState]) -> dict:
         "summary": summary,
         "summary_html": _portfolio_summary_html(summary),
         "positions_html": _position_table(positions, states),
+        "settled_positions_html": _settled_position_table(settled_trades, states),
     }
 
 
@@ -546,6 +553,49 @@ def _position_table(rows: list, states: list[WebState]) -> str:
         "<col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'><col class='money-col'>"
         "<col class='money-col'><col class='time-col'></colgroup>"
         "<thead><tr><th>币种</th><th>预估收益</th><th>价差</th><th>结算时间UTC+8</th><th>YES 持仓腿</th><th>YES 数量</th><th>YES 价格</th><th>YES 金额</th>"
+        "<th>NO 持仓腿</th><th>NO 数量</th><th>NO 价格</th><th>NO 金额</th><th>成本</th><th>最低赔付</th><th>开仓时间</th></tr></thead><tbody>"
+        + "".join(body)
+        + "</tbody></table>"
+    )
+
+
+def _settled_position_table(rows: list, states: list[WebState]) -> str:
+    if not rows:
+        return "<div class='empty'>暂无已结束持仓。</div>"
+    body = []
+    for row in rows:
+        asset = _asset_symbol_for_row(row, states)
+        profit = row.get("guaranteed_profit", 0)
+        total_cost = row.get("total_cost", 0)
+        profit_value = _to_float(profit)
+        total_cost_value = _to_float(total_cost)
+        return_rate = _rate(profit_value, total_cost_value)
+        body.append(
+            "<tr>"
+            f"<td>{escape(asset)}</td>"
+            f"<td>{_profit_text(_signed_money(profit), profit)}</td>"
+            f"<td>{_profit_text(_percent(return_rate), return_rate)}</td>"
+            f"<td>{_spread(row)}</td>"
+            f"<td class='time-cell'>{_time_html(_settlement_time(row))}</td>"
+            f"<td class='market-text'>{_market_link(row.get('yes_question', ''), row.get('yes_event_slug', ''))}</td>"
+            f"<td>{_number(row.get('shares', 0))}</td>"
+            f"<td>{_price(row.get('yes_avg_price', 0))}</td>"
+            f"<td>{_money(_leg_amount(row, 'yes_avg_price'))}</td>"
+            f"<td class='market-text'>{_market_link(row.get('no_question', ''), row.get('no_event_slug', ''))}</td>"
+            f"<td>{_number(row.get('shares', 0))}</td>"
+            f"<td>{_price(row.get('no_avg_price', 0))}</td>"
+            f"<td>{_money(_leg_amount(row, 'no_avg_price'))}</td>"
+            f"<td>{_money(total_cost)}</td>"
+            f"<td>{_money(row.get('min_payout', 0))}</td>"
+            f"<td class='time-cell'>{_time_html(_format_time_value(row.get('detected_at', '')))}</td>"
+            "</tr>"
+        )
+    return (
+        "<table class='trade-table wide-table position-table'>"
+        "<colgroup><col class='asset-col'><col class='profit-col'><col class='profit-col'><col class='spread-col'><col class='time-col'><col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'>"
+        "<col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'><col class='money-col'>"
+        "<col class='money-col'><col class='time-col'></colgroup>"
+        "<thead><tr><th>币种</th><th>收益</th><th>收益率</th><th>价差</th><th>结束时间UTC+8</th><th>YES 持仓腿</th><th>YES 数量</th><th>YES 价格</th><th>YES 金额</th>"
         "<th>NO 持仓腿</th><th>NO 数量</th><th>NO 价格</th><th>NO 金额</th><th>成本</th><th>最低赔付</th><th>开仓时间</th></tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table>"
@@ -770,6 +820,13 @@ def _sum_float(rows: list, key: str) -> float:
         except (TypeError, ValueError):
             continue
     return total
+
+
+def _to_float(value: object) -> float:
+    try:
+        return float(value or 0)
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def _rate(numerator: float, denominator: float) -> float:

@@ -160,6 +160,23 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
 
     payload = dashboard_payload([btc, eth])
 
+    settled_html = payload["portfolio"]["settled_positions_html"]
+    assert "已结束持仓收益" in render_dashboard([btc, eth])
+    assert "settled-btc" not in settled_html
+    assert "<th>交易对</th>" not in settled_html
+    assert "<th>币种</th>" in settled_html
+    assert "<th>收益</th>" in settled_html
+    assert "<th>收益率</th>" in settled_html
+    assert "<th>结束时间UTC+8</th>" in settled_html
+    assert "+5.00" in settled_html
+    assert "2.56%" in settled_html
+    assert "What price will Bitcoin hit in June?" in settled_html
+    assert "条件：↑ 70,000" in settled_html
+    assert "40.00¢" in settled_html
+    assert "57.50¢" in settled_html
+    assert "2.50¢" in settled_html
+    assert "<span class='time-date'>2020-06-28</span><span class='time-clock'>08:00:00</span>" in settled_html
+
     assert "+5.00" in payload["portfolio"]["summary_html"]
     assert "+9.00" not in payload["portfolio"]["summary_html"]
     assert "0.05%" in payload["portfolio"]["summary_html"]
@@ -401,9 +418,9 @@ def test_dashboard_infers_event_link_and_condition_for_legacy_rows(tmp_path):
             values (
                 'same:2636444', '2636444', 'yes-token',
                 'Will Ethereum dip to $1,500 June 22-28?', '',
-                '2026-06-29T04:00:00+00:00', 0.07,
+                '2099-06-29T04:00:00+00:00', 0.07,
                 '2636444', 'no-token', 'Will Ethereum dip to $1,500 June 22-28?', '',
-                '2026-06-29T04:00:00+00:00', 0.91,
+                '2099-06-29T04:00:00+00:00', 0.91,
                 538.62, 526.18, 538.62, 12.43544, '2026-06-28T08:10:13+00:00'
             )
             """
@@ -454,6 +471,7 @@ def test_dashboard_hides_settled_positions(tmp_path):
     payload = dashboard_payload([btc])
 
     assert "暂无持仓" in payload["portfolio"]["positions_html"]
+    assert "+3.00" in payload["portfolio"]["settled_positions_html"]
     assert "settled-btc" not in payload["portfolio"]["positions_html"]
 
 
