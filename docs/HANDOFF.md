@@ -1,5 +1,14 @@
 # Handoff
 
+## 2026-06-29 Quantity precision update
+
+- Dashboard quantity/share values now display with 2 decimal places instead of
+  4 decimal places.
+- This applies to all Web tables that use the shared quantity formatter,
+  including opportunities, positions, and trades.
+- Verification:
+  - `python3 -m pytest -p no:cacheprovider tests -q`: 31 passed.
+
 ## 2026-06-29 Trade table overlap fix
 
 - `模拟持仓` and `模拟成交` no longer show the internal `交易对` / `pair_key`

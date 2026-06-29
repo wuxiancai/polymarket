@@ -157,7 +157,8 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "结算时间" in payload["portfolio"]["positions_html"]
     assert "YES 份额" not in payload["portfolio"]["positions_html"]
     assert "NO 份额" not in payload["portfolio"]["positions_html"]
-    assert "300.0000" in payload["portfolio"]["positions_html"]
+    assert "300.00" in payload["portfolio"]["positions_html"]
+    assert "300.0000" not in payload["portfolio"]["positions_html"]
     assert "0.40" in payload["portfolio"]["positions_html"]
     assert "0.57" in payload["portfolio"]["positions_html"]
     assert "0.4000" not in payload["portfolio"]["positions_html"]
@@ -188,7 +189,8 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "结算时间" in trade_html
     assert "YES 份额" not in trade_html
     assert "NO 份额" not in trade_html
-    assert "300.0000" in trade_html
+    assert "300.00" in trade_html
+    assert "300.0000" not in trade_html
     assert "0.40" in trade_html
     assert "0.57" in trade_html
     assert "0.4000" not in trade_html

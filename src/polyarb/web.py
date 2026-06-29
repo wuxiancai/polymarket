@@ -797,7 +797,7 @@ def _number(value: object) -> str:
         number = float(value)
     except (TypeError, ValueError):
         number = 0.0
-    return f"{number:,.4f}"
+    return f"{number:,.2f}"
 
 
 def _price(value: object) -> str:
