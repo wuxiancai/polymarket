@@ -15,6 +15,7 @@ from .store import PaperStore
 from .websocket import apply_market_message, market_subscription_message
 
 WEBSOCKET_RECONNECT_DELAY_SECONDS = 10
+MIN_DISPLAYED_POSITION_VALUE = 0.01
 
 
 @dataclass
@@ -98,12 +99,18 @@ class PaperRunner:
         if budget <= 0:
             return None
         scale = budget / opportunity.total_cost
+        shares = opportunity.shares * scale
+        total_cost = opportunity.total_cost * scale
+        min_payout = opportunity.min_payout * scale
+        guaranteed_profit = opportunity.guaranteed_profit * scale
+        if shares < MIN_DISPLAYED_POSITION_VALUE or guaranteed_profit < MIN_DISPLAYED_POSITION_VALUE:
+            return None
         return replace(
             opportunity,
-            shares=opportunity.shares * scale,
-            total_cost=opportunity.total_cost * scale,
-            min_payout=opportunity.min_payout * scale,
-            guaranteed_profit=opportunity.guaranteed_profit * scale,
+            shares=shares,
+            total_cost=total_cost,
+            min_payout=min_payout,
+            guaranteed_profit=guaranteed_profit,
         )
 
     def _used_capital(self) -> float:

@@ -1,5 +1,22 @@
 # Handoff
 
+## 2026-06-30 Dust paper position guard
+
+- Diagnosed a dashboard symptom where `模拟持仓` could show `预估收益 +0.00`
+  and `YES 数量 0.00`.
+- Local `data/paper.sqlite3` had no trades, so the screenshot row was not
+  reproducible from the local DB; code review and regression tests found the
+  likely path: position sizing could scale an otherwise valid opportunity down
+  to a dust trade when remaining allocation was only a tiny positive amount.
+- `PaperRunner._sized_opportunity()` now skips sized paper trades whose scaled
+  share count or guaranteed profit would render below `0.01`.
+- `PaperStore.record_paper_trade()` also rejects dust trades, and
+  `latest_trades()` filters old dust rows so existing invalid paper records do
+  not keep appearing in dashboard positions/trades.
+- Verification:
+  - `python3 -m pytest -p no:cacheprovider tests/test_paper_store.py::test_paper_store_ignores_dust_trade_that_would_render_as_zero tests/test_runner_position_sizing.py::test_runner_skips_dust_position_that_would_render_as_zero -q`: passed.
+  - `python3 -m pytest -p no:cacheprovider tests -q`: 36 passed.
+
 ## 2026-06-29 Dashboard spread color update
 
 - Dashboard spread values now render through a shared `spread-value` span.

@@ -58,3 +58,13 @@ def test_runner_uses_full_half_or_thirty_percent_position_by_profit_rate(tmp_pat
     assert round(thirty.total_cost, 2) == 210.00
     assert round(thirty.shares, 2) == 210.00
     assert too_small is None
+
+
+def test_runner_skips_dust_position_that_would_render_as_zero(tmp_path):
+    item = runner(tmp_path)
+    used = opportunity(profit=27.9998, total_cost=699.995)
+    item.store.record_paper_trade(used)
+
+    sized = item._sized_opportunity(opportunity(profit=30.0, total_cost=1000.0))
+
+    assert sized is None

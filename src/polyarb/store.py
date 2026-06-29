@@ -12,6 +12,7 @@ from .models import ArbOpportunity
 
 ET = ZoneInfo("America/New_York")
 MONTHS = {name.lower(): i for i, name in enumerate(calendar.month_name) if name}
+MIN_DISPLAYED_TRADE_VALUE = 0.01
 
 
 class PaperStore:
@@ -116,6 +117,8 @@ class PaperStore:
     def record_paper_trade(self, opportunity: ArbOpportunity) -> None:
         if not opportunity.executable:
             return
+        if opportunity.shares < MIN_DISPLAYED_TRADE_VALUE or opportunity.guaranteed_profit < MIN_DISPLAYED_TRADE_VALUE:
+            return
         with self._connect() as conn:
             conn.execute(
                 """
@@ -153,10 +156,12 @@ class PaperStore:
             rows = conn.execute(
                 """
                 select * from paper_trades
+                where shares >= ?
+                  and guaranteed_profit >= ?
                 order by detected_at desc, id desc
                 limit ?
                 """,
-                (limit,),
+                (MIN_DISPLAYED_TRADE_VALUE, MIN_DISPLAYED_TRADE_VALUE, limit),
             ).fetchall()
         return [dict(row) for row in rows]
 
