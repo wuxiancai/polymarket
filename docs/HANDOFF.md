@@ -1,5 +1,21 @@
 # Handoff
 
+## 2026-06-29 Dashboard runtime clock update
+
+- Dashboard header now shows a compact runtime panel before the action buttons.
+- The panel displays second-precision current Beijing time and service runtime
+  duration from the Web process start time.
+- The browser updates the clock every second; `/api/dashboard` partial refresh
+  remains unchanged.
+- Added regression coverage for the header clock DOM, fixed Asia/Shanghai time
+  formatting, startup timestamp, and one-second update interval.
+- Verification:
+  - `python3 -m pytest -p no:cacheprovider tests/test_web.py::test_dashboard_header_shows_live_clock_and_runtime -q`: passed.
+  - `python3 -m pytest -p no:cacheprovider tests -q`: 34 passed.
+  - `bash -n start.sh deploy.sh && git diff --check`: passed.
+  - Playwright visual check on `http://127.0.0.1:8791` desktop
+    `2048x260` and mobile `390x780`: header clock visible without overlap.
+
 ## 2026-06-29 Settled position profit panel update
 
 - Dashboard now adds an `已结束持仓收益` section immediately below `模拟持仓`.

@@ -62,6 +62,24 @@ def test_dashboard_shows_realtime_listening_status(tmp_path):
     assert "实时监听中" in html
 
 
+def test_dashboard_header_shows_live_clock_and_runtime(tmp_path):
+    config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
+    store = PaperStore(config.database_path)
+    store.initialize()
+    state = WebState(config=config, store=store, asset=BTC_ASSET, runner=PaperRunner(config, BTC_ASSET))
+
+    html = render_dashboard(state)
+
+    assert "当前时间" in html
+    assert "运行时间" in html
+    assert 'id="currentTimeValue"' in html
+    assert 'id="runDurationValue"' in html
+    assert 'data-started-at="' in html
+    assert "timeZone: 'Asia/Shanghai'" in html
+    assert "updateRuntimeClock" in html
+    assert "setInterval(updateRuntimeClock, 1000)" in html
+
+
 def test_dashboard_payload_contains_fragments(tmp_path):
     config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
     store = PaperStore(config.database_path)

@@ -18,6 +18,7 @@ from .runner import PaperRunner, RealtimePaperRunner, ScanResult
 from .store import PaperStore
 
 DISPLAY_TZ = ZoneInfo("Asia/Shanghai")
+APP_STARTED_AT = datetime.now(timezone.utc)
 
 
 @dataclass
@@ -213,6 +214,7 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
     error_html = _error_html(panels)
     portfolio = _portfolio_payload(panels)
     asset_sections = "\n".join(_asset_section(state) for state in panels)
+    started_at = escape(APP_STARTED_AT.isoformat())
     return f"""<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -256,6 +258,24 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
     p {{ color: var(--muted); margin: 8px 0 0; }}
     main {{ padding: 22px 0 36px; }}
     .toolbar {{ display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }}
+    .runtime-panel {{
+      min-width: 250px;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fbfcfd;
+      color: var(--ink);
+      font-size: 14px;
+      line-height: 1.45;
+    }}
+    .runtime-row {{
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      white-space: nowrap;
+    }}
+    .runtime-label {{ color: var(--muted); }}
+    .runtime-value {{ font-weight: 800; font-variant-numeric: tabular-nums; }}
     button {{
       border: 1px solid #17624c;
       background: var(--accent);
@@ -347,6 +367,8 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
     .log-error {{ color: var(--danger); }}
     @media (max-width: 760px) {{
       .top {{ align-items: flex-start; flex-direction: column; padding: 18px 0; }}
+      .toolbar {{ width: 100%; }}
+      .runtime-panel {{ width: 100%; min-width: 0; }}
       .metrics {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
       .portfolio-grid {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
       table {{ min-width: 760px; }}
@@ -361,6 +383,16 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
         <p>只读 Polymarket BTC / ETH 行情，执行纸面模拟交易；不连接钱包，不真实下单。</p>
       </div>
       <div class="toolbar">
+        <div class="runtime-panel" data-started-at="{started_at}">
+          <div class="runtime-row">
+            <span class="runtime-label">当前时间：</span>
+            <span class="runtime-value" id="currentTimeValue">--</span>
+          </div>
+          <div class="runtime-row">
+            <span class="runtime-label">运行时间：</span>
+            <span class="runtime-value" id="runDurationValue">--</span>
+          </div>
+        </div>
         <button id="scanBtn">触发扫描</button>
         <button class="secondary" id="refreshBtn">刷新数据</button>
       </div>
@@ -389,6 +421,42 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
   <script>
     function setText(id, value) {{
       document.getElementById(id).textContent = value;
+    }}
+    function formatCurrentTime(now) {{
+      const parts = new Intl.DateTimeFormat('zh-CN', {{
+        timeZone: 'Asia/Shanghai',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      }}).formatToParts(now).reduce((values, part) => {{
+        values[part.type] = part.value;
+        return values;
+      }}, {{}});
+      const year = parts.year;
+      const month = parts.month;
+      const day = parts.day;
+      const hour = parts.hour;
+      const minute = parts.minute;
+      const second = parts.second;
+      return `${{year}}-${{month}}-${{day}} ${{hour}}:${{minute}}:${{second}}`;
+    }}
+    function formatRuntime(startedAt, now) {{
+      const totalSeconds = Math.max(0, Math.floor((now.getTime() - startedAt.getTime()) / 1000));
+      const days = Math.floor(totalSeconds / 86400);
+      const hours = Math.floor((totalSeconds % 86400) / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      return `${{days}} 天 ${{hours}} 小时 ${{minutes}} 分钟`;
+    }}
+    function updateRuntimeClock() {{
+      const panel = document.querySelector('.runtime-panel');
+      const startedAt = new Date(panel.dataset.startedAt);
+      const now = new Date();
+      setText('currentTimeValue', formatCurrentTime(now));
+      setText('runDurationValue', formatRuntime(startedAt, now));
     }}
     async function refreshDashboard() {{
       const response = await fetch('/api/dashboard');
@@ -420,6 +488,8 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
     }}
     document.getElementById('scanBtn').addEventListener('click', triggerScan);
     document.getElementById('refreshBtn').addEventListener('click', refreshDashboard);
+    updateRuntimeClock();
+    setInterval(updateRuntimeClock, 1000);
     setInterval(refreshDashboard, 5000);
   </script>
 </body>
