@@ -1,5 +1,15 @@
 # Handoff
 
+## 2026-06-29 Dashboard spread color update
+
+- Dashboard spread values now render through a shared `spread-value` span.
+- `spread-value` is styled blue and bold, covering opportunity, open position,
+  settled position, and trade tables through the shared `_spread()` formatter.
+- Verification:
+  - `python3 -m pytest -p no:cacheprovider tests/test_web.py::test_dashboard_renders_chinese_status tests/test_web.py::test_dashboard_shows_profit_and_positions tests/test_web.py::test_opportunity_table_shows_spread_and_execution_state -q`: passed.
+  - `python3 -m pytest -p no:cacheprovider tests -q`: 34 passed.
+  - `bash -n start.sh deploy.sh && git diff --check`: passed.
+
 ## 2026-06-29 Dashboard runtime clock update
 
 - Dashboard header now shows a compact runtime panel before the action buttons.

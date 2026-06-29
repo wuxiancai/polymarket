@@ -331,6 +331,7 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
     .exec {{ color: var(--accent); }}
     .done {{ color: var(--muted); }}
     .watch {{ color: var(--warn); }}
+    .spread-value {{ color: #2563eb; font-weight: 800; }}
     .profit-positive {{ color: var(--accent); }}
     .profit-negative {{ color: var(--danger); }}
     .wide-table {{ min-width: 1540px; table-layout: fixed; }}
@@ -957,7 +958,7 @@ def _price(value: object) -> str:
 
 
 def _spread(row: dict) -> str:
-    return f"{_spread_cents(row):.2f}¢"
+    return f"<span class='spread-value'>{_spread_cents(row):.2f}¢</span>"
 
 
 def _spread_cents(row: dict) -> float:

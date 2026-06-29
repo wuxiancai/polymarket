@@ -18,6 +18,8 @@ def test_dashboard_renders_chinese_status(tmp_path):
     html = render_dashboard([btc, eth])
 
     assert "Polymarket 套利模拟系统" in html
+    assert ".spread-value" in html
+    assert "color: #2563eb" in html
     assert "Polyarb 套利模拟系统" not in html
     assert "BTC 套利模拟" in html
     assert "ETH 套利模拟" in html
@@ -237,7 +239,7 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "300.0000" not in payload["portfolio"]["positions_html"]
     assert "40.00¢" in payload["portfolio"]["positions_html"]
     assert "57.00¢" in payload["portfolio"]["positions_html"]
-    assert "3.00¢" in payload["portfolio"]["positions_html"]
+    assert "<span class='spread-value'>3.00¢</span>" in payload["portfolio"]["positions_html"]
     assert "0.40" not in payload["portfolio"]["positions_html"]
     assert "0.57" not in payload["portfolio"]["positions_html"]
     assert "120.00" in payload["portfolio"]["positions_html"]
@@ -276,7 +278,7 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "300.0000" not in trade_html
     assert "40.00¢" in trade_html
     assert "57.00¢" in trade_html
-    assert "3.00¢" in trade_html
+    assert "<span class='spread-value'>3.00¢</span>" in trade_html
     assert "0.40" not in trade_html
     assert "0.57" not in trade_html
     assert "120.00" in trade_html
@@ -416,8 +418,8 @@ def test_opportunity_table_shows_spread_and_execution_state(tmp_path):
     assert "已成交" in html
     assert "可模拟成交" in html
     assert "仅观察" in html
-    assert "3.00¢" in html
-    assert "1.50¢" in html
+    assert "<span class='spread-value'>3.00¢</span>" in html
+    assert "<span class='spread-value'>1.50¢</span>" in html
 
 
 def test_dashboard_infers_event_link_and_condition_for_legacy_rows(tmp_path):
