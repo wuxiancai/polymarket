@@ -1,5 +1,18 @@
 # Handoff
 
+## 2026-06-29 Opportunity table spread/status update
+
+- `最近套利机会` now includes a `价差` column immediately after `状态`.
+- Opportunity status rendering now distinguishes:
+  - `已成交` when the matching `pair_key + detected_at` has already been
+    written to `paper_trades`;
+  - `仅观察` when displayed spread is below `2.00¢`, even if the scanner row is
+    executable;
+  - `可模拟成交` only for untraded opportunities with spread at least `2.00¢`.
+- Verification:
+  - `python3 -m pytest -p no:cacheprovider tests -q`: 33 passed.
+  - `bash -n start.sh deploy.sh && git diff --check`: passed.
+
 ## 2026-06-29 Position settlement column update
 
 - In `模拟持仓`, settlement time now appears immediately after `价差`.

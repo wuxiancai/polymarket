@@ -309,6 +309,7 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
     .error {{ color: var(--danger); font-weight: 700; }}
     .pill {{ display: inline-block; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); }}
     .exec {{ color: var(--accent); }}
+    .done {{ color: var(--muted); }}
     .watch {{ color: var(--warn); }}
     .profit-positive {{ color: var(--accent); }}
     .profit-negative {{ color: var(--danger); }}
@@ -653,6 +654,7 @@ def _asset_payload(state: WebState) -> dict:
     snapshot = state.snapshot()
     opportunities = _filter_rows_by_asset(state.store.latest_opportunities(20), state.asset)[:10]
     trades = _filter_rows_by_asset(state.store.latest_trades(20), state.asset)[:10]
+    opportunities = _mark_executed_opportunities(opportunities, trades)
     return {
         "symbol": state.asset.symbol,
         "status": snapshot,
@@ -671,6 +673,20 @@ def _filter_rows_by_asset(rows: list, asset: AssetSpec) -> list:
         if needle in yes_question or needle in no_question:
             filtered.append(row)
     return filtered
+
+
+def _mark_executed_opportunities(opportunities: list, trades: list) -> list:
+    executed_keys = {_opportunity_execution_key(row) for row in trades}
+    marked = []
+    for row in opportunities:
+        item = dict(row)
+        item["_paper_trade_executed"] = _opportunity_execution_key(item) in executed_keys
+        marked.append(item)
+    return marked
+
+
+def _opportunity_execution_key(row: dict) -> tuple[str, str]:
+    return (str(row.get("pair_key") or ""), str(row.get("detected_at") or ""))
 
 
 def _error_html(states: list[WebState]) -> str:
@@ -814,13 +830,17 @@ def _price(value: object) -> str:
 
 
 def _spread(row: dict) -> str:
+    return f"{_spread_cents(row):.2f}¢"
+
+
+def _spread_cents(row: dict) -> float:
     try:
         yes_price = float(row.get("yes_avg_price") or 0)
         no_price = float(row.get("no_avg_price") or 0)
     except (TypeError, ValueError):
         yes_price = 0.0
         no_price = 0.0
-    return f"{(1 - yes_price - no_price) * 100:.2f}¢"
+    return (1 - yes_price - no_price) * 100
 
 
 def _leg_amount(row: dict, price_key: str) -> float:
@@ -887,12 +907,12 @@ def _opportunity_table(rows: list) -> str:
         return "<div class='empty'>暂无记录。系统只会在发现正收益组合时写入机会。</div>"
     body = []
     for row in rows:
-        cls = "exec" if row.get("executable") else "watch"
-        state = "可模拟成交" if row.get("executable") else "仅观察"
+        cls, state = _opportunity_state(row)
         detail = _opportunity_status_detail(row)
         body.append(
             "<tr>"
             f"<td><span class='pill {cls}'>{state}</span>{detail}</td>"
+            f"<td>{_spread(row)}</td>"
             f"<td>{escape(_money(row.get('guaranteed_profit', 0)))}</td>"
             f"<td class='market-text'>{_market_link(row.get('yes_question', ''), row.get('yes_event_slug', ''))}</td>"
             f"<td>{_number(row.get('shares', 0))}</td>"
@@ -902,11 +922,21 @@ def _opportunity_table(rows: list) -> str:
             "</tr>"
         )
     return (
-        "<table><thead><tr><th>状态</th><th>保证利润</th><th>YES 交易对</th><th>YES 份额</th>"
+        "<table><thead><tr><th>状态</th><th>价差</th><th>保证利润</th><th>YES 交易对</th><th>YES 份额</th>"
         "<th>NO 交易对</th><th>NO 份额</th><th>时间</th></tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table>"
     )
+
+
+def _opportunity_state(row: dict) -> tuple[str, str]:
+    if row.get("_paper_trade_executed"):
+        return "done", "已成交"
+    if _spread_cents(row) < 2:
+        return "watch", "仅观察"
+    if row.get("executable"):
+        return "exec", "可模拟成交"
+    return "watch", "仅观察"
 
 
 def _opportunity_status_detail(row: dict) -> str:

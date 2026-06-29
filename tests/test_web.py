@@ -292,6 +292,99 @@ def test_opportunity_table_hides_internal_english_reason(tmp_path):
     assert "executable" not in html
 
 
+def test_opportunity_table_shows_spread_and_execution_state(tmp_path):
+    config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
+    store = PaperStore(config.database_path)
+    store.initialize()
+    traded = ArbOpportunity(
+        pair_key="traded-btc",
+        kind="same_market",
+        yes_market_id="m1",
+        yes_token_id="y1",
+        yes_question="Will Bitcoin reach $70,000 in June?",
+        no_market_id="m1",
+        no_token_id="n1",
+        no_question="Will Bitcoin reach $70,000 in June?",
+        yes_event_slug="what-price-will-bitcoin-hit-in-june",
+        no_event_slug="what-price-will-bitcoin-hit-in-june",
+        yes_end_date="2026-07-01T00:00:00+00:00",
+        no_end_date="2026-07-01T00:00:00+00:00",
+        shares=300.0,
+        yes_avg_price=0.40,
+        no_avg_price=0.57,
+        total_cost=291.0,
+        min_payout=300.0,
+        guaranteed_profit=9.0,
+        edge_per_share=0.03,
+        executable=True,
+        reason="executable",
+        detected_at=datetime(2026, 6, 27, 12, 0, tzinfo=timezone.utc),
+    )
+    thin_spread = ArbOpportunity(
+        pair_key="thin-btc",
+        kind="same_market",
+        yes_market_id="m2",
+        yes_token_id="y2",
+        yes_question="Will Bitcoin reach $75,000 in June?",
+        no_market_id="m2",
+        no_token_id="n2",
+        no_question="Will Bitcoin reach $75,000 in June?",
+        yes_event_slug="will-bitcoin-reach-75000-in-june",
+        no_event_slug="will-bitcoin-reach-75000-in-june",
+        yes_end_date="2026-07-01T00:00:00+00:00",
+        no_end_date="2026-07-01T00:00:00+00:00",
+        shares=300.0,
+        yes_avg_price=0.40,
+        no_avg_price=0.585,
+        total_cost=295.5,
+        min_payout=300.0,
+        guaranteed_profit=4.5,
+        edge_per_share=0.015,
+        executable=True,
+        reason="executable",
+        detected_at=datetime(2026, 6, 27, 12, 1, tzinfo=timezone.utc),
+    )
+    executable = ArbOpportunity(
+        pair_key="open-btc",
+        kind="same_market",
+        yes_market_id="m3",
+        yes_token_id="y3",
+        yes_question="Will Bitcoin reach $80,000 in June?",
+        no_market_id="m3",
+        no_token_id="n3",
+        no_question="Will Bitcoin reach $80,000 in June?",
+        yes_event_slug="will-bitcoin-reach-80000-in-june",
+        no_event_slug="will-bitcoin-reach-80000-in-june",
+        yes_end_date="2026-07-01T00:00:00+00:00",
+        no_end_date="2026-07-01T00:00:00+00:00",
+        shares=300.0,
+        yes_avg_price=0.40,
+        no_avg_price=0.57,
+        total_cost=291.0,
+        min_payout=300.0,
+        guaranteed_profit=9.0,
+        edge_per_share=0.03,
+        executable=True,
+        reason="executable",
+        detected_at=datetime(2026, 6, 27, 12, 2, tzinfo=timezone.utc),
+    )
+    for opportunity in (traded, thin_spread, executable):
+        store.record_opportunity(opportunity)
+    store.record_paper_trade(traded)
+    state = WebState(config=config, store=store, asset=BTC_ASSET, runner=PaperRunner(config, BTC_ASSET))
+
+    payload = dashboard_payload([state])
+
+    html = payload["assets"][0]["opportunities_html"]
+    assert html.index("<th>状态</th>") < html.index("<th>价差</th>")
+    assert html.index("<th>价差</th>") < html.index("<th>保证利润</th>")
+    assert "已成交" in html
+    assert "可模拟成交" in html
+    assert "仅观察" in html
+    assert "3.00¢" in html
+    assert "1.50¢" in html
+
+
 def test_dashboard_infers_event_link_and_condition_for_legacy_rows(tmp_path):
     config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
     store = PaperStore(config.database_path)
