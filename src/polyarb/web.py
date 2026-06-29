@@ -312,13 +312,21 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
     .watch {{ color: var(--warn); }}
     .profit-positive {{ color: var(--accent); }}
     .profit-negative {{ color: var(--danger); }}
-    .wide-table {{ min-width: 1180px; }}
-    .position-table {{ min-width: 1420px; }}
+    .wide-table {{ min-width: 1540px; table-layout: fixed; }}
+    .position-table {{ min-width: 1660px; }}
     .wide-table th, .wide-table td {{ white-space: nowrap; }}
-    .market-text {{ width: 220px; min-width: 220px; max-width: 260px; white-space: normal; overflow-wrap: break-word; word-break: normal; line-height: 1.35; }}
-    .market-card {{ display: block; color: var(--ink); text-decoration: none; }}
+    .wide-table .asset-col {{ width: 64px; }}
+    .wide-table .market-col {{ width: 320px; }}
+    .wide-table .qty-col {{ width: 120px; }}
+    .wide-table .price-col {{ width: 82px; }}
+    .wide-table .amount-col {{ width: 112px; }}
+    .wide-table .money-col {{ width: 112px; }}
+    .wide-table .profit-col {{ width: 112px; }}
+    .wide-table .time-col {{ width: 150px; }}
+    .market-text {{ white-space: normal; overflow-wrap: break-word; word-break: normal; line-height: 1.35; }}
+    .market-card {{ display: block; color: var(--ink); text-decoration: none; white-space: normal; overflow-wrap: break-word; }}
     a.market-card:hover .market-event {{ text-decoration: underline; }}
-    .market-event {{ display: block; font-weight: 700; }}
+    .market-event {{ display: block; font-weight: 700; white-space: normal; overflow-wrap: break-word; }}
     .market-condition {{
       display: inline-block;
       margin-top: 6px;
@@ -511,7 +519,6 @@ def _position_table(rows: list, states: list[WebState]) -> str:
         body.append(
             "<tr>"
             f"<td>{escape(asset)}</td>"
-            f"<td>{escape(str(row.get('pair_key', '')))}</td>"
             f"<td class='market-text'>{_market_link(row.get('yes_question', ''), row.get('yes_event_slug', ''))}</td>"
             f"<td>{_number(row.get('shares', 0))}</td>"
             f"<td>{_price(row.get('yes_avg_price', 0))}</td>"
@@ -528,7 +535,11 @@ def _position_table(rows: list, states: list[WebState]) -> str:
             "</tr>"
         )
     return (
-        "<table class='trade-table wide-table position-table'><thead><tr><th>币种</th><th>交易对</th><th>YES 持仓腿</th><th>YES 数量</th><th>YES 价格</th><th>YES 金额</th>"
+        "<table class='trade-table wide-table position-table'>"
+        "<colgroup><col class='asset-col'><col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'>"
+        "<col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'><col class='money-col'>"
+        "<col class='money-col'><col class='profit-col'><col class='time-col'><col class='time-col'></colgroup>"
+        "<thead><tr><th>币种</th><th>YES 持仓腿</th><th>YES 数量</th><th>YES 价格</th><th>YES 金额</th>"
         "<th>NO 持仓腿</th><th>NO 数量</th><th>NO 价格</th><th>NO 金额</th><th>成本</th><th>最低赔付</th><th>预估收益</th><th>开仓时间</th><th>结算时间</th></tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table>"
@@ -554,7 +565,7 @@ def _market_link(text: object, event_slug: object) -> str:
     if event_title or condition:
         parts = []
         if event_title:
-            parts.append(f"<span class='market-event'>事件：{escape(event_title)}</span>")
+            parts.append(f"<span class='market-event'>{escape(event_title)}</span>")
         if condition:
             parts.append(f"<span class='market-condition'>条件：{escape(condition)}</span>")
         label = "".join(parts)
@@ -898,7 +909,6 @@ def _trade_table(rows: list) -> str:
     for row in rows:
         body.append(
             "<tr>"
-            f"<td>{escape(str(row.get('pair_key', '')))}</td>"
             f"<td class='market-text'>{_market_link(row.get('yes_question', ''), row.get('yes_event_slug', ''))}</td>"
             f"<td>{_number(row.get('shares', 0))}</td>"
             f"<td>{_price(row.get('yes_avg_price', 0))}</td>"
@@ -914,7 +924,11 @@ def _trade_table(rows: list) -> str:
             "</tr>"
         )
     return (
-        "<table class='trade-table wide-table'><thead><tr><th>交易对</th><th>YES 持仓腿</th><th>YES 数量</th><th>YES 价格</th><th>YES 金额</th>"
+        "<table class='trade-table wide-table'>"
+        "<colgroup><col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'>"
+        "<col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'><col class='money-col'>"
+        "<col class='profit-col'><col class='time-col'><col class='time-col'></colgroup>"
+        "<thead><tr><th>YES 持仓腿</th><th>YES 数量</th><th>YES 价格</th><th>YES 金额</th>"
         "<th>NO 持仓腿</th><th>NO 数量</th><th>NO 价格</th><th>NO 金额</th><th>成本</th><th>预估收益</th><th>时间</th><th>结算时间</th></tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table>"

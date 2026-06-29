@@ -1,5 +1,20 @@
 # Handoff
 
+## 2026-06-29 Trade table overlap fix
+
+- `模拟持仓` and `模拟成交` no longer show the internal `交易对` / `pair_key`
+  column. Those ids remain in storage but are hidden from the dashboard tables.
+- Market leg cells no longer prepend `事件：`; they show the inferred event
+  title directly, followed by the condition badge such as `条件：↓ 1,500`.
+- Wide trade tables now use explicit column groups:
+  - market-leg columns get wider fixed space;
+  - quantity, price, amount, profit, and time columns stay compact;
+  - market titles wrap inside their own cells instead of overlapping adjacent
+    quantity cells.
+- Verification:
+  - `python3 -m pytest -p no:cacheprovider tests -q`: 31 passed.
+  - `bash -n start.sh deploy.sh && git diff --check`: passed.
+
 ## 2026-06-28 Trade table layout polish
 
 - `模拟持仓` and `模拟成交` now use dedicated wide table classes instead of
@@ -411,7 +426,7 @@ Added local Web dashboard and one-click scripts.
   `Will Ethereum dip to $1,500 June 22-28?`, because that exact text is hard to
   find with Polymarket's website search.
 - Market cells now render:
-  - `事件：What price will <Asset> hit <period>?`
+  - `What price will <Asset> hit <period>?`
   - `条件：↑ <threshold>` for reach/hit markets or `条件：↓ <threshold>` for dip
     markets.
 - If an old row has no stored event slug, the UI infers the common crypto price

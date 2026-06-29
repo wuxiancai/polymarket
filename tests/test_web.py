@@ -137,14 +137,16 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "7,000.00" in payload["portfolio"]["summary_html"]
     assert "3,000.00" in payload["portfolio"]["summary_html"]
     assert "USDT" not in payload["portfolio"]["summary_html"]
-    assert "pair-btc" in payload["portfolio"]["positions_html"]
+    assert "pair-btc" not in payload["portfolio"]["positions_html"]
+    assert "<th>交易对</th>" not in payload["portfolio"]["positions_html"]
     assert "Will Bitcoin reach $70,000 in June?" not in payload["portfolio"]["positions_html"]
     assert "https://polymarket.com/event/what-price-will-bitcoin-hit-in-june" in payload["portfolio"]["positions_html"]
     assert "class='trade-table" in payload["portfolio"]["positions_html"]
     assert "class='market-card" in payload["portfolio"]["positions_html"]
     assert "class='market-event'" in payload["portfolio"]["positions_html"]
     assert "class='market-condition'" in payload["portfolio"]["positions_html"]
-    assert "事件：What price will Bitcoin hit in June?" in payload["portfolio"]["positions_html"]
+    assert "事件：" not in payload["portfolio"]["positions_html"]
+    assert "What price will Bitcoin hit in June?" in payload["portfolio"]["positions_html"]
     assert "条件：↑ 70,000" in payload["portfolio"]["positions_html"]
     assert "YES 数量" in payload["portfolio"]["positions_html"]
     assert "YES 价格" in payload["portfolio"]["positions_html"]
@@ -170,9 +172,12 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
 
     trade_html = payload["assets"][0]["trades_html"]
     assert "https://polymarket.com/event/what-price-will-bitcoin-hit-in-june" in trade_html
+    assert "pair-btc" not in trade_html
+    assert "<th>交易对</th>" not in trade_html
     assert "class='trade-table" in trade_html
     assert "class='market-card" in trade_html
-    assert "事件：What price will Bitcoin hit in June?" in trade_html
+    assert "事件：" not in trade_html
+    assert "What price will Bitcoin hit in June?" in trade_html
     assert "条件：↑ 70,000" in trade_html
     assert "YES 数量" in trade_html
     assert "YES 价格" in trade_html
@@ -264,7 +269,8 @@ def test_dashboard_infers_event_link_and_condition_for_legacy_rows(tmp_path):
     html = payload["portfolio"]["positions_html"]
 
     assert "https://polymarket.com/event/what-price-will-ethereum-hit-june-22-28-2026" in html
-    assert "事件：What price will Ethereum hit June 22-28?" in html
+    assert "事件：" not in html
+    assert "What price will Ethereum hit June 22-28?" in html
     assert "条件：↓ 1,500" in html
 
 
