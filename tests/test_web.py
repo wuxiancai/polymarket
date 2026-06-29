@@ -225,7 +225,10 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "YES 数量" in trade_html
     assert "YES 价格" in trade_html
     assert "YES 金额" in trade_html
-    assert trade_html.index("<th>价差</th>") < trade_html.index("<th>YES 持仓腿</th>")
+    assert trade_html.index("<th>价差</th>") < trade_html.index("<th>预估收益</th>")
+    assert trade_html.index("<th>预估收益</th>") < trade_html.index("<th>结算时间UTC+8</th>")
+    assert trade_html.index("<th>结算时间UTC+8</th>") < trade_html.index("<th>YES 持仓腿</th>")
+    assert "<th>结算时间</th>" not in trade_html
     assert "NO 数量" in trade_html
     assert "NO 价格" in trade_html
     assert "NO 金额" in trade_html

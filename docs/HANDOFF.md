@@ -1,5 +1,15 @@
 # Handoff
 
+## 2026-06-29 Trade table lead columns update
+
+- In `模拟成交`, `预估收益` and settlement time now appear immediately after
+  `价差`.
+- The settlement header is now `结算时间UTC+8`, matching the Beijing-time table
+  rendering.
+- The opening `时间` column remains near the end of the trade table.
+- Verification:
+  - `python3 -m pytest -p no:cacheprovider tests -q`: 32 passed.
+
 ## 2026-06-29 Table time wrapping update
 
 - Dashboard trade table time cells now render date and clock on separate lines.
