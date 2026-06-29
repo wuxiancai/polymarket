@@ -1,5 +1,27 @@
 # Handoff
 
+## 2026-06-30 Virtual position fallback
+
+- When a paper opportunity passes existing execution gates but real paper
+  allocation is insufficient for the normal position size, the runner now
+  records a virtual trade instead of shrinking it into a dust position.
+- Virtual trades use a fixed `1000.00` cost budget per trade and are stored in
+  `paper_trades` with `is_virtual=1`.
+- Normal `latest_trades()`, `latest_positions()`, portfolio used capital, and
+  ordinary `模拟持仓` / `模拟成交` exclude virtual trades.
+- Added `latest_virtual_trades()` and `latest_virtual_positions()` plus a
+  dashboard `虚拟持仓` section. Virtual trades still mark matching recent
+  opportunities as `已成交`.
+- SQLite migration adds `paper_trades.is_virtual` with default `0` for existing
+  databases.
+- Verification:
+  - `python3 -m pytest -p no:cacheprovider tests/test_runner_position_sizing.py tests/test_paper_store.py::test_paper_store_lists_virtual_positions_separately tests/test_web.py::test_dashboard_shows_profit_and_positions tests/test_web.py::test_virtual_trade_marks_matching_opportunity_as_executed -q`: passed.
+  - `python3 -m pytest -p no:cacheprovider tests -q`: 38 passed.
+  - `bash -n start.sh deploy.sh && git diff --check`: passed.
+  - Playwright check on a temp DB: `收益概览` used capital stayed `0.00`,
+    ordinary `模拟持仓` stayed empty, and `虚拟持仓` showed the fixed
+    `1,000.00` virtual cost row.
+
 ## 2026-06-30 Dust paper position guard
 
 - Diagnosed a dashboard symptom where `模拟持仓` could show `预估收益 +0.00`

@@ -68,6 +68,7 @@ class PaperStore:
                     total_cost real not null,
                     min_payout real not null,
                     guaranteed_profit real not null,
+                    is_virtual integer not null default 0,
                     detected_at text not null
                 );
                 create index if not exists idx_opportunities_detected_at on opportunities(detected_at);
@@ -115,6 +116,12 @@ class PaperStore:
             )
 
     def record_paper_trade(self, opportunity: ArbOpportunity) -> None:
+        self._record_trade(opportunity, is_virtual=False)
+
+    def record_virtual_trade(self, opportunity: ArbOpportunity) -> None:
+        self._record_trade(opportunity, is_virtual=True)
+
+    def _record_trade(self, opportunity: ArbOpportunity, is_virtual: bool) -> None:
         if not opportunity.executable:
             return
         if opportunity.shares < MIN_DISPLAYED_TRADE_VALUE or opportunity.guaranteed_profit < MIN_DISPLAYED_TRADE_VALUE:
@@ -125,9 +132,9 @@ class PaperStore:
                 insert into paper_trades (
                     pair_key, yes_market_id, yes_token_id, yes_question, yes_event_slug, yes_end_date, yes_avg_price,
                     no_market_id, no_token_id, no_question, no_event_slug, no_end_date, no_avg_price, shares,
-                    total_cost, min_payout, guaranteed_profit, detected_at
+                    total_cost, min_payout, guaranteed_profit, is_virtual, detected_at
                 )
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     opportunity.pair_key,
@@ -147,21 +154,29 @@ class PaperStore:
                     opportunity.total_cost,
                     opportunity.min_payout,
                     opportunity.guaranteed_profit,
+                    1 if is_virtual else 0,
                     opportunity.detected_at.isoformat(),
                 ),
             )
 
     def latest_trades(self, limit: int = 20) -> List[Dict[str, object]]:
+        return self._latest_trades(limit=limit, is_virtual=False)
+
+    def latest_virtual_trades(self, limit: int = 20) -> List[Dict[str, object]]:
+        return self._latest_trades(limit=limit, is_virtual=True)
+
+    def _latest_trades(self, limit: int, is_virtual: bool) -> List[Dict[str, object]]:
         with self._connect() as conn:
             rows = conn.execute(
                 """
                 select * from paper_trades
                 where shares >= ?
                   and guaranteed_profit >= ?
+                  and coalesce(is_virtual, 0) = ?
                 order by detected_at desc, id desc
                 limit ?
                 """,
-                (MIN_DISPLAYED_TRADE_VALUE, MIN_DISPLAYED_TRADE_VALUE, limit),
+                (MIN_DISPLAYED_TRADE_VALUE, MIN_DISPLAYED_TRADE_VALUE, 1 if is_virtual else 0, limit),
             ).fetchall()
         return [dict(row) for row in rows]
 
@@ -180,6 +195,16 @@ class PaperStore:
         rows = []
         for row in self.latest_trades(limit=limit * 2):
             if _is_settled(row, current):
+                rows.append(row)
+            if len(rows) >= limit:
+                break
+        return rows
+
+    def latest_virtual_positions(self, limit: int = 50, now: Optional[datetime] = None) -> List[Dict[str, object]]:
+        current = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+        rows = []
+        for row in self.latest_virtual_trades(limit=limit * 2):
+            if not _is_settled(row, current):
                 rows.append(row)
             if len(rows) >= limit:
                 break
@@ -215,6 +240,7 @@ class PaperStore:
             "no_event_slug": "text not null default ''",
             "no_end_date": "text not null default ''",
             "no_avg_price": "real not null default 0",
+            "is_virtual": "integer not null default 0",
         }
         for name, definition in columns.items():
             if name not in existing:

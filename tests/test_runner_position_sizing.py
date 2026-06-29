@@ -43,28 +43,36 @@ def runner(tmp_path) -> PaperRunner:
 def test_runner_uses_full_half_or_thirty_percent_position_by_profit_rate(tmp_path):
     item = runner(tmp_path)
 
-    full = item._sized_opportunity(opportunity(profit=40.0, total_cost=1000.0))
-    half = item._sized_opportunity(opportunity(profit=25.0, total_cost=1000.0))
-    thirty = item._sized_opportunity(opportunity(profit=15.0, total_cost=1000.0))
-    too_small = item._sized_opportunity(opportunity(profit=5.0, total_cost=1000.0))
+    full, full_virtual = item._sized_opportunity(opportunity(profit=40.0, total_cost=1000.0))
+    half, half_virtual = item._sized_opportunity(opportunity(profit=25.0, total_cost=1000.0))
+    thirty, thirty_virtual = item._sized_opportunity(opportunity(profit=15.0, total_cost=1000.0))
+    too_small, too_small_virtual = item._sized_opportunity(opportunity(profit=5.0, total_cost=1000.0))
 
     assert full is not None
+    assert full_virtual is False
     assert round(full.total_cost, 2) == 700.00
     assert round(full.shares, 2) == 700.00
     assert half is not None
+    assert half_virtual is False
     assert round(half.total_cost, 2) == 350.00
     assert round(half.shares, 2) == 350.00
     assert thirty is not None
+    assert thirty_virtual is False
     assert round(thirty.total_cost, 2) == 210.00
     assert round(thirty.shares, 2) == 210.00
     assert too_small is None
+    assert too_small_virtual is False
 
 
-def test_runner_skips_dust_position_that_would_render_as_zero(tmp_path):
+def test_runner_records_fixed_size_virtual_trade_when_capital_is_insufficient(tmp_path):
     item = runner(tmp_path)
     used = opportunity(profit=27.9998, total_cost=699.995)
     item.store.record_paper_trade(used)
 
-    sized = item._sized_opportunity(opportunity(profit=30.0, total_cost=1000.0))
+    sized, is_virtual = item._sized_opportunity(opportunity(profit=30.0, total_cost=1000.0))
 
-    assert sized is None
+    assert is_virtual is True
+    assert sized is not None
+    assert round(sized.total_cost, 2) == 1000.00
+    assert round(sized.shares, 2) == 1000.00
+    assert round(sized.guaranteed_profit, 2) == 30.00

@@ -410,6 +410,10 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
       <div id="positionTable">{portfolio["positions_html"]}</div>
     </section>
     <section>
+      <h2>虚拟持仓</h2>
+      <div id="virtualPositionTable">{portfolio["virtual_positions_html"]}</div>
+    </section>
+    <section>
       <h2>已结束持仓收益</h2>
       <div id="settledPositionTable">{portfolio["settled_positions_html"]}</div>
     </section>
@@ -465,6 +469,7 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
       document.getElementById('errorBox').innerHTML = payload.error_html;
       document.getElementById('portfolioSummary').innerHTML = payload.portfolio.summary_html;
       document.getElementById('positionTable').innerHTML = payload.portfolio.positions_html;
+      document.getElementById('virtualPositionTable').innerHTML = payload.portfolio.virtual_positions_html;
       document.getElementById('settledPositionTable').innerHTML = payload.portfolio.settled_positions_html;
       document.getElementById('connectionLog').innerHTML = payload.connection_log_html;
       for (const asset of payload.assets) {{
@@ -516,10 +521,12 @@ def _portfolio_payload(states: list[WebState]) -> dict:
         return {
             "summary_html": "<div class='empty'>暂无资产配置。</div>",
             "positions_html": "<div class='empty'>暂无持仓。</div>",
+            "virtual_positions_html": "<div class='empty'>暂无虚拟持仓。</div>",
             "settled_positions_html": "<div class='empty'>暂无已结束持仓。</div>",
         }
     store = states[0].store
     positions = store.latest_positions(100)
+    virtual_positions = store.latest_virtual_positions(100)
     settled_trades = store.latest_settled_trades(100)
     asset_summaries = []
     total_cost = 0.0
@@ -556,6 +563,7 @@ def _portfolio_payload(states: list[WebState]) -> dict:
         "summary": summary,
         "summary_html": _portfolio_summary_html(summary),
         "positions_html": _position_table(positions, states),
+        "virtual_positions_html": _virtual_position_table(virtual_positions, states),
         "settled_positions_html": _settled_position_table(settled_trades, states),
     }
 
@@ -596,6 +604,16 @@ def _portfolio_summary_html(summary: dict) -> str:
 def _position_table(rows: list, states: list[WebState]) -> str:
     if not rows:
         return "<div class='empty'>暂无持仓。</div>"
+    return _position_table_html(rows, states)
+
+
+def _virtual_position_table(rows: list, states: list[WebState]) -> str:
+    if not rows:
+        return "<div class='empty'>暂无虚拟持仓。</div>"
+    return _position_table_html(rows, states)
+
+
+def _position_table_html(rows: list, states: list[WebState]) -> str:
     body = []
     for row in rows:
         asset = _asset_symbol_for_row(row, states)
@@ -775,7 +793,8 @@ def _asset_payload(state: WebState) -> dict:
     snapshot = state.snapshot()
     opportunities = _filter_rows_by_asset(state.store.latest_opportunities(20), state.asset)[:10]
     trades = _filter_rows_by_asset(state.store.latest_trades(20), state.asset)[:10]
-    opportunities = _mark_executed_opportunities(opportunities, trades)
+    virtual_trades = _filter_rows_by_asset(state.store.latest_virtual_trades(20), state.asset)[:10]
+    opportunities = _mark_executed_opportunities(opportunities, trades + virtual_trades)
     return {
         "symbol": state.asset.symbol,
         "status": snapshot,

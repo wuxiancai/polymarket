@@ -85,6 +85,68 @@ def test_paper_store_ignores_dust_trade_that_would_render_as_zero(tmp_path):
     assert store.latest_trades(limit=5) == []
 
 
+def test_paper_store_lists_virtual_positions_separately(tmp_path):
+    db_path = tmp_path / "paper.sqlite3"
+    store = PaperStore(db_path)
+    store.initialize()
+    real = ArbOpportunity(
+        pair_key="real",
+        kind="implication",
+        yes_market_id="month70",
+        yes_token_id="y-month",
+        yes_question="Will Bitcoin reach $70,000 in June?",
+        no_market_id="week70",
+        no_token_id="n-week",
+        no_question="Will Bitcoin reach $70,000 June 22-28?",
+        yes_event_slug="what-price-will-bitcoin-hit-in-june",
+        no_event_slug="what-price-will-bitcoin-hit-june-22-28-2026",
+        yes_end_date="2026-07-01T00:00:00+00:00",
+        no_end_date="2026-06-29T00:00:00+00:00",
+        shares=300.0,
+        yes_avg_price=0.40,
+        no_avg_price=0.57,
+        total_cost=291.0,
+        min_payout=300.0,
+        guaranteed_profit=9.0,
+        edge_per_share=0.03,
+        executable=True,
+        reason="executable",
+        detected_at=datetime(2026, 6, 27, 12, 0, tzinfo=timezone.utc),
+    )
+    virtual = ArbOpportunity(
+        pair_key="virtual",
+        kind="implication",
+        yes_market_id="month75",
+        yes_token_id="y-month75",
+        yes_question="Will Bitcoin reach $75,000 in June?",
+        no_market_id="week75",
+        no_token_id="n-week75",
+        no_question="Will Bitcoin reach $75,000 June 22-28?",
+        yes_event_slug="will-bitcoin-reach-75000-in-june",
+        no_event_slug="will-bitcoin-reach-75000-june-22-28-2026",
+        yes_end_date="2026-07-01T00:00:00+00:00",
+        no_end_date="2026-06-29T00:00:00+00:00",
+        shares=1000.0,
+        yes_avg_price=0.40,
+        no_avg_price=0.57,
+        total_cost=970.0,
+        min_payout=1000.0,
+        guaranteed_profit=30.0,
+        edge_per_share=0.03,
+        executable=True,
+        reason="executable",
+        detected_at=datetime(2026, 6, 27, 12, 1, tzinfo=timezone.utc),
+    )
+
+    store.record_paper_trade(real)
+    store.record_virtual_trade(virtual)
+
+    assert [row["pair_key"] for row in store.latest_positions()] == ["real"]
+    assert [row["pair_key"] for row in store.latest_virtual_positions()] == ["virtual"]
+    assert [row["pair_key"] for row in store.latest_trades(limit=5)] == ["real"]
+    assert [row["pair_key"] for row in store.latest_virtual_trades(limit=5)] == ["virtual"]
+
+
 def test_paper_store_lists_settled_trades_separately_from_positions(tmp_path):
     db_path = tmp_path / "paper.sqlite3"
     store = PaperStore(db_path)

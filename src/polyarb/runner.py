@@ -16,6 +16,7 @@ from .websocket import apply_market_message, market_subscription_message
 
 WEBSOCKET_RECONNECT_DELAY_SECONDS = 10
 MIN_DISPLAYED_POSITION_VALUE = 0.01
+VIRTUAL_TRADE_BUDGET = 1000.0
 
 
 @dataclass
@@ -64,10 +65,13 @@ class PaperRunner:
         for opportunity in result.opportunities:
             self.store.record_opportunity(opportunity)
             if self._should_execute(opportunity):
-                sized = self._sized_opportunity(opportunity)
+                sized, is_virtual = self._sized_opportunity(opportunity)
                 if sized is None:
                     continue
-                self.store.record_paper_trade(sized)
+                if is_virtual:
+                    self.store.record_virtual_trade(sized)
+                else:
+                    self.store.record_paper_trade(sized)
                 self.last_execution[opportunity.pair_key] = time.time()
         return result
 
@@ -79,9 +83,9 @@ class PaperRunner:
             return True
         return time.time() - last >= self.config.cooldown_seconds
 
-    def _sized_opportunity(self, opportunity: ArbOpportunity) -> Optional[ArbOpportunity]:
+    def _sized_opportunity(self, opportunity: ArbOpportunity) -> tuple[Optional[ArbOpportunity], bool]:
         if opportunity.total_cost <= 0:
-            return None
+            return None, False
         profit_rate = opportunity.guaranteed_profit / opportunity.total_cost
         if profit_rate >= 0.03:
             position_ratio = 1.0
@@ -90,27 +94,30 @@ class PaperRunner:
         elif profit_rate >= 0.01:
             position_ratio = 0.3
         else:
-            return None
+            return None, False
 
         allocation = self.config.initial_capital_usdt * self.asset.allocation_ratio
         used = self._used_capital()
         available = max(0.0, allocation - used)
-        budget = min(opportunity.total_cost, available * position_ratio)
-        if budget <= 0:
-            return None
+        target_budget = min(opportunity.total_cost, allocation * position_ratio)
+        is_virtual = available < target_budget
+        budget = VIRTUAL_TRADE_BUDGET if is_virtual else target_budget
         scale = budget / opportunity.total_cost
         shares = opportunity.shares * scale
         total_cost = opportunity.total_cost * scale
         min_payout = opportunity.min_payout * scale
         guaranteed_profit = opportunity.guaranteed_profit * scale
         if shares < MIN_DISPLAYED_POSITION_VALUE or guaranteed_profit < MIN_DISPLAYED_POSITION_VALUE:
-            return None
-        return replace(
-            opportunity,
-            shares=shares,
-            total_cost=total_cost,
-            min_payout=min_payout,
-            guaranteed_profit=guaranteed_profit,
+            return None, False
+        return (
+            replace(
+                opportunity,
+                shares=shares,
+                total_cost=total_cost,
+                min_payout=min_payout,
+                guaranteed_profit=guaranteed_profit,
+            ),
+            is_virtual,
         )
 
     def _used_capital(self) -> float:
@@ -200,10 +207,13 @@ class RealtimePaperRunner(PaperRunner):
         for opportunity in result.opportunities:
             self.store.record_opportunity(opportunity)
             if self._should_execute(opportunity):
-                sized = self._sized_opportunity(opportunity)
+                sized, is_virtual = self._sized_opportunity(opportunity)
                 if sized is None:
                     continue
-                self.store.record_paper_trade(sized)
+                if is_virtual:
+                    self.store.record_virtual_trade(sized)
+                else:
+                    self.store.record_paper_trade(sized)
                 self.last_execution[opportunity.pair_key] = time.time()
 
     def _log(self, callback: Optional[Callable[[str, str], None]], level: str, message: str) -> None:
