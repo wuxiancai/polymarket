@@ -313,12 +313,13 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
     .profit-positive {{ color: var(--accent); }}
     .profit-negative {{ color: var(--danger); }}
     .wide-table {{ min-width: 1540px; table-layout: fixed; }}
-    .position-table {{ min-width: 1660px; }}
+    .position-table {{ min-width: 1750px; }}
     .wide-table th, .wide-table td {{ white-space: nowrap; }}
     .wide-table .asset-col {{ width: 64px; }}
     .wide-table .market-col {{ width: 320px; }}
     .wide-table .qty-col {{ width: 120px; }}
     .wide-table .price-col {{ width: 82px; }}
+    .wide-table .spread-col {{ width: 90px; }}
     .wide-table .amount-col {{ width: 112px; }}
     .wide-table .money-col {{ width: 112px; }}
     .wide-table .profit-col {{ width: 112px; }}
@@ -522,6 +523,7 @@ def _position_table(rows: list, states: list[WebState]) -> str:
             "<tr>"
             f"<td>{escape(asset)}</td>"
             f"<td>{_profit_text(_signed_money(row.get('guaranteed_profit', 0)), row.get('guaranteed_profit', 0))}</td>"
+            f"<td>{_spread(row)}</td>"
             f"<td class='market-text'>{_market_link(row.get('yes_question', ''), row.get('yes_event_slug', ''))}</td>"
             f"<td>{_number(row.get('shares', 0))}</td>"
             f"<td>{_price(row.get('yes_avg_price', 0))}</td>"
@@ -538,10 +540,10 @@ def _position_table(rows: list, states: list[WebState]) -> str:
         )
     return (
         "<table class='trade-table wide-table position-table'>"
-        "<colgroup><col class='asset-col'><col class='profit-col'><col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'>"
+        "<colgroup><col class='asset-col'><col class='profit-col'><col class='spread-col'><col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'>"
         "<col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'><col class='money-col'>"
         "<col class='money-col'><col class='time-col'><col class='time-col'></colgroup>"
-        "<thead><tr><th>币种</th><th>预估收益</th><th>YES 持仓腿</th><th>YES 数量</th><th>YES 价格</th><th>YES 金额</th>"
+        "<thead><tr><th>币种</th><th>预估收益</th><th>价差</th><th>YES 持仓腿</th><th>YES 数量</th><th>YES 价格</th><th>YES 金额</th>"
         "<th>NO 持仓腿</th><th>NO 数量</th><th>NO 价格</th><th>NO 金额</th><th>成本</th><th>最低赔付</th><th>开仓时间</th><th>结算时间</th></tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table>"
@@ -810,6 +812,16 @@ def _price(value: object) -> str:
     return f"{number * 100:.2f}¢"
 
 
+def _spread(row: dict) -> str:
+    try:
+        yes_price = float(row.get("yes_avg_price") or 0)
+        no_price = float(row.get("no_avg_price") or 0)
+    except (TypeError, ValueError):
+        yes_price = 0.0
+        no_price = 0.0
+    return f"{(1 - yes_price - no_price) * 100:.2f}¢"
+
+
 def _leg_amount(row: dict, price_key: str) -> float:
     try:
         shares = float(row.get("shares") or 0)
@@ -911,6 +923,7 @@ def _trade_table(rows: list) -> str:
     for row in rows:
         body.append(
             "<tr>"
+            f"<td>{_spread(row)}</td>"
             f"<td class='market-text'>{_market_link(row.get('yes_question', ''), row.get('yes_event_slug', ''))}</td>"
             f"<td>{_number(row.get('shares', 0))}</td>"
             f"<td>{_price(row.get('yes_avg_price', 0))}</td>"
@@ -927,10 +940,10 @@ def _trade_table(rows: list) -> str:
         )
     return (
         "<table class='trade-table wide-table'>"
-        "<colgroup><col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'>"
+        "<colgroup><col class='spread-col'><col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'>"
         "<col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'><col class='money-col'>"
         "<col class='profit-col'><col class='time-col'><col class='time-col'></colgroup>"
-        "<thead><tr><th>YES 持仓腿</th><th>YES 数量</th><th>YES 价格</th><th>YES 金额</th>"
+        "<thead><tr><th>价差</th><th>YES 持仓腿</th><th>YES 数量</th><th>YES 价格</th><th>YES 金额</th>"
         "<th>NO 持仓腿</th><th>NO 数量</th><th>NO 价格</th><th>NO 金额</th><th>成本</th><th>预估收益</th><th>时间</th><th>结算时间</th></tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table>"

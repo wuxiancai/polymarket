@@ -1,5 +1,16 @@
 # Handoff
 
+## 2026-06-29 Spread column update
+
+- `模拟持仓` and `模拟成交` now include a `价差` column.
+- `价差` uses the dashboard cents display unit:
+  `100 - ((yes_avg_price + no_avg_price) * 100)`.
+  Example: `40.00¢ + 57.00¢` displays `3.00¢`.
+- In `模拟持仓`, `价差` appears after `预估收益` and before `YES 持仓腿`.
+- In `模拟成交`, `价差` appears as the first column before `YES 持仓腿`.
+- Verification:
+  - `python3 -m pytest -p no:cacheprovider tests -q`: 32 passed.
+
 ## 2026-06-29 Portfolio realized profit wording update
 
 - `收益概览` now reports realized settled profit:

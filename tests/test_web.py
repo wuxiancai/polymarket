@@ -174,7 +174,8 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "USDT" not in payload["portfolio"]["summary_html"]
     position_html = payload["portfolio"]["positions_html"]
     assert position_html.index("<th>币种</th>") < position_html.index("<th>预估收益</th>")
-    assert position_html.index("<th>预估收益</th>") < position_html.index("<th>YES 持仓腿</th>")
+    assert position_html.index("<th>预估收益</th>") < position_html.index("<th>价差</th>")
+    assert position_html.index("<th>价差</th>") < position_html.index("<th>YES 持仓腿</th>")
     assert "pair-btc" not in payload["portfolio"]["positions_html"]
     assert "<th>交易对</th>" not in payload["portfolio"]["positions_html"]
     assert "Will Bitcoin reach $70,000 in June?" not in payload["portfolio"]["positions_html"]
@@ -199,6 +200,7 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "300.0000" not in payload["portfolio"]["positions_html"]
     assert "40.00¢" in payload["portfolio"]["positions_html"]
     assert "57.00¢" in payload["portfolio"]["positions_html"]
+    assert "3.00¢" in payload["portfolio"]["positions_html"]
     assert "0.40" not in payload["portfolio"]["positions_html"]
     assert "0.57" not in payload["portfolio"]["positions_html"]
     assert "120.00" in payload["portfolio"]["positions_html"]
@@ -221,6 +223,7 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "YES 数量" in trade_html
     assert "YES 价格" in trade_html
     assert "YES 金额" in trade_html
+    assert trade_html.index("<th>价差</th>") < trade_html.index("<th>YES 持仓腿</th>")
     assert "NO 数量" in trade_html
     assert "NO 价格" in trade_html
     assert "NO 金额" in trade_html
@@ -231,6 +234,7 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "300.0000" not in trade_html
     assert "40.00¢" in trade_html
     assert "57.00¢" in trade_html
+    assert "3.00¢" in trade_html
     assert "0.40" not in trade_html
     assert "0.57" not in trade_html
     assert "120.00" in trade_html
