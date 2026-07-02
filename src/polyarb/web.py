@@ -315,7 +315,7 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
     .metric {{ padding: 14px; }}
     .label {{ color: var(--muted); font-size: 13px; }}
     .value {{ margin-top: 6px; font-size: 24px; font-weight: 800; }}
-    section {{ margin-top: 16px; overflow-x: auto; overflow-y: hidden; }}
+    section {{ margin-top: 16px; overflow: hidden; }}
     section h2 {{
       margin: 0;
       padding: 13px 14px;
@@ -364,7 +364,9 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
     }}
     .time-cell {{ white-space: normal; line-height: 1.35; }}
     .time-date, .time-clock {{ display: block; white-space: nowrap; }}
-    .log-scroll {{ max-height: 348px; overflow-y: auto; overflow-x: auto; }}
+    .table-scroll {{ max-height: 356px; overflow-y: auto; overflow-x: auto; }}
+    .table-scroll thead th {{ position: sticky; top: 0; z-index: 1; }}
+    .log-scroll {{ max-height: 356px; overflow-y: auto; overflow-x: auto; }}
     .log-table td:first-child {{ white-space: nowrap; color: var(--muted); }}
     .log-level {{ font-weight: 700; }}
     .log-ok {{ color: var(--accent); }}
@@ -487,6 +489,7 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
         setText(asset.symbol + 'OpportunitiesValue', asset.status.opportunities);
         document.getElementById(asset.symbol + 'OpportunityTable').innerHTML = asset.opportunities_html;
         document.getElementById(asset.symbol + 'TradeTable').innerHTML = asset.trades_html;
+        document.getElementById(asset.symbol + 'VirtualTradeTable').innerHTML = asset.virtual_trades_html;
       }}
     }}
     async function triggerScan() {{
@@ -564,6 +567,10 @@ def _dashboard_row_time(row: dict) -> datetime:
 def _dashboard_id(row: dict, id_map: dict[str, int]) -> str:
     value = id_map.get(_dashboard_row_key(row))
     return escape(str(value)) if value is not None else "-"
+
+
+def _scroll_table(table_html: str) -> str:
+    return f"<div class='table-scroll'>{table_html}</div>"
 
 
 def _portfolio_payload(states: list[WebState], id_map: dict[str, int]) -> dict:
@@ -644,7 +651,7 @@ def _portfolio_summary_html(summary: dict) -> str:
             "</tr>"
         )
     detail = (
-        "<div class='portfolio-detail'><table><thead><tr>"
+        "<div class='portfolio-detail table-scroll'><table><thead><tr>"
         "<th>币种</th><th>分配本金</th><th>已用本金</th><th>剩余本金</th>"
         "<th>收益</th><th>收益率</th><th>持仓数</th>"
         "</tr></thead><tbody>"
@@ -690,7 +697,7 @@ def _position_table_html(rows: list, states: list[WebState], id_map: dict[str, i
             f"<td class='time-cell'>{_time_html(_format_time_value(row.get('detected_at', '')))}</td>"
             "</tr>"
         )
-    return (
+    return _scroll_table(
         "<table class='trade-table wide-table position-table'>"
         "<colgroup><col class='id-col'><col class='asset-col'><col class='profit-col'><col class='spread-col'><col class='time-col'><col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'>"
         "<col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'><col class='money-col'>"
@@ -744,7 +751,7 @@ def _settled_position_table_html(rows: list, states: list[WebState], id_map: dic
             f"<td class='time-cell'>{_time_html(_format_time_value(row.get('detected_at', '')))}</td>"
             "</tr>"
         )
-    return (
+    return _scroll_table(
         "<table class='trade-table wide-table position-table'>"
         "<colgroup><col class='id-col'><col class='asset-col'><col class='profit-col'><col class='profit-col'><col class='spread-col'><col class='time-col'><col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'>"
         "<col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'><col class='money-col'>"
@@ -851,14 +858,18 @@ def _asset_section(state: WebState, id_map: dict[str, int]) -> str:
         <h2>模拟成交</h2>
         <div id="{escape(symbol)}TradeTable">{payload["trades_html"]}</div>
       </section>
+      <section>
+        <h2>虚拟成交</h2>
+        <div id="{escape(symbol)}VirtualTradeTable">{payload["virtual_trades_html"]}</div>
+      </section>
     </div>"""
 
 
 def _asset_payload(state: WebState, id_map: dict[str, int]) -> dict:
     snapshot = state.snapshot()
-    opportunities = _filter_rows_by_asset(state.store.latest_opportunities(20), state.asset)[:10]
-    trades = _filter_rows_by_asset(state.store.latest_trades(20), state.asset)[:10]
-    virtual_trades = _filter_rows_by_asset(state.store.latest_virtual_trades(20), state.asset)[:10]
+    opportunities = _filter_rows_by_asset(state.store.latest_opportunities(100), state.asset)
+    trades = _filter_rows_by_asset(state.store.latest_trades(100), state.asset)
+    virtual_trades = _filter_rows_by_asset(state.store.latest_virtual_trades(100), state.asset)
     opportunities = _mark_executed_opportunities(opportunities, trades, virtual_trades)
     return {
         "symbol": state.asset.symbol,
@@ -866,6 +877,7 @@ def _asset_payload(state: WebState, id_map: dict[str, int]) -> dict:
         "status_text": status_label(snapshot),
         "opportunities_html": _opportunity_table(opportunities, id_map),
         "trades_html": _trade_table(trades, id_map),
+        "virtual_trades_html": _trade_table(virtual_trades, id_map, empty_text="暂无虚拟成交。"),
     }
 
 
@@ -881,20 +893,34 @@ def _filter_rows_by_asset(rows: list, asset: AssetSpec) -> list:
 
 
 def _mark_executed_opportunities(opportunities: list, trades: list, virtual_trades: list) -> list:
-    executed_keys = {_opportunity_execution_key(row) for row in trades}
-    virtual_keys = {_opportunity_execution_key(row) for row in virtual_trades}
+    executed_rows = {_opportunity_execution_key(row): row for row in trades}
+    virtual_rows = {_opportunity_execution_key(row): row for row in virtual_trades}
     marked = []
     for row in opportunities:
         item = dict(row)
         key = _opportunity_execution_key(item)
-        if key in executed_keys:
+        if key in executed_rows:
             item["_execution_type"] = "paper"
-        elif key in virtual_keys:
+            item.update(_execution_display_values(executed_rows[key]))
+        elif key in virtual_rows:
             item["_execution_type"] = "virtual"
+            item.update(_execution_display_values(virtual_rows[key]))
         else:
             item["_execution_type"] = ""
         marked.append(item)
     return marked
+
+
+def _execution_display_values(row: dict) -> dict:
+    keys = (
+        "guaranteed_profit",
+        "shares",
+        "yes_avg_price",
+        "no_avg_price",
+        "total_cost",
+        "min_payout",
+    )
+    return {key: row.get(key) for key in keys if key in row}
 
 
 def _opportunity_execution_key(row: dict) -> tuple[str, str]:
@@ -1141,7 +1167,7 @@ def _opportunity_table(rows: list, id_map: dict[str, int]) -> str:
             f"<td class='time-cell'>{_time_html(_format_time_value(row.get('detected_at', '')))}</td>"
             "</tr>"
         )
-    return (
+    return _scroll_table(
         "<table><thead><tr><th>ID</th><th>状态</th><th>价差</th><th>保证利润</th><th>YES 交易对</th><th>YES 份额</th>"
         "<th>NO 交易对</th><th>NO 份额</th><th>时间</th></tr></thead><tbody>"
         + "".join(body)
@@ -1176,9 +1202,9 @@ def _reason_label(reason: str) -> str:
     return reason
 
 
-def _trade_table(rows: list, id_map: dict[str, int]) -> str:
+def _trade_table(rows: list, id_map: dict[str, int], empty_text: str = "暂无成交。") -> str:
     if not rows:
-        return "<div class='empty'>暂无成交。</div>"
+        return f"<div class='empty'>{escape(empty_text)}</div>"
     body = []
     for row in rows:
         body.append(
@@ -1199,7 +1225,7 @@ def _trade_table(rows: list, id_map: dict[str, int]) -> str:
             f"<td class='time-cell'>{_time_html(_format_time_value(row.get('detected_at', '')))}</td>"
             "</tr>"
         )
-    return (
+    return _scroll_table(
         "<table class='trade-table wide-table'>"
         "<colgroup><col class='id-col'><col class='spread-col'><col class='profit-col'><col class='time-col'><col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'>"
         "<col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'><col class='money-col'>"

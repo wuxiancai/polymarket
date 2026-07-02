@@ -1,3 +1,4 @@
+from dataclasses import replace
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
@@ -122,7 +123,9 @@ def test_dashboard_connection_log_updates(tmp_path):
     assert "行情源连接失败" in payload["connection_log_html"]
     assert "BTC" in payload["connection_log_html"]
     assert "class='log-scroll'" in payload["connection_log_html"]
-    assert ".log-scroll { max-height: 348px; overflow-y: auto; overflow-x: auto; }" in render_dashboard(state)
+    html = render_dashboard(state)
+    assert ".table-scroll { max-height: 356px; overflow-y: auto; overflow-x: auto; }" in html
+    assert ".log-scroll { max-height: 356px; overflow-y: auto; overflow-x: auto; }" in html
 
 
 def test_dashboard_uses_shared_id_sequence_across_assets_and_tables(tmp_path):
@@ -185,7 +188,7 @@ def test_dashboard_uses_shared_id_sequence_across_assets_and_tables(tmp_path):
 
     payload = dashboard_payload([btc, eth])
 
-    assert payload["portfolio"]["positions_html"].startswith("<table")
+    assert payload["portfolio"]["positions_html"].startswith("<div class='table-scroll'><table")
     assert "<th>ID</th><th>币种</th>" in payload["portfolio"]["positions_html"]
     assert "<th>ID</th><th>价差</th>" in payload["assets"][0]["trades_html"]
     assert "<th>ID</th><th>状态</th>" in payload["assets"][0]["opportunities_html"]
@@ -563,15 +566,20 @@ def test_virtual_trade_marks_matching_opportunity_as_executed(tmp_path):
         reason="executable",
         detected_at=datetime(2026, 6, 27, 12, 0, tzinfo=timezone.utc),
     )
-    store.record_opportunity(opportunity)
-    store.record_virtual_trade(opportunity)
+    virtual_trade = replace(opportunity, shares=1000.0, total_cost=970.0, min_payout=1000.0, guaranteed_profit=30.0)
+    discovered_opportunity = replace(opportunity, shares=21559.29, total_cost=20922.52, min_payout=21559.29, guaranteed_profit=603.67)
+    store.record_opportunity(discovered_opportunity)
+    store.record_virtual_trade(virtual_trade)
     state = WebState(config=config, store=store, asset=BTC_ASSET, runner=PaperRunner(config, BTC_ASSET))
 
     payload = dashboard_payload([state])
 
     assert "虚拟成交" in payload["assets"][0]["opportunities_html"]
     assert "已成交" not in payload["assets"][0]["opportunities_html"]
+    assert "30.00" in payload["assets"][0]["opportunities_html"]
+    assert "603.67" not in payload["assets"][0]["opportunities_html"]
     assert "暂无成交" in payload["assets"][0]["trades_html"]
+    assert "30.00" in payload["assets"][0]["virtual_trades_html"]
     assert "virtual-btc" not in payload["portfolio"]["virtual_positions_html"]
     assert "What price will Bitcoin hit in June?" in payload["portfolio"]["settled_virtual_positions_html"]
     assert "+30.00" in payload["portfolio"]["settled_virtual_positions_html"]

@@ -1,5 +1,25 @@
 # Handoff
 
+## 2026-07-02 Opportunity execution display and table scroll update
+
+- Diagnosed the ID-level profit mismatch: `最近套利机会` was showing the raw
+  discovered opportunity's maximum executable-depth profit, while `虚拟成交` /
+  settled virtual panels show the actual fixed-size virtual execution result.
+  Therefore the same ID could show different profit numbers.
+- Fixed matched opportunity display rows so once an opportunity is matched to a
+  normal or virtual execution, the opportunity table uses the actual execution
+  values for `guaranteed_profit`, shares, prices, cost, and payout.
+- Added per-asset `虚拟成交` tables beside existing `模拟成交` tables.
+- Changed per-asset opportunity/trade queries from 10 visible rows to 100 rows;
+  visible height is now controlled by scroll containers.
+- Wrapped dashboard tables in a `table-scroll` container. Each table defaults to
+  about 5 visible rows, with sticky table headers and vertical/horizontal scroll
+  for the remaining rows.
+- Verification:
+  - `python3 -m pytest -p no:cacheprovider tests/test_web.py -q`: 15 passed.
+  - `python3 -m pytest -p no:cacheprovider tests -q`: 39 passed.
+  - `bash -n start.sh deploy.sh && git diff --check`: passed.
+
 ## 2026-07-02 Virtual execution status clarification
 
 - Diagnosed dashboard confusion where `最近套利机会` showed high IDs as
