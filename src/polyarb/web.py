@@ -420,6 +420,10 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
       <h2>已结束持仓收益</h2>
       <div id="settledPositionTable">{portfolio["settled_positions_html"]}</div>
     </section>
+    <section>
+      <h2>已结束虚拟持仓收益</h2>
+      <div id="settledVirtualPositionTable">{portfolio["settled_virtual_positions_html"]}</div>
+    </section>
     {asset_sections}
     <section>
       <h2>Polymarket 连接日志</h2>
@@ -474,6 +478,7 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
       document.getElementById('positionTable').innerHTML = payload.portfolio.positions_html;
       document.getElementById('virtualPositionTable').innerHTML = payload.portfolio.virtual_positions_html;
       document.getElementById('settledPositionTable').innerHTML = payload.portfolio.settled_positions_html;
+      document.getElementById('settledVirtualPositionTable').innerHTML = payload.portfolio.settled_virtual_positions_html;
       document.getElementById('connectionLog').innerHTML = payload.connection_log_html;
       for (const asset of payload.assets) {{
         setText(asset.symbol + 'StatusValue', asset.status_text);
@@ -568,11 +573,13 @@ def _portfolio_payload(states: list[WebState], id_map: dict[str, int]) -> dict:
             "positions_html": "<div class='empty'>暂无持仓。</div>",
             "virtual_positions_html": "<div class='empty'>暂无虚拟持仓。</div>",
             "settled_positions_html": "<div class='empty'>暂无已结束持仓。</div>",
+            "settled_virtual_positions_html": "<div class='empty'>暂无已结束虚拟持仓。</div>",
         }
     store = states[0].store
     positions = store.latest_positions(100)
     virtual_positions = store.latest_virtual_positions(100)
     settled_trades = store.latest_settled_trades(100)
+    settled_virtual_trades = store.latest_settled_virtual_trades(100)
     asset_summaries = []
     total_cost = 0.0
     total_profit = 0.0
@@ -610,6 +617,7 @@ def _portfolio_payload(states: list[WebState], id_map: dict[str, int]) -> dict:
         "positions_html": _position_table(positions, states, id_map),
         "virtual_positions_html": _virtual_position_table(virtual_positions, states, id_map),
         "settled_positions_html": _settled_position_table(settled_trades, states, id_map),
+        "settled_virtual_positions_html": _settled_virtual_position_table(settled_virtual_trades, states, id_map),
     }
 
 
@@ -697,6 +705,16 @@ def _position_table_html(rows: list, states: list[WebState], id_map: dict[str, i
 def _settled_position_table(rows: list, states: list[WebState], id_map: dict[str, int]) -> str:
     if not rows:
         return "<div class='empty'>暂无已结束持仓。</div>"
+    return _settled_position_table_html(rows, states, id_map)
+
+
+def _settled_virtual_position_table(rows: list, states: list[WebState], id_map: dict[str, int]) -> str:
+    if not rows:
+        return "<div class='empty'>暂无已结束虚拟持仓。</div>"
+    return _settled_position_table_html(rows, states, id_map)
+
+
+def _settled_position_table_html(rows: list, states: list[WebState], id_map: dict[str, int]) -> str:
     body = []
     for row in rows:
         asset = _asset_symbol_for_row(row, states)
@@ -841,7 +859,7 @@ def _asset_payload(state: WebState, id_map: dict[str, int]) -> dict:
     opportunities = _filter_rows_by_asset(state.store.latest_opportunities(20), state.asset)[:10]
     trades = _filter_rows_by_asset(state.store.latest_trades(20), state.asset)[:10]
     virtual_trades = _filter_rows_by_asset(state.store.latest_virtual_trades(20), state.asset)[:10]
-    opportunities = _mark_executed_opportunities(opportunities, trades + virtual_trades)
+    opportunities = _mark_executed_opportunities(opportunities, trades, virtual_trades)
     return {
         "symbol": state.asset.symbol,
         "status": snapshot,
@@ -862,12 +880,19 @@ def _filter_rows_by_asset(rows: list, asset: AssetSpec) -> list:
     return filtered
 
 
-def _mark_executed_opportunities(opportunities: list, trades: list) -> list:
+def _mark_executed_opportunities(opportunities: list, trades: list, virtual_trades: list) -> list:
     executed_keys = {_opportunity_execution_key(row) for row in trades}
+    virtual_keys = {_opportunity_execution_key(row) for row in virtual_trades}
     marked = []
     for row in opportunities:
         item = dict(row)
-        item["_paper_trade_executed"] = _opportunity_execution_key(item) in executed_keys
+        key = _opportunity_execution_key(item)
+        if key in executed_keys:
+            item["_execution_type"] = "paper"
+        elif key in virtual_keys:
+            item["_execution_type"] = "virtual"
+        else:
+            item["_execution_type"] = ""
         marked.append(item)
     return marked
 
@@ -1125,8 +1150,10 @@ def _opportunity_table(rows: list, id_map: dict[str, int]) -> str:
 
 
 def _opportunity_state(row: dict) -> tuple[str, str]:
-    if row.get("_paper_trade_executed"):
+    if row.get("_execution_type") == "paper":
         return "done", "已成交"
+    if row.get("_execution_type") == "virtual":
+        return "exec", "虚拟成交"
     if _spread_cents(row) < 2:
         return "watch", "仅观察"
     if row.get("executable"):

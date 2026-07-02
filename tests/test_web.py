@@ -27,6 +27,7 @@ def test_dashboard_renders_chinese_status(tmp_path):
     assert "触发扫描" in html
     assert "收益概览" in html
     assert "模拟持仓" in html
+    assert "已结束虚拟持仓收益" in html
     assert "纸面模拟持仓" not in html
     assert "模拟成交" in html
     assert "纸面模拟成交" not in html
@@ -103,6 +104,7 @@ def test_dashboard_payload_contains_fragments(tmp_path):
     assert payload["assets"][1]["symbol"] == "ETH"
     assert "暂无成交" in payload["assets"][1]["trades_html"]
     assert "summary_html" in payload["portfolio"]
+    assert "settled_virtual_positions_html" in payload["portfolio"]
     assert "connection_log_html" in payload
 
 
@@ -567,9 +569,12 @@ def test_virtual_trade_marks_matching_opportunity_as_executed(tmp_path):
 
     payload = dashboard_payload([state])
 
-    assert "已成交" in payload["assets"][0]["opportunities_html"]
+    assert "虚拟成交" in payload["assets"][0]["opportunities_html"]
+    assert "已成交" not in payload["assets"][0]["opportunities_html"]
     assert "暂无成交" in payload["assets"][0]["trades_html"]
     assert "virtual-btc" not in payload["portfolio"]["virtual_positions_html"]
+    assert "What price will Bitcoin hit in June?" in payload["portfolio"]["settled_virtual_positions_html"]
+    assert "+30.00" in payload["portfolio"]["settled_virtual_positions_html"]
 
 
 def test_dashboard_infers_event_link_and_condition_for_legacy_rows(tmp_path):

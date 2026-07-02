@@ -1,5 +1,26 @@
 # Handoff
 
+## 2026-07-02 Virtual execution status clarification
+
+- Diagnosed dashboard confusion where `最近套利机会` showed high IDs as
+  `已成交`, while the same IDs were absent from `模拟成交` and
+  `已结束持仓收益`.
+- Root cause: opportunity status treated normal paper trades and virtual trades
+  as the same `已成交` state. Settled virtual trades also had no visible settled
+  table: they were excluded from normal `模拟成交` / `已结束持仓收益`, and no longer
+  appeared in open `虚拟持仓` after settlement.
+- Fixed dashboard status classification:
+  - normal paper matches still show `已成交`;
+  - virtual matches now show `虚拟成交`.
+- Added `已结束虚拟持仓收益` section so settled virtual trades remain visible
+  after they disappear from open `虚拟持仓`.
+- Added `PaperStore.latest_settled_virtual_trades()` for the new settled virtual
+  panel.
+- Verification:
+  - `python3 -m pytest -p no:cacheprovider tests/test_web.py tests/test_paper_store.py -q`: 23 passed.
+  - `python3 -m pytest -p no:cacheprovider tests -q`: 39 passed.
+  - `bash -n start.sh deploy.sh && git diff --check`: passed.
+
 ## 2026-07-02 Dashboard shared ID and log scroll update
 
 - Added a first-column `ID` to dashboard data tables:

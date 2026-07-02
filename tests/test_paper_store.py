@@ -143,6 +143,7 @@ def test_paper_store_lists_virtual_positions_separately(tmp_path):
 
     assert [row["pair_key"] for row in store.latest_positions()] == ["real"]
     assert [row["pair_key"] for row in store.latest_virtual_positions()] == ["virtual"]
+    assert [row["pair_key"] for row in store.latest_settled_virtual_trades()] == []
     assert [row["pair_key"] for row in store.latest_trades(limit=5)] == ["real"]
     assert [row["pair_key"] for row in store.latest_virtual_trades(limit=5)] == ["virtual"]
 
