@@ -212,8 +212,9 @@ class PolyarbHandler(BaseHTTPRequestHandler):
 def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
     panels = _as_states(states)
     error_html = _error_html(panels)
-    portfolio = _portfolio_payload(panels)
-    asset_sections = "\n".join(_asset_section(state) for state in panels)
+    id_map = _dashboard_id_map(panels)
+    portfolio = _portfolio_payload(panels, id_map)
+    asset_sections = "\n".join(_asset_section(state, id_map) for state in panels)
     started_at = escape(APP_STARTED_AT.isoformat())
     return f"""<!doctype html>
 <html lang="zh-CN">
@@ -334,9 +335,10 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
     .spread-value {{ color: #2563eb; font-weight: 800; }}
     .profit-positive {{ color: var(--accent); }}
     .profit-negative {{ color: var(--danger); }}
-    .wide-table {{ min-width: 1540px; table-layout: fixed; }}
-    .position-table {{ min-width: 1750px; }}
+    .wide-table {{ min-width: 1604px; table-layout: fixed; }}
+    .position-table {{ min-width: 1814px; }}
     .wide-table th, .wide-table td {{ white-space: nowrap; }}
+    .wide-table .id-col {{ width: 64px; }}
     .wide-table .asset-col {{ width: 64px; }}
     .wide-table .market-col {{ width: 320px; }}
     .wide-table .qty-col {{ width: 120px; }}
@@ -362,6 +364,7 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
     }}
     .time-cell {{ white-space: normal; line-height: 1.35; }}
     .time-date, .time-clock {{ display: block; white-space: nowrap; }}
+    .log-scroll {{ max-height: 348px; overflow-y: auto; overflow-x: auto; }}
     .log-table td:first-child {{ white-space: nowrap; color: var(--muted); }}
     .log-level {{ font-weight: 700; }}
     .log-ok {{ color: var(--accent); }}
@@ -504,10 +507,11 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
 
 def dashboard_payload(states: Union[WebState, list[WebState]]) -> dict:
     panels = _as_states(states)
+    id_map = _dashboard_id_map(panels)
     return {
         "error_html": _error_html(panels),
-        "portfolio": _portfolio_payload(panels),
-        "assets": [_asset_payload(state) for state in panels],
+        "portfolio": _portfolio_payload(panels, id_map),
+        "assets": [_asset_payload(state, id_map) for state in panels],
         "connection_log_html": _connection_log_html(panels),
     }
 
@@ -516,7 +520,48 @@ def _as_states(states: Union[WebState, list[WebState]]) -> list[WebState]:
     return states if isinstance(states, list) else [states]
 
 
-def _portfolio_payload(states: list[WebState]) -> dict:
+def _dashboard_id_map(states: list[WebState]) -> dict[str, int]:
+    if not states:
+        return {}
+    store = states[0].store
+    rows = []
+    for row in store.latest_opportunities(10000):
+        rows.append(row)
+    for row in store.latest_trades(10000):
+        rows.append(row)
+    for row in store.latest_virtual_trades(10000):
+        rows.append(row)
+    sortable = []
+    seen_keys = set()
+    for row in rows:
+        key = _dashboard_row_key(row)
+        if not key or key in seen_keys:
+            continue
+        seen_keys.add(key)
+        sortable.append((_dashboard_row_time(row), key))
+    sortable.sort(key=lambda item: (item[0], item[1]))
+    return {key: index for index, (_time, key) in enumerate(sortable, start=1)}
+
+
+def _dashboard_row_key(row: dict) -> str:
+    pair_key = str(row.get("pair_key") or "")
+    detected_at = str(row.get("detected_at") or "")
+    if pair_key or detected_at:
+        return f"{pair_key}|{detected_at}"
+    row_id = str(row.get("id") or "")
+    return f"id:{row_id}" if row_id else ""
+
+
+def _dashboard_row_time(row: dict) -> datetime:
+    return _parse_time_value(row.get("detected_at")) or datetime.min.replace(tzinfo=timezone.utc)
+
+
+def _dashboard_id(row: dict, id_map: dict[str, int]) -> str:
+    value = id_map.get(_dashboard_row_key(row))
+    return escape(str(value)) if value is not None else "-"
+
+
+def _portfolio_payload(states: list[WebState], id_map: dict[str, int]) -> dict:
     if not states:
         return {
             "summary_html": "<div class='empty'>暂无资产配置。</div>",
@@ -562,9 +607,9 @@ def _portfolio_payload(states: list[WebState]) -> dict:
     return {
         "summary": summary,
         "summary_html": _portfolio_summary_html(summary),
-        "positions_html": _position_table(positions, states),
-        "virtual_positions_html": _virtual_position_table(virtual_positions, states),
-        "settled_positions_html": _settled_position_table(settled_trades, states),
+        "positions_html": _position_table(positions, states, id_map),
+        "virtual_positions_html": _virtual_position_table(virtual_positions, states, id_map),
+        "settled_positions_html": _settled_position_table(settled_trades, states, id_map),
     }
 
 
@@ -601,24 +646,25 @@ def _portfolio_summary_html(summary: dict) -> str:
     return metrics + detail
 
 
-def _position_table(rows: list, states: list[WebState]) -> str:
+def _position_table(rows: list, states: list[WebState], id_map: dict[str, int]) -> str:
     if not rows:
         return "<div class='empty'>暂无持仓。</div>"
-    return _position_table_html(rows, states)
+    return _position_table_html(rows, states, id_map)
 
 
-def _virtual_position_table(rows: list, states: list[WebState]) -> str:
+def _virtual_position_table(rows: list, states: list[WebState], id_map: dict[str, int]) -> str:
     if not rows:
         return "<div class='empty'>暂无虚拟持仓。</div>"
-    return _position_table_html(rows, states)
+    return _position_table_html(rows, states, id_map)
 
 
-def _position_table_html(rows: list, states: list[WebState]) -> str:
+def _position_table_html(rows: list, states: list[WebState], id_map: dict[str, int]) -> str:
     body = []
     for row in rows:
         asset = _asset_symbol_for_row(row, states)
         body.append(
             "<tr>"
+            f"<td>{_dashboard_id(row, id_map)}</td>"
             f"<td>{escape(asset)}</td>"
             f"<td>{_profit_text(_signed_money(row.get('guaranteed_profit', 0)), row.get('guaranteed_profit', 0))}</td>"
             f"<td>{_spread(row)}</td>"
@@ -638,17 +684,17 @@ def _position_table_html(rows: list, states: list[WebState]) -> str:
         )
     return (
         "<table class='trade-table wide-table position-table'>"
-        "<colgroup><col class='asset-col'><col class='profit-col'><col class='spread-col'><col class='time-col'><col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'>"
+        "<colgroup><col class='id-col'><col class='asset-col'><col class='profit-col'><col class='spread-col'><col class='time-col'><col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'>"
         "<col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'><col class='money-col'>"
         "<col class='money-col'><col class='time-col'></colgroup>"
-        "<thead><tr><th>币种</th><th>预估收益</th><th>价差</th><th>结算时间UTC+8</th><th>YES 持仓腿</th><th>YES 数量</th><th>YES 价格</th><th>YES 金额</th>"
+        "<thead><tr><th>ID</th><th>币种</th><th>预估收益</th><th>价差</th><th>结算时间UTC+8</th><th>YES 持仓腿</th><th>YES 数量</th><th>YES 价格</th><th>YES 金额</th>"
         "<th>NO 持仓腿</th><th>NO 数量</th><th>NO 价格</th><th>NO 金额</th><th>成本</th><th>最低赔付</th><th>开仓时间</th></tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table>"
     )
 
 
-def _settled_position_table(rows: list, states: list[WebState]) -> str:
+def _settled_position_table(rows: list, states: list[WebState], id_map: dict[str, int]) -> str:
     if not rows:
         return "<div class='empty'>暂无已结束持仓。</div>"
     body = []
@@ -661,6 +707,7 @@ def _settled_position_table(rows: list, states: list[WebState]) -> str:
         return_rate = _rate(profit_value, total_cost_value)
         body.append(
             "<tr>"
+            f"<td>{_dashboard_id(row, id_map)}</td>"
             f"<td>{escape(asset)}</td>"
             f"<td>{_profit_text(_signed_money(profit), profit)}</td>"
             f"<td>{_profit_text(_percent(return_rate), return_rate)}</td>"
@@ -681,10 +728,10 @@ def _settled_position_table(rows: list, states: list[WebState]) -> str:
         )
     return (
         "<table class='trade-table wide-table position-table'>"
-        "<colgroup><col class='asset-col'><col class='profit-col'><col class='profit-col'><col class='spread-col'><col class='time-col'><col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'>"
+        "<colgroup><col class='id-col'><col class='asset-col'><col class='profit-col'><col class='profit-col'><col class='spread-col'><col class='time-col'><col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'>"
         "<col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'><col class='money-col'>"
         "<col class='money-col'><col class='time-col'></colgroup>"
-        "<thead><tr><th>币种</th><th>收益</th><th>收益率</th><th>价差</th><th>结束时间UTC+8</th><th>YES 持仓腿</th><th>YES 数量</th><th>YES 价格</th><th>YES 金额</th>"
+        "<thead><tr><th>ID</th><th>币种</th><th>收益</th><th>收益率</th><th>价差</th><th>结束时间UTC+8</th><th>YES 持仓腿</th><th>YES 数量</th><th>YES 价格</th><th>YES 金额</th>"
         "<th>NO 持仓腿</th><th>NO 数量</th><th>NO 价格</th><th>NO 金额</th><th>成本</th><th>最低赔付</th><th>开仓时间</th></tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table>"
@@ -766,8 +813,8 @@ def _parse_market_question(question: str) -> Optional[tuple[str, str, str, str]]
     return asset, direction, threshold, period_text
 
 
-def _asset_section(state: WebState) -> str:
-    payload = _asset_payload(state)
+def _asset_section(state: WebState, id_map: dict[str, int]) -> str:
+    payload = _asset_payload(state, id_map)
     symbol = state.asset.symbol
     return f"""
     <div class="asset-panel" id="{escape(symbol)}Panel">
@@ -789,7 +836,7 @@ def _asset_section(state: WebState) -> str:
     </div>"""
 
 
-def _asset_payload(state: WebState) -> dict:
+def _asset_payload(state: WebState, id_map: dict[str, int]) -> dict:
     snapshot = state.snapshot()
     opportunities = _filter_rows_by_asset(state.store.latest_opportunities(20), state.asset)[:10]
     trades = _filter_rows_by_asset(state.store.latest_trades(20), state.asset)[:10]
@@ -799,8 +846,8 @@ def _asset_payload(state: WebState) -> dict:
         "symbol": state.asset.symbol,
         "status": snapshot,
         "status_text": status_label(snapshot),
-        "opportunities_html": _opportunity_table(opportunities),
-        "trades_html": _trade_table(trades),
+        "opportunities_html": _opportunity_table(opportunities, id_map),
+        "trades_html": _trade_table(trades, id_map),
     }
 
 
@@ -858,9 +905,9 @@ def _connection_log_html(states: list[WebState]) -> str:
             "</tr>"
         )
     return (
-        "<table class='log-table'><thead><tr><th>时间</th><th>资产</th><th>级别</th><th>事件</th></tr></thead><tbody>"
+        "<div class='log-scroll'><table class='log-table'><thead><tr><th>时间</th><th>资产</th><th>级别</th><th>事件</th></tr></thead><tbody>"
         + "".join(rows)
-        + "</tbody></table>"
+        + "</tbody></table></div>"
     )
 
 
@@ -1049,7 +1096,7 @@ def _parse_time_value(value: object) -> Optional[datetime]:
     return parsed.astimezone(timezone.utc)
 
 
-def _opportunity_table(rows: list) -> str:
+def _opportunity_table(rows: list, id_map: dict[str, int]) -> str:
     if not rows:
         return "<div class='empty'>暂无记录。系统只会在发现正收益组合时写入机会。</div>"
     body = []
@@ -1058,6 +1105,7 @@ def _opportunity_table(rows: list) -> str:
         detail = _opportunity_status_detail(row)
         body.append(
             "<tr>"
+            f"<td>{_dashboard_id(row, id_map)}</td>"
             f"<td><span class='pill {cls}'>{state}</span>{detail}</td>"
             f"<td>{_spread(row)}</td>"
             f"<td>{escape(_money(row.get('guaranteed_profit', 0)))}</td>"
@@ -1069,7 +1117,7 @@ def _opportunity_table(rows: list) -> str:
             "</tr>"
         )
     return (
-        "<table><thead><tr><th>状态</th><th>价差</th><th>保证利润</th><th>YES 交易对</th><th>YES 份额</th>"
+        "<table><thead><tr><th>ID</th><th>状态</th><th>价差</th><th>保证利润</th><th>YES 交易对</th><th>YES 份额</th>"
         "<th>NO 交易对</th><th>NO 份额</th><th>时间</th></tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table>"
@@ -1101,13 +1149,14 @@ def _reason_label(reason: str) -> str:
     return reason
 
 
-def _trade_table(rows: list) -> str:
+def _trade_table(rows: list, id_map: dict[str, int]) -> str:
     if not rows:
         return "<div class='empty'>暂无成交。</div>"
     body = []
     for row in rows:
         body.append(
             "<tr>"
+            f"<td>{_dashboard_id(row, id_map)}</td>"
             f"<td>{_spread(row)}</td>"
             f"<td>{_profit_text(_signed_money(row.get('guaranteed_profit', 0)), row.get('guaranteed_profit', 0))}</td>"
             f"<td class='time-cell'>{_time_html(_settlement_time(row))}</td>"
@@ -1125,10 +1174,10 @@ def _trade_table(rows: list) -> str:
         )
     return (
         "<table class='trade-table wide-table'>"
-        "<colgroup><col class='spread-col'><col class='profit-col'><col class='time-col'><col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'>"
+        "<colgroup><col class='id-col'><col class='spread-col'><col class='profit-col'><col class='time-col'><col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'>"
         "<col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'><col class='money-col'>"
         "<col class='time-col'></colgroup>"
-        "<thead><tr><th>价差</th><th>预估收益</th><th>结算时间UTC+8</th><th>YES 持仓腿</th><th>YES 数量</th><th>YES 价格</th><th>YES 金额</th>"
+        "<thead><tr><th>ID</th><th>价差</th><th>预估收益</th><th>结算时间UTC+8</th><th>YES 持仓腿</th><th>YES 数量</th><th>YES 价格</th><th>YES 金额</th>"
         "<th>NO 持仓腿</th><th>NO 数量</th><th>NO 价格</th><th>NO 金额</th><th>成本</th><th>时间</th></tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table>"

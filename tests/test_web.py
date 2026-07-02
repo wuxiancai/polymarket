@@ -119,6 +119,78 @@ def test_dashboard_connection_log_updates(tmp_path):
     assert "Gamma API 正在拉取 BTC 市场" in payload["connection_log_html"]
     assert "行情源连接失败" in payload["connection_log_html"]
     assert "BTC" in payload["connection_log_html"]
+    assert "class='log-scroll'" in payload["connection_log_html"]
+    assert ".log-scroll { max-height: 348px; overflow-y: auto; overflow-x: auto; }" in render_dashboard(state)
+
+
+def test_dashboard_uses_shared_id_sequence_across_assets_and_tables(tmp_path):
+    config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
+    store = PaperStore(config.database_path)
+    store.initialize()
+    btc = WebState(config=config, store=store, asset=BTC_ASSET, runner=PaperRunner(config, BTC_ASSET))
+    eth = WebState(config=config, store=store, asset=ETH_ASSET, runner=PaperRunner(config, ETH_ASSET))
+    btc_opportunity = ArbOpportunity(
+        pair_key="id-btc",
+        kind="implication",
+        yes_market_id="btc-yes",
+        yes_token_id="btc-y",
+        yes_question="Will Bitcoin reach $70,000 in June?",
+        no_market_id="btc-no",
+        no_token_id="btc-n",
+        no_question="Will Bitcoin reach $70,000 in June?",
+        yes_event_slug="what-price-will-bitcoin-hit-in-june",
+        no_event_slug="what-price-will-bitcoin-hit-in-june",
+        yes_end_date="2099-07-01T00:00:00+00:00",
+        no_end_date="2099-07-01T00:00:00+00:00",
+        yes_avg_price=0.40,
+        no_avg_price=0.57,
+        shares=100,
+        total_cost=97,
+        min_payout=100,
+        guaranteed_profit=3,
+        edge_per_share=0.03,
+        executable=True,
+        reason="executable",
+        detected_at=datetime(2026, 6, 27, 12, 0, tzinfo=timezone.utc),
+    )
+    eth_opportunity = ArbOpportunity(
+        pair_key="id-eth",
+        kind="implication",
+        yes_market_id="eth-yes",
+        yes_token_id="eth-y",
+        yes_question="Will Ethereum dip to $1,500 June 22-28?",
+        no_market_id="eth-no",
+        no_token_id="eth-n",
+        no_question="Will Ethereum dip to $1,500 June 22-28?",
+        yes_event_slug="what-price-will-ethereum-hit-june-22-28-2026",
+        no_event_slug="what-price-will-ethereum-hit-june-22-28-2026",
+        yes_end_date="2099-07-01T00:00:00+00:00",
+        no_end_date="2099-07-01T00:00:00+00:00",
+        yes_avg_price=0.40,
+        no_avg_price=0.57,
+        shares=100,
+        total_cost=97,
+        min_payout=100,
+        guaranteed_profit=3,
+        edge_per_share=0.03,
+        executable=True,
+        reason="executable",
+        detected_at=datetime(2026, 6, 27, 12, 1, tzinfo=timezone.utc),
+    )
+    store.record_opportunity(btc_opportunity)
+    store.record_paper_trade(btc_opportunity)
+    store.record_opportunity(eth_opportunity)
+
+    payload = dashboard_payload([btc, eth])
+
+    assert payload["portfolio"]["positions_html"].startswith("<table")
+    assert "<th>ID</th><th>币种</th>" in payload["portfolio"]["positions_html"]
+    assert "<th>ID</th><th>价差</th>" in payload["assets"][0]["trades_html"]
+    assert "<th>ID</th><th>状态</th>" in payload["assets"][0]["opportunities_html"]
+    assert "<tr><td>1</td><td>BTC</td>" in payload["portfolio"]["positions_html"]
+    assert "<tr><td>1</td><td><span class='spread-value'>3.00¢</span>" in payload["assets"][0]["trades_html"]
+    assert "<tr><td>1</td><td><span class='pill done'>已成交</span>" in payload["assets"][0]["opportunities_html"]
+    assert "<tr><td>2</td><td><span class='pill exec'>可模拟成交</span>" in payload["assets"][1]["opportunities_html"]
 
 
 def test_dashboard_shows_profit_and_positions(tmp_path):

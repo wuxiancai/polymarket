@@ -1,5 +1,28 @@
 # Handoff
 
+## 2026-07-02 Dashboard shared ID and log scroll update
+
+- Added a first-column `ID` to dashboard data tables:
+  - `最近套利机会`;
+  - `模拟成交`;
+  - `模拟持仓`;
+  - `虚拟持仓`;
+  - `已结束持仓收益`.
+- Dashboard IDs are generated from one shared timeline across BTC and ETH and
+  across opportunity/trade/position views. Rows sharing the same `pair_key` and
+  `detected_at` reuse the same ID, so an opportunity and its paper trade/position
+  stay aligned instead of each table starting from `1` independently.
+- `Polymarket 连接日志` now wraps the table in a scroll container and defaults to
+  about 7 visible rows; older log rows remain available through the vertical
+  scrollbar.
+- Test maintenance: stale 2026 settlement fixtures that were intended to be open
+  positions were moved to 2099 dates so the suite remains deterministic after
+  2026-07-01.
+- Verification:
+  - `python3 -m pytest -p no:cacheprovider tests/test_web.py -q`: 15 passed.
+  - `python3 -m pytest -p no:cacheprovider tests -q`: 39 passed.
+  - `bash -n start.sh deploy.sh && git diff --check`: passed.
+
 ## 2026-06-30 Virtual position fallback
 
 - When a paper opportunity passes existing execution gates but real paper
