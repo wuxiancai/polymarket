@@ -870,7 +870,7 @@ def _asset_payload(state: WebState, id_map: dict[str, int]) -> dict:
     opportunities = _filter_rows_by_asset(state.store.latest_opportunities(100), state.asset)
     trades = _filter_rows_by_asset(state.store.latest_trades(100), state.asset)
     virtual_trades = _filter_rows_by_asset(state.store.latest_virtual_trades(100), state.asset)
-    opportunities = _mark_executed_opportunities(opportunities, trades, virtual_trades)
+    opportunities = _mark_executed_opportunities(opportunities, trades, virtual_trades, state.config.cooldown_seconds)
     return {
         "symbol": state.asset.symbol,
         "status": snapshot,
@@ -892,9 +892,15 @@ def _filter_rows_by_asset(rows: list, asset: AssetSpec) -> list:
     return filtered
 
 
-def _mark_executed_opportunities(opportunities: list, trades: list, virtual_trades: list) -> list:
+def _mark_executed_opportunities(
+    opportunities: list,
+    trades: list,
+    virtual_trades: list,
+    cooldown_seconds: int,
+) -> list:
     executed_rows = {_opportunity_execution_key(row): row for row in trades}
     virtual_rows = {_opportunity_execution_key(row): row for row in virtual_trades}
+    execution_rows = list(trades) + list(virtual_trades)
     marked = []
     for row in opportunities:
         item = dict(row)
@@ -906,7 +912,12 @@ def _mark_executed_opportunities(opportunities: list, trades: list, virtual_trad
             item["_execution_type"] = "virtual"
             item.update(_execution_display_values(virtual_rows[key]))
         else:
-            item["_execution_type"] = ""
+            cooldown_match = _cooldown_execution_match(item, execution_rows, cooldown_seconds)
+            if cooldown_match is not None:
+                item["_execution_type"] = "cooldown"
+                item["_cooldown_seconds_remaining"] = cooldown_match
+            else:
+                item["_execution_type"] = ""
         marked.append(item)
     return marked
 
@@ -921,6 +932,28 @@ def _execution_display_values(row: dict) -> dict:
         "min_payout",
     )
     return {key: row.get(key) for key in keys if key in row}
+
+
+def _cooldown_execution_match(opportunity: dict, executions: list, cooldown_seconds: int) -> Optional[int]:
+    opportunity_pair = str(opportunity.get("pair_key") or "")
+    opportunity_time = _parse_time_value(opportunity.get("detected_at"))
+    if not opportunity_pair or opportunity_time is None or cooldown_seconds <= 0:
+        return None
+    closest_delta = None
+    for execution in executions:
+        if str(execution.get("pair_key") or "") != opportunity_pair:
+            continue
+        execution_time = _parse_time_value(execution.get("detected_at"))
+        if execution_time is None:
+            continue
+        delta = (opportunity_time - execution_time).total_seconds()
+        if delta < 0 or delta >= cooldown_seconds:
+            continue
+        if closest_delta is None or delta < closest_delta:
+            closest_delta = delta
+    if closest_delta is None:
+        return None
+    return max(1, int(cooldown_seconds - closest_delta))
 
 
 def _opportunity_execution_key(row: dict) -> tuple[str, str]:
@@ -1180,6 +1213,8 @@ def _opportunity_state(row: dict) -> tuple[str, str]:
         return "done", "已成交"
     if row.get("_execution_type") == "virtual":
         return "exec", "虚拟成交"
+    if row.get("_execution_type") == "cooldown":
+        return "watch", "冷却中"
     if _spread_cents(row) < 2:
         return "watch", "仅观察"
     if row.get("executable"):
@@ -1188,6 +1223,11 @@ def _opportunity_state(row: dict) -> tuple[str, str]:
 
 
 def _opportunity_status_detail(row: dict) -> str:
+    if row.get("_execution_type") == "cooldown":
+        seconds = row.get("_cooldown_seconds_remaining")
+        if seconds:
+            return f"<div class='label'>同交易对冷却中，约 {escape(str(seconds))} 秒后才允许再次成交</div>"
+        return "<div class='label'>同交易对冷却中，未写入成交</div>"
     reason = str(row.get("reason") or "")
     if not reason or reason == "executable":
         return ""

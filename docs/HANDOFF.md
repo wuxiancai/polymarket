@@ -1,5 +1,22 @@
 # Handoff
 
+## 2026-07-02 Opportunity cooldown status update
+
+- Diagnosed why rows such as ID40 could show `可模拟成交` while no matching
+  normal/virtual trade or position existed: the row was a repeated opportunity
+  for a pair that had just been executed, so the runner skipped it during the
+  configured cooldown window. The old dashboard did not infer that skipped state
+  and therefore still displayed the generic executable label.
+- Dashboard opportunity rows now infer same-pair cooldown from nearby normal or
+  virtual executions and display `冷却中` with a Chinese detail line instead of
+  `可模拟成交`.
+- `可模拟成交` now means no matching execution and no inferred cooldown match;
+  actual normal/virtual executions still show `已成交` or `虚拟成交`.
+- Verification:
+  - `python3 -m pytest -p no:cacheprovider tests/test_web.py -q`: 15 passed.
+  - `python3 -m pytest -p no:cacheprovider tests -q`: 39 passed.
+  - `bash -n start.sh deploy.sh && git diff --check`: passed.
+
 ## 2026-07-02 Opportunity execution display and table scroll update
 
 - Diagnosed the ID-level profit mismatch: `最近套利机会` was showing the raw

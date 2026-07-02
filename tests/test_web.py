@@ -497,6 +497,14 @@ def test_opportunity_table_shows_spread_and_execution_state(tmp_path):
         reason="executable",
         detected_at=datetime(2026, 6, 27, 12, 1, tzinfo=timezone.utc),
     )
+    cooldown_duplicate = replace(
+        traded,
+        guaranteed_profit=12.0,
+        shares=400.0,
+        total_cost=388.0,
+        min_payout=400.0,
+        detected_at=datetime(2026, 6, 27, 12, 0, 10, tzinfo=timezone.utc),
+    )
     executable = ArbOpportunity(
         pair_key="open-btc",
         kind="same_market",
@@ -521,7 +529,7 @@ def test_opportunity_table_shows_spread_and_execution_state(tmp_path):
         reason="executable",
         detected_at=datetime(2026, 6, 27, 12, 2, tzinfo=timezone.utc),
     )
-    for opportunity in (traded, thin_spread, executable):
+    for opportunity in (traded, cooldown_duplicate, thin_spread, executable):
         store.record_opportunity(opportunity)
     store.record_paper_trade(traded)
     state = WebState(config=config, store=store, asset=BTC_ASSET, runner=PaperRunner(config, BTC_ASSET))
@@ -532,6 +540,8 @@ def test_opportunity_table_shows_spread_and_execution_state(tmp_path):
     assert html.index("<th>状态</th>") < html.index("<th>价差</th>")
     assert html.index("<th>价差</th>") < html.index("<th>保证利润</th>")
     assert "已成交" in html
+    assert "冷却中" in html
+    assert "同交易对冷却中" in html
     assert "可模拟成交" in html
     assert "仅观察" in html
     assert "<span class='spread-value'>3.00¢</span>" in html
