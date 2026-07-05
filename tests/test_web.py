@@ -573,6 +573,54 @@ def test_opportunity_table_shows_spread_and_execution_state(tmp_path):
         reason="executable",
         detected_at=datetime(2026, 6, 27, 12, 1, tzinfo=timezone.utc),
     )
+    no_trade_boundary = ArbOpportunity(
+        pair_key="no-trade-boundary-btc",
+        kind="same_market",
+        yes_market_id="m4",
+        yes_token_id="y4",
+        yes_question="Will Bitcoin reach $85,000 in June?",
+        no_market_id="m4",
+        no_token_id="n4",
+        no_question="Will Bitcoin reach $85,000 in June?",
+        yes_event_slug="will-bitcoin-reach-85000-in-june",
+        no_event_slug="will-bitcoin-reach-85000-in-june",
+        yes_end_date="2026-07-01T00:00:00+00:00",
+        no_end_date="2026-07-01T00:00:00+00:00",
+        shares=300.0,
+        yes_avg_price=0.40,
+        no_avg_price=0.575,
+        total_cost=292.5,
+        min_payout=300.0,
+        guaranteed_profit=7.5,
+        edge_per_share=0.025,
+        executable=True,
+        reason="executable",
+        detected_at=datetime(2026, 6, 27, 12, 3, tzinfo=timezone.utc),
+    )
+    executable_boundary = ArbOpportunity(
+        pair_key="executable-boundary-btc",
+        kind="same_market",
+        yes_market_id="m5",
+        yes_token_id="y5",
+        yes_question="Will Bitcoin reach $90,000 in June?",
+        no_market_id="m5",
+        no_token_id="n5",
+        no_question="Will Bitcoin reach $90,000 in June?",
+        yes_event_slug="will-bitcoin-reach-90000-in-june",
+        no_event_slug="will-bitcoin-reach-90000-in-june",
+        yes_end_date="2026-07-01T00:00:00+00:00",
+        no_end_date="2026-07-01T00:00:00+00:00",
+        shares=300.0,
+        yes_avg_price=0.40,
+        no_avg_price=0.574,
+        total_cost=292.2,
+        min_payout=300.0,
+        guaranteed_profit=7.8,
+        edge_per_share=0.026,
+        executable=True,
+        reason="executable",
+        detected_at=datetime(2026, 6, 27, 12, 4, tzinfo=timezone.utc),
+    )
     cooldown_duplicate = replace(
         traded,
         guaranteed_profit=12.0,
@@ -605,7 +653,7 @@ def test_opportunity_table_shows_spread_and_execution_state(tmp_path):
         reason="executable",
         detected_at=datetime(2026, 6, 27, 12, 2, tzinfo=timezone.utc),
     )
-    for opportunity in (traded, cooldown_duplicate, thin_spread, executable):
+    for opportunity in (traded, cooldown_duplicate, thin_spread, executable, no_trade_boundary, executable_boundary):
         store.record_opportunity(opportunity)
     store.record_paper_trade(traded)
     state = WebState(config=config, store=store, asset=BTC_ASSET, runner=PaperRunner(config, BTC_ASSET))
@@ -621,6 +669,10 @@ def test_opportunity_table_shows_spread_and_execution_state(tmp_path):
     assert "可模拟成交" in html
     assert "仅观察" in html
     assert "<span class='spread-value'>3.00¢</span>" in html
+    assert "<span class='spread-value'>2.50¢</span>" in html
+    assert "<span class='spread-value'>2.60¢</span>" in html
+    assert "<span class='pill watch'>仅观察</span></td><td><span class='spread-value'>2.50¢</span>" in html
+    assert "<span class='pill exec'>可模拟成交</span></td><td><span class='spread-value'>2.60¢</span>" in html
     assert "<span class='spread-value'>1.50¢</span>" in html
 
 

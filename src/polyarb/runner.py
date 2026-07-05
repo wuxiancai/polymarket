@@ -17,6 +17,9 @@ from .websocket import apply_market_message, market_subscription_message
 WEBSOCKET_RECONNECT_DELAY_SECONDS = 10
 MIN_DISPLAYED_POSITION_VALUE = 0.01
 VIRTUAL_TRADE_BUDGET = 1000.0
+MIN_SPREAD_TO_OPEN_CENTS = 2.5
+THIRTY_PERCENT_MAX_SPREAD_CENTS = 3.5
+SIXTY_PERCENT_MAX_SPREAD_CENTS = 4.3
 
 
 @dataclass
@@ -86,15 +89,15 @@ class PaperRunner:
     def _sized_opportunity(self, opportunity: ArbOpportunity) -> tuple[Optional[ArbOpportunity], bool]:
         if opportunity.total_cost <= 0:
             return None, False
-        profit_rate = opportunity.guaranteed_profit / opportunity.total_cost
-        if profit_rate >= 0.03:
-            position_ratio = 1.0
-        elif profit_rate >= 0.02:
-            position_ratio = 0.5
-        elif profit_rate >= 0.01:
-            position_ratio = 0.3
-        else:
+        spread_cents = _spread_cents(opportunity)
+        if spread_cents <= MIN_SPREAD_TO_OPEN_CENTS:
             return None, False
+        if spread_cents <= THIRTY_PERCENT_MAX_SPREAD_CENTS:
+            position_ratio = 0.3
+        elif spread_cents <= SIXTY_PERCENT_MAX_SPREAD_CENTS:
+            position_ratio = 0.6
+        else:
+            position_ratio = 1.0
 
         allocation = self.config.initial_capital_usdt * self.asset.allocation_ratio
         used = self._used_capital()
@@ -133,6 +136,10 @@ class PaperRunner:
             except (TypeError, ValueError):
                 continue
         return total
+
+
+def _spread_cents(opportunity: ArbOpportunity) -> float:
+    return round((1 - opportunity.yes_avg_price - opportunity.no_avg_price) * 100, 10)
 
 
 class RealtimePaperRunner(PaperRunner):

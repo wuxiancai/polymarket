@@ -2,13 +2,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from polyarb.config import Config
-from polyarb.models import BTC_ASSET, ArbOpportunity
+from polyarb.models import BTC_ASSET, ETH_ASSET, ArbOpportunity
 from polyarb.runner import PaperRunner
 
 
-def opportunity(profit: float, total_cost: float = 1000.0) -> ArbOpportunity:
+def opportunity(profit: float, total_cost: float = 1000.0, spread_cents: float = 3.0) -> ArbOpportunity:
+    yes_price = 0.40
+    no_price = 1 - yes_price - (spread_cents / 100)
     return ArbOpportunity(
-        pair_key=f"pair-{profit}",
+        pair_key=f"pair-{profit}-{spread_cents}",
         kind="same_market",
         yes_market_id="m1",
         yes_token_id="y1",
@@ -21,8 +23,8 @@ def opportunity(profit: float, total_cost: float = 1000.0) -> ArbOpportunity:
         yes_end_date="2099-07-01T00:00:00+00:00",
         no_end_date="2099-07-01T00:00:00+00:00",
         shares=1000.0,
-        yes_avg_price=0.40,
-        no_avg_price=0.57,
+        yes_avg_price=yes_price,
+        no_avg_price=no_price,
         total_cost=total_cost,
         min_payout=1000.0,
         guaranteed_profit=profit,
@@ -40,28 +42,48 @@ def runner(tmp_path) -> PaperRunner:
     return item
 
 
-def test_runner_uses_full_half_or_thirty_percent_position_by_profit_rate(tmp_path):
+def test_runner_uses_position_size_tiers_by_spread(tmp_path):
     item = runner(tmp_path)
 
-    full, full_virtual = item._sized_opportunity(opportunity(profit=40.0, total_cost=1000.0))
-    half, half_virtual = item._sized_opportunity(opportunity(profit=25.0, total_cost=1000.0))
-    thirty, thirty_virtual = item._sized_opportunity(opportunity(profit=15.0, total_cost=1000.0))
-    too_small, too_small_virtual = item._sized_opportunity(opportunity(profit=5.0, total_cost=1000.0))
+    full, full_virtual = item._sized_opportunity(opportunity(profit=44.0, total_cost=1000.0, spread_cents=4.4))
+    sixty, sixty_virtual = item._sized_opportunity(opportunity(profit=43.0, total_cost=1000.0, spread_cents=4.3))
+    thirty, thirty_virtual = item._sized_opportunity(opportunity(profit=35.0, total_cost=1000.0, spread_cents=3.5))
+    just_above_min, just_above_min_virtual = item._sized_opportunity(
+        opportunity(profit=26.0, total_cost=1000.0, spread_cents=2.6)
+    )
+    too_small, too_small_virtual = item._sized_opportunity(opportunity(profit=25.0, total_cost=1000.0, spread_cents=2.5))
 
     assert full is not None
     assert full_virtual is False
     assert round(full.total_cost, 2) == 700.00
     assert round(full.shares, 2) == 700.00
-    assert half is not None
-    assert half_virtual is False
-    assert round(half.total_cost, 2) == 350.00
-    assert round(half.shares, 2) == 350.00
+    assert sixty is not None
+    assert sixty_virtual is False
+    assert round(sixty.total_cost, 2) == 420.00
+    assert round(sixty.shares, 2) == 420.00
     assert thirty is not None
     assert thirty_virtual is False
     assert round(thirty.total_cost, 2) == 210.00
     assert round(thirty.shares, 2) == 210.00
+    assert just_above_min is not None
+    assert just_above_min_virtual is False
+    assert round(just_above_min.total_cost, 2) == 210.00
+    assert round(just_above_min.shares, 2) == 210.00
     assert too_small is None
     assert too_small_virtual is False
+
+
+def test_runner_sizes_spread_tiers_against_current_asset_allocation(tmp_path):
+    config = Config(database_path=Path(tmp_path) / "paper.sqlite3", initial_capital_usdt=1000.0)
+    item = PaperRunner(config, ETH_ASSET)
+    item.store.initialize()
+
+    sized, is_virtual = item._sized_opportunity(opportunity(profit=26.0, total_cost=1000.0, spread_cents=2.6))
+
+    assert is_virtual is False
+    assert sized is not None
+    assert round(sized.total_cost, 2) == 90.00
+    assert round(sized.shares, 2) == 90.00
 
 
 def test_runner_records_fixed_size_virtual_trade_when_capital_is_insufficient(tmp_path):

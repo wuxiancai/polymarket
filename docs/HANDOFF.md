@@ -1,5 +1,33 @@
 # Handoff
 
+## 2026-07-05 Spread-based paper sizing tiers
+
+- Replaced the old paper execution sizing tiers based on
+  `guaranteed_profit / total_cost` with spread-based tiers using the same cents
+  spread formula shown on the dashboard:
+  `spread_cents = (1 - yes_avg_price - no_avg_price) * 100`.
+- New paper sizing rules:
+  - `spread <= 2.5¢`: do not open a paper/virtual position;
+  - `2.5¢ < spread <= 3.5¢`: use 30% of the current asset allocation;
+  - `3.5¢ < spread <= 4.3¢`: use 60% of the current asset allocation;
+  - `spread > 4.3¢`: use 100% of the current asset allocation.
+- The asset allocation is still asset-specific: BTC uses its configured
+  allocation ratio, ETH uses its configured allocation ratio. For example, with
+  the default ETH 30% allocation and total paper capital of `1000`, a 2.6¢ ETH
+  spread opens with `90` cost budget.
+- Dashboard opportunity status now uses the same `> 2.5¢` executable threshold,
+  so 2.5¢ rows display `仅观察` instead of `可模拟成交`.
+- Spread calculations in runner and dashboard are rounded before threshold
+  comparison to avoid floating-point boundary drift at values such as 2.5¢ and
+  4.3¢.
+- Verification:
+  - Added runner regression coverage for 2.5 / 2.6 / 3.5 / 4.3 / 4.4 spread
+    boundaries and ETH allocation sizing.
+  - Added dashboard regression coverage for 2.5¢ `仅观察` and 2.6¢
+    `可模拟成交`.
+  - `python3 -m pytest -p no:cacheprovider tests -q`: 43 passed.
+  - `bash -n start.sh deploy.sh && git diff --check`: passed.
+
 ## 2026-07-05 Dashboard runtime starts from first DB data
 
 - Changed the dashboard `运行时间` baseline from Web process start time to the
