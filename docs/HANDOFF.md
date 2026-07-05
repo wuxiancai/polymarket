@@ -1,5 +1,26 @@
 # Handoff
 
+## 2026-07-05 Dashboard table scroll preservation
+
+- Diagnosed dashboard table scroll reset during auto/manual refresh:
+  `refreshDashboard()` replaced the whole table container `innerHTML`, which
+  recreated nested `.table-scroll` / `.log-scroll` elements and reset browser
+  `scrollTop` / `scrollLeft` to zero.
+- Added `updateHtmlPreservingScroll(containerId, html)` in the dashboard script.
+  It captures nested scroll container offsets before replacing a section and
+  restores them after the new HTML is mounted.
+- Refresh updates for `已结束持仓收益`, `已结束虚拟持仓收益`, per-asset
+  `最近套利机会`, `模拟成交`, and `虚拟成交` now use the preserving helper.
+  Other refreshed table/log panels use the same helper as well.
+- Verification:
+  - `python3 -m pytest -p no:cacheprovider tests/test_web.py -q`: 16 passed.
+  - `python3 -m pytest -p no:cacheprovider tests -q`: 40 passed.
+  - `bash -n start.sh deploy.sh && git diff --check`: passed.
+  - Playwright CLI real-page check against temporary `127.0.0.1:8793`
+    dashboard: injected a scrollable table into `settledPositionTable`, set
+    `scrollTop=64`, refreshed through `updateHtmlPreservingScroll()`, and the
+    assertion passed without `scrollTop` resetting.
+
 ## 2026-07-02 Opportunity cooldown status update
 
 - Diagnosed why rows such as ID40 could show `可模拟成交` while no matching

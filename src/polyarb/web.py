@@ -472,24 +472,43 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
       setText('currentTimeValue', formatCurrentTime(now));
       setText('runDurationValue', formatRuntime(startedAt, now));
     }}
+    function updateHtmlPreservingScroll(containerId, html) {{
+      const container = document.getElementById(containerId);
+      if (!container) {{
+        return;
+      }}
+      const scrollPositions = Array.from(container.querySelectorAll('.table-scroll, .log-scroll')).map((scroller) => ({{
+        top: scroller.scrollTop,
+        left: scroller.scrollLeft,
+      }}));
+      container.innerHTML = html;
+      Array.from(container.querySelectorAll('.table-scroll, .log-scroll')).forEach((scroller, index) => {{
+        const position = scrollPositions[index];
+        if (!position) {{
+          return;
+        }}
+        scroller.scrollTop = position.top;
+        scroller.scrollLeft = position.left;
+      }});
+    }}
     async function refreshDashboard() {{
       const response = await fetch('/api/dashboard');
       const payload = await response.json();
-      document.getElementById('errorBox').innerHTML = payload.error_html;
-      document.getElementById('portfolioSummary').innerHTML = payload.portfolio.summary_html;
-      document.getElementById('positionTable').innerHTML = payload.portfolio.positions_html;
-      document.getElementById('virtualPositionTable').innerHTML = payload.portfolio.virtual_positions_html;
-      document.getElementById('settledPositionTable').innerHTML = payload.portfolio.settled_positions_html;
-      document.getElementById('settledVirtualPositionTable').innerHTML = payload.portfolio.settled_virtual_positions_html;
-      document.getElementById('connectionLog').innerHTML = payload.connection_log_html;
+      updateHtmlPreservingScroll('errorBox', payload.error_html);
+      updateHtmlPreservingScroll('portfolioSummary', payload.portfolio.summary_html);
+      updateHtmlPreservingScroll('positionTable', payload.portfolio.positions_html);
+      updateHtmlPreservingScroll('virtualPositionTable', payload.portfolio.virtual_positions_html);
+      updateHtmlPreservingScroll('settledPositionTable', payload.portfolio.settled_positions_html);
+      updateHtmlPreservingScroll('settledVirtualPositionTable', payload.portfolio.settled_virtual_positions_html);
+      updateHtmlPreservingScroll('connectionLog', payload.connection_log_html);
       for (const asset of payload.assets) {{
         setText(asset.symbol + 'StatusValue', asset.status_text);
         setText(asset.symbol + 'MarketsValue', asset.status.markets);
         setText(asset.symbol + 'PairsValue', asset.status.pairs);
         setText(asset.symbol + 'OpportunitiesValue', asset.status.opportunities);
-        document.getElementById(asset.symbol + 'OpportunityTable').innerHTML = asset.opportunities_html;
-        document.getElementById(asset.symbol + 'TradeTable').innerHTML = asset.trades_html;
-        document.getElementById(asset.symbol + 'VirtualTradeTable').innerHTML = asset.virtual_trades_html;
+        updateHtmlPreservingScroll(asset.symbol + 'OpportunityTable', asset.opportunities_html);
+        updateHtmlPreservingScroll(asset.symbol + 'TradeTable', asset.trades_html);
+        updateHtmlPreservingScroll(asset.symbol + 'VirtualTradeTable', asset.virtual_trades_html);
       }}
     }}
     async function triggerScan() {{

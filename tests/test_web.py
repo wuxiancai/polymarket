@@ -84,6 +84,41 @@ def test_dashboard_header_shows_live_clock_and_runtime(tmp_path):
     assert "setInterval(updateRuntimeClock, 1000)" in html
 
 
+def test_dashboard_refresh_preserves_table_scroll_positions(tmp_path):
+    config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
+    store = PaperStore(config.database_path)
+    store.initialize()
+    btc = WebState(config=config, store=store, asset=BTC_ASSET, runner=PaperRunner(config, BTC_ASSET))
+    eth = WebState(config=config, store=store, asset=ETH_ASSET, runner=PaperRunner(config, ETH_ASSET))
+
+    html = render_dashboard([btc, eth])
+
+    assert "function updateHtmlPreservingScroll(containerId, html)" in html
+    assert "scroller.scrollTop = position.top" in html
+    assert "scroller.scrollLeft = position.left" in html
+    for target in (
+        "settledPositionTable",
+        "settledVirtualPositionTable",
+    ):
+        assert f"updateHtmlPreservingScroll('{target}'" in html
+        assert f"document.getElementById('{target}').innerHTML" not in html
+    for target in (
+        "BTCOpportunityTable",
+        "BTCTradeTable",
+        "BTCVirtualTradeTable",
+        "ETHOpportunityTable",
+        "ETHTradeTable",
+        "ETHVirtualTradeTable",
+    ):
+        assert f'id="{target}"' in html
+    assert "updateHtmlPreservingScroll(asset.symbol + 'OpportunityTable', asset.opportunities_html)" in html
+    assert "updateHtmlPreservingScroll(asset.symbol + 'TradeTable', asset.trades_html)" in html
+    assert "updateHtmlPreservingScroll(asset.symbol + 'VirtualTradeTable', asset.virtual_trades_html)" in html
+    assert "document.getElementById(asset.symbol + 'OpportunityTable').innerHTML" not in html
+    assert "document.getElementById(asset.symbol + 'TradeTable').innerHTML" not in html
+    assert "document.getElementById(asset.symbol + 'VirtualTradeTable').innerHTML" not in html
+
+
 def test_dashboard_payload_contains_fragments(tmp_path):
     config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
     store = PaperStore(config.database_path)
