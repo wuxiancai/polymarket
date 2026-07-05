@@ -360,11 +360,118 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
     .log-ok {{ color: var(--accent); }}
     .log-error {{ color: var(--danger); }}
     @media (max-width: 760px) {{
-      .top {{ align-items: flex-start; flex-direction: column; padding: 18px 0; }}
-      .toolbar {{ width: 100%; }}
-      .runtime-panel {{ width: 100%; min-width: 0; }}
-      .metrics {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
-      .portfolio-grid {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+      .wrap {{ width: 100%; padding: 0 12px; }}
+      .top {{ align-items: flex-start; flex-direction: column; gap: 14px; min-height: auto; padding: 16px 0; }}
+      h1 {{ font-size: 22px; }}
+      p {{ font-size: 14px; line-height: 1.45; }}
+      main {{ padding: 14px 0 24px; }}
+      .toolbar {{ width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }}
+      .runtime-panel {{ grid-column: 1 / -1; width: 100%; min-width: 0; padding: 10px 12px; border-radius: 10px; }}
+      .runtime-row {{ gap: 8px; }}
+      button {{ width: 100%; min-height: 44px; border-radius: 10px; }}
+      .metrics, .portfolio-grid {{ grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }}
+      .metric {{ min-width: 0; padding: 11px 10px; border-radius: 10px; }}
+      .label {{ font-size: 12px; }}
+      .value {{ font-size: 19px; overflow-wrap: anywhere; }}
+      .asset-panel {{ margin-top: 22px; margin-bottom: 34px; }}
+      .asset-title {{ font-size: 20px; margin-bottom: 10px; }}
+      section {{ margin-top: 12px; border-radius: 12px; }}
+      section h2 {{ padding: 12px; font-size: 16px; }}
+      .table-scroll, .log-scroll {{ -webkit-overflow-scrolling: touch; }}
+      th, td {{ padding: 9px 10px; font-size: 13px; }}
+      .market-text {{ min-width: 220px; max-width: 280px; }}
+    }}
+    @media (max-width: 640px) {{
+      .portfolio-detail {{ margin-top: 8px; overflow: visible; }}
+      .table-scroll, .log-scroll {{ max-height: none; overflow: visible; }}
+      .table-scroll thead th {{ position: static; }}
+      table {{ width: 100%; min-width: 0; font-size: 13px; }}
+      table thead {{ display: none; }}
+      table tbody, table tr, table td {{ display: block; width: 100%; }}
+      table tr {{ margin: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }}
+      table td {{ display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 10px; align-items: start; padding: 7px 0; border-bottom: 1px dashed var(--line); text-align: right; overflow-wrap: anywhere; }}
+      table td:last-child {{ border-bottom: 0; }}
+      table td::before {{ color: var(--muted); content: ""; font-size: 12px; font-weight: 700; line-height: 1.35; text-align: left; }}
+      .wide-table th, .wide-table td {{ white-space: normal; }}
+      .market-text {{ min-width: 0; max-width: none; }}
+      .market-card {{ text-align: right; }}
+      .market-event {{ display: inline; }}
+      .market-condition {{ margin-top: 4px; }}
+      .time-date, .time-clock {{ display: inline; white-space: normal; }}
+      .time-clock::before {{ content: " "; }}
+      .portfolio-table td:nth-child(1)::before {{ content: "币种"; }}
+      .portfolio-table td:nth-child(2)::before {{ content: "分配本金"; }}
+      .portfolio-table td:nth-child(3)::before {{ content: "已用本金"; }}
+      .portfolio-table td:nth-child(4)::before {{ content: "剩余本金"; }}
+      .portfolio-table td:nth-child(5)::before {{ content: "收益"; }}
+      .portfolio-table td:nth-child(6)::before {{ content: "收益率"; }}
+      .portfolio-table td:nth-child(7)::before {{ content: "持仓数"; }}
+      .opportunity-table td:nth-child(1)::before {{ content: "ID"; }}
+      .opportunity-table td:nth-child(2)::before {{ content: "状态"; }}
+      .opportunity-table td:nth-child(3)::before {{ content: "价差"; }}
+      .opportunity-table td:nth-child(4)::before {{ content: "保证利润"; }}
+      .opportunity-table td:nth-child(5)::before {{ content: "YES 交易对"; }}
+      .opportunity-table td:nth-child(6)::before {{ content: "YES 份额"; }}
+      .opportunity-table td:nth-child(7)::before {{ content: "NO 交易对"; }}
+      .opportunity-table td:nth-child(8)::before {{ content: "NO 份额"; }}
+      .opportunity-table td:nth-child(9)::before {{ content: "时间"; }}
+      .trade-table td:nth-child(1)::before {{ content: "ID"; }}
+      .trade-table td:nth-child(2)::before {{ content: "价差"; }}
+      .trade-table td:nth-child(3)::before {{ content: "预估收益"; }}
+      .trade-table td:nth-child(4)::before {{ content: "结算时间"; }}
+      .trade-table td:nth-child(5)::before {{ content: "YES 持仓腿"; }}
+      .trade-table td:nth-child(6)::before {{ content: "YES 数量"; }}
+      .trade-table td:nth-child(7)::before {{ content: "YES 价格"; }}
+      .trade-table td:nth-child(8)::before {{ content: "YES 金额"; }}
+      .trade-table td:nth-child(9)::before {{ content: "NO 持仓腿"; }}
+      .trade-table td:nth-child(10)::before {{ content: "NO 数量"; }}
+      .trade-table td:nth-child(11)::before {{ content: "NO 价格"; }}
+      .trade-table td:nth-child(12)::before {{ content: "NO 金额"; }}
+      .trade-table td:nth-child(13)::before {{ content: "成本"; }}
+      .trade-table td:nth-child(14)::before {{ content: "时间"; }}
+      .open-position-table td:nth-child(1)::before {{ content: "ID"; }}
+      .open-position-table td:nth-child(2)::before {{ content: "币种"; }}
+      .open-position-table td:nth-child(3)::before {{ content: "预估收益"; }}
+      .open-position-table td:nth-child(4)::before {{ content: "价差"; }}
+      .open-position-table td:nth-child(5)::before {{ content: "结算时间"; }}
+      .open-position-table td:nth-child(6)::before {{ content: "YES 持仓腿"; }}
+      .open-position-table td:nth-child(7)::before {{ content: "YES 数量"; }}
+      .open-position-table td:nth-child(8)::before {{ content: "YES 价格"; }}
+      .open-position-table td:nth-child(9)::before {{ content: "YES 金额"; }}
+      .open-position-table td:nth-child(10)::before {{ content: "NO 持仓腿"; }}
+      .open-position-table td:nth-child(11)::before {{ content: "NO 数量"; }}
+      .open-position-table td:nth-child(12)::before {{ content: "NO 价格"; }}
+      .open-position-table td:nth-child(13)::before {{ content: "NO 金额"; }}
+      .open-position-table td:nth-child(14)::before {{ content: "成本"; }}
+      .open-position-table td:nth-child(15)::before {{ content: "最低赔付"; }}
+      .open-position-table td:nth-child(16)::before {{ content: "开仓时间"; }}
+      .settled-position-table td:nth-child(1)::before {{ content: "ID"; }}
+      .settled-position-table td:nth-child(2)::before {{ content: "币种"; }}
+      .settled-position-table td:nth-child(3)::before {{ content: "收益"; }}
+      .settled-position-table td:nth-child(4)::before {{ content: "收益率"; }}
+      .settled-position-table td:nth-child(5)::before {{ content: "价差"; }}
+      .settled-position-table td:nth-child(6)::before {{ content: "结束时间"; }}
+      .settled-position-table td:nth-child(7)::before {{ content: "YES 持仓腿"; }}
+      .settled-position-table td:nth-child(8)::before {{ content: "YES 数量"; }}
+      .settled-position-table td:nth-child(9)::before {{ content: "YES 价格"; }}
+      .settled-position-table td:nth-child(10)::before {{ content: "YES 金额"; }}
+      .settled-position-table td:nth-child(11)::before {{ content: "NO 持仓腿"; }}
+      .settled-position-table td:nth-child(12)::before {{ content: "NO 数量"; }}
+      .settled-position-table td:nth-child(13)::before {{ content: "NO 价格"; }}
+      .settled-position-table td:nth-child(14)::before {{ content: "NO 金额"; }}
+      .settled-position-table td:nth-child(15)::before {{ content: "成本"; }}
+      .settled-position-table td:nth-child(16)::before {{ content: "最低赔付"; }}
+      .settled-position-table td:nth-child(17)::before {{ content: "开仓时间"; }}
+      .log-table td:nth-child(1)::before {{ content: "时间"; }}
+      .log-table td:nth-child(2)::before {{ content: "资产"; }}
+      .log-table td:nth-child(3)::before {{ content: "级别"; }}
+      .log-table td:nth-child(4)::before {{ content: "事件"; }}
+    }}
+    @media (max-width: 420px) {{
+      .metrics, .portfolio-grid {{ grid-template-columns: 1fr; }}
+      .toolbar {{ grid-template-columns: 1fr; }}
+      table tr {{ margin: 8px; }}
+      table td {{ grid-template-columns: 88px minmax(0, 1fr); }}
     }}
   </style>
 </head>
@@ -664,7 +771,7 @@ def _portfolio_summary_html(summary: dict) -> str:
             "</tr>"
         )
     detail = (
-        "<div class='portfolio-detail table-scroll'><table><thead><tr>"
+        "<div class='portfolio-detail table-scroll'><table class='portfolio-table'><thead><tr>"
         "<th>币种</th><th>分配本金</th><th>已用本金</th><th>剩余本金</th>"
         "<th>收益</th><th>收益率</th><th>持仓数</th>"
         "</tr></thead><tbody>"
@@ -711,7 +818,7 @@ def _position_table_html(rows: list, states: list[WebState], id_map: dict[str, i
             "</tr>"
         )
     return _scroll_table(
-        "<table class='trade-table wide-table position-table'>"
+        "<table class='trade-table wide-table position-table open-position-table'>"
         "<colgroup><col class='id-col'><col class='asset-col'><col class='profit-col'><col class='spread-col'><col class='time-col'><col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'>"
         "<col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'><col class='money-col'>"
         "<col class='money-col'><col class='time-col'></colgroup>"
@@ -765,7 +872,7 @@ def _settled_position_table_html(rows: list, states: list[WebState], id_map: dic
             "</tr>"
         )
     return _scroll_table(
-        "<table class='trade-table wide-table position-table'>"
+        "<table class='trade-table wide-table position-table settled-position-table'>"
         "<colgroup><col class='id-col'><col class='asset-col'><col class='profit-col'><col class='profit-col'><col class='spread-col'><col class='time-col'><col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'>"
         "<col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'><col class='money-col'>"
         "<col class='money-col'><col class='time-col'></colgroup>"
@@ -1214,7 +1321,7 @@ def _opportunity_table(rows: list, id_map: dict[str, int]) -> str:
             "</tr>"
         )
     return _scroll_table(
-        "<table><thead><tr><th>ID</th><th>状态</th><th>价差</th><th>保证利润</th><th>YES 交易对</th><th>YES 份额</th>"
+        "<table class='opportunity-table'><thead><tr><th>ID</th><th>状态</th><th>价差</th><th>保证利润</th><th>YES 交易对</th><th>YES 份额</th>"
         "<th>NO 交易对</th><th>NO 份额</th><th>时间</th></tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table>"

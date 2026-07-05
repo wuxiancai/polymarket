@@ -64,6 +64,56 @@ def test_dashboard_tables_are_left_aligned_and_content_sized(tmp_path):
     assert "table { min-width: 760px; }" not in html
 
 
+def test_dashboard_has_mobile_browser_layout_css(tmp_path):
+    config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
+    store = PaperStore(config.database_path)
+    store.initialize()
+    store.record_opportunity(
+        ArbOpportunity(
+            pair_key="mobile-layout",
+            kind="same_market",
+            yes_market_id="yes-mobile",
+            yes_token_id="yes-token-mobile",
+            yes_question="Will Bitcoin reach $70,000 in June?",
+            no_market_id="no-mobile",
+            no_token_id="no-token-mobile",
+            no_question="Will Bitcoin reach $70,000 in June?",
+            yes_event_slug="what-price-will-bitcoin-hit-in-june",
+            no_event_slug="what-price-will-bitcoin-hit-in-june",
+            yes_end_date="2099-07-01T00:00:00+00:00",
+            no_end_date="2099-07-01T00:00:00+00:00",
+            shares=100,
+            yes_avg_price=0.40,
+            no_avg_price=0.57,
+            total_cost=97,
+            min_payout=100,
+            guaranteed_profit=3,
+            edge_per_share=0.03,
+            executable=True,
+            reason="executable",
+            detected_at=datetime(2026, 6, 27, 12, 0, tzinfo=timezone.utc),
+        )
+    )
+    btc = WebState(config=config, store=store, asset=BTC_ASSET, runner=PaperRunner(config, BTC_ASSET))
+    eth = WebState(config=config, store=store, asset=ETH_ASSET, runner=PaperRunner(config, ETH_ASSET))
+
+    html = render_dashboard([btc, eth])
+
+    assert "@media (max-width: 760px)" in html
+    assert "@media (max-width: 640px)" in html
+    assert ".wrap { width: 100%; padding: 0 12px; }" in html
+    assert ".toolbar { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }" in html
+    assert ".table-scroll, .log-scroll { max-height: none; overflow: visible; }" in html
+    assert "table td { display: grid; grid-template-columns: 96px minmax(0, 1fr);" in html
+    assert ".portfolio-table td:nth-child(2)::before { content: \"分配本金\"; }" in html
+    assert ".opportunity-table td:nth-child(5)::before { content: \"YES 交易对\"; }" in html
+    assert ".open-position-table td:nth-child(16)::before { content: \"开仓时间\"; }" in html
+    assert ".settled-position-table td:nth-child(17)::before { content: \"开仓时间\"; }" in html
+    assert ".log-table td:nth-child(4)::before { content: \"事件\"; }" in html
+    assert "<table class='portfolio-table'>" in html
+    assert "<table class='opportunity-table'>" in html
+
+
 def test_dashboard_shows_realtime_listening_status(tmp_path):
     config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
     store = PaperStore(config.database_path)

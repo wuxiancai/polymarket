@@ -1,5 +1,24 @@
 # Handoff
 
+## 2026-07-05 Dashboard mobile browser adaptation
+
+- Adapted the dashboard for mobile browsers without changing Polymarket scan,
+  paper execution, portfolio, database, API, or refresh logic.
+- Desktop table layout remains content-sized and left-aligned; mobile-only CSS
+  now tightens page padding, header spacing, toolbar buttons, metric cards,
+  section spacing, font sizes, and table cell padding.
+- At phone widths, dashboard tables render as stacked card-like rows with
+  visible Chinese field labels via table-specific responsive CSS. This avoids
+  forcing users to horizontally drag wide tables on small screens.
+- Added table classes for portfolio, opportunity, open position, and settled
+  position tables so the mobile CSS can label each card row accurately.
+- Verification:
+  - Added regression coverage for mobile breakpoints, card-style table CSS,
+    and required table classes/field labels.
+  - `python3 -m pytest -p no:cacheprovider tests/test_web.py -q`: 19 passed.
+  - `python3 -m pytest -p no:cacheprovider tests -q`: 45 passed.
+  - `bash -n start.sh deploy.sh && git diff --check`: passed.
+
 ## 2026-07-05 Dashboard table auto-width alignment
 
 - Updated dashboard table styling so all table headers and cells stay
