@@ -322,7 +322,7 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
       font-size: 17px;
       border-bottom: 1px solid var(--line);
     }}
-    table {{ width: 100%; border-collapse: collapse; font-size: 14px; table-layout: auto; }}
+    table {{ width: max-content; min-width: 100%; border-collapse: collapse; font-size: 14px; table-layout: auto; }}
     th, td {{ padding: 11px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }}
     th {{ color: var(--muted); font-weight: 700; background: #fbfcfd; }}
     tr:last-child td {{ border-bottom: 0; }}
@@ -335,19 +335,7 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
     .spread-value {{ color: #2563eb; font-weight: 800; }}
     .profit-positive {{ color: var(--accent); }}
     .profit-negative {{ color: var(--danger); }}
-    .wide-table {{ min-width: 1604px; table-layout: fixed; }}
-    .position-table {{ min-width: 1814px; }}
     .wide-table th, .wide-table td {{ white-space: nowrap; }}
-    .wide-table .id-col {{ width: 64px; }}
-    .wide-table .asset-col {{ width: 64px; }}
-    .wide-table .market-col {{ width: 320px; }}
-    .wide-table .qty-col {{ width: 120px; }}
-    .wide-table .price-col {{ width: 82px; }}
-    .wide-table .spread-col {{ width: 90px; }}
-    .wide-table .amount-col {{ width: 112px; }}
-    .wide-table .money-col {{ width: 112px; }}
-    .wide-table .profit-col {{ width: 112px; }}
-    .wide-table .time-col {{ width: 150px; }}
     .market-text {{ white-space: normal; overflow-wrap: break-word; word-break: normal; line-height: 1.35; }}
     .market-card {{ display: block; color: var(--ink); text-decoration: none; white-space: normal; overflow-wrap: break-word; }}
     a.market-card:hover .market-event {{ text-decoration: underline; }}
@@ -377,7 +365,6 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
       .runtime-panel {{ width: 100%; min-width: 0; }}
       .metrics {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
       .portfolio-grid {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
-      table {{ min-width: 760px; }}
     }}
   </style>
 </head>

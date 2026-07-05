@@ -48,6 +48,22 @@ def test_dashboard_renders_chinese_status(tmp_path):
     assert "profit-positive" in html
 
 
+def test_dashboard_tables_are_left_aligned_and_content_sized(tmp_path):
+    config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
+    store = PaperStore(config.database_path)
+    store.initialize()
+    btc = WebState(config=config, store=store, asset=BTC_ASSET, runner=PaperRunner(config, BTC_ASSET))
+    eth = WebState(config=config, store=store, asset=ETH_ASSET, runner=PaperRunner(config, ETH_ASSET))
+
+    html = render_dashboard([btc, eth])
+
+    assert "table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 14px; table-layout: auto; }" in html
+    assert "th, td { padding: 11px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }" in html
+    assert "table-layout: fixed" not in html
+    assert ".wide-table .id-col" not in html
+    assert "table { min-width: 760px; }" not in html
+
+
 def test_dashboard_shows_realtime_listening_status(tmp_path):
     config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
     store = PaperStore(config.database_path)

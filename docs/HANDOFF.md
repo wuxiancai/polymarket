@@ -1,5 +1,20 @@
 # Handoff
 
+## 2026-07-05 Dashboard table auto-width alignment
+
+- Updated dashboard table styling so all table headers and cells stay
+  left-aligned while column width is driven by content instead of fixed
+  widths.
+- Global table CSS now uses `width: max-content`, `min-width: 100%`, and
+  `table-layout: auto`, with existing scroll containers handling overflow.
+- Removed fixed wide-table minimum widths, per-column width rules, and the
+  mobile `table min-width: 760px` override.
+- Verification:
+  - Added regression coverage for left-aligned, content-sized dashboard table
+    CSS and absence of fixed table/column width rules.
+  - `python3 -m pytest -p no:cacheprovider tests -q`: 44 passed.
+  - `bash -n start.sh deploy.sh && git diff --check`: passed.
+
 ## 2026-07-05 Spread-based paper sizing tiers
 
 - Replaced the old paper execution sizing tiers based on
