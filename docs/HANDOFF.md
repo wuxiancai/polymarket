@@ -1,5 +1,22 @@
 # Handoff
 
+## 2026-07-05 Dashboard runtime starts from first DB data
+
+- Changed the dashboard `运行时间` baseline from Web process start time to the
+  earliest persisted data timestamp in SQLite.
+- `PaperStore.first_data_at()` now returns the earliest `detected_at` across
+  `opportunities` and `paper_trades`.
+- `render_dashboard()` uses that database timestamp for the runtime panel when
+  data exists, and falls back to the Web process start time for an empty
+  database.
+- Verification:
+  - Added Web regression coverage that `data-started-at` comes from the older
+    `paper_trades.detected_at` row instead of the process start.
+  - Added Store regression coverage for earliest timestamp across opportunities
+    and trades.
+  - `python3 -m pytest -p no:cacheprovider tests -q`: 42 passed.
+  - `bash -n start.sh deploy.sh && git diff --check`: passed.
+
 ## 2026-07-05 Dashboard table scroll preservation
 
 - Diagnosed dashboard table scroll reset during auto/manual refresh:

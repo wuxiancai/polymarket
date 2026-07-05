@@ -51,6 +51,44 @@ def test_paper_store_records_opportunity_and_trade(tmp_path):
     assert rows[0]["no_avg_price"] == 0.57
 
 
+def test_paper_store_first_data_at_uses_earliest_opportunity_or_trade(tmp_path):
+    db_path = tmp_path / "paper.sqlite3"
+    store = PaperStore(db_path)
+    store.initialize()
+    with store._connect() as conn:
+        conn.execute(
+            """
+            insert into opportunities (
+                pair_key, kind, yes_market_id, yes_token_id, yes_question, yes_event_slug, yes_end_date,
+                no_market_id, no_token_id, no_question, no_event_slug, no_end_date, shares, yes_avg_price,
+                no_avg_price, total_cost, min_payout, guaranteed_profit,
+                edge_per_share, executable, reason, detected_at
+            )
+            values (
+                'newer', 'same_market', 'm1', 'y1', 'Will Bitcoin reach $70,000 in June?', '', '',
+                'm1', 'n1', 'Will Bitcoin reach $70,000 in June?', '', '', 100, 0.40,
+                0.57, 97, 100, 3, 0.03, 1, 'executable', '2026-06-27T12:00:00+00:00'
+            )
+            """
+        )
+        conn.execute(
+            """
+            insert into paper_trades (
+                pair_key, yes_market_id, yes_token_id, yes_question, yes_event_slug, yes_end_date, yes_avg_price,
+                no_market_id, no_token_id, no_question, no_event_slug, no_end_date, no_avg_price, shares,
+                total_cost, min_payout, guaranteed_profit, is_virtual, detected_at
+            )
+            values (
+                'older', 'm2', 'y2', 'Will Bitcoin reach $65,000 in June?', '', '', 0.40,
+                'm2', 'n2', 'Will Bitcoin reach $65,000 in June?', '', '', 0.57, 100,
+                97, 100, 3, 0, '2026-06-26T08:30:00+00:00'
+            )
+            """
+        )
+
+    assert store.first_data_at() == datetime(2026, 6, 26, 8, 30, tzinfo=timezone.utc)
+
+
 def test_paper_store_ignores_dust_trade_that_would_render_as_zero(tmp_path):
     db_path = tmp_path / "paper.sqlite3"
     store = PaperStore(db_path)

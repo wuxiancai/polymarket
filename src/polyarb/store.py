@@ -232,6 +232,22 @@ class PaperStore:
             ).fetchall()
         return [dict(row) for row in rows]
 
+    def first_data_at(self) -> Optional[datetime]:
+        with self._connect() as conn:
+            row = conn.execute(
+                """
+                select min(detected_at) as detected_at
+                from (
+                    select detected_at from opportunities
+                    union all
+                    select detected_at from paper_trades
+                )
+                """
+            ).fetchone()
+        if row is None:
+            return None
+        return _parse_datetime(row["detected_at"])
+
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.path)
         conn.row_factory = sqlite3.Row

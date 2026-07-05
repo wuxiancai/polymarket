@@ -84,6 +84,47 @@ def test_dashboard_header_shows_live_clock_and_runtime(tmp_path):
     assert "setInterval(updateRuntimeClock, 1000)" in html
 
 
+def test_dashboard_runtime_starts_at_earliest_database_data_time(tmp_path):
+    config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
+    store = PaperStore(config.database_path)
+    store.initialize()
+    with store._connect() as conn:
+        conn.execute(
+            """
+            insert into opportunities (
+                pair_key, kind, yes_market_id, yes_token_id, yes_question, yes_event_slug, yes_end_date,
+                no_market_id, no_token_id, no_question, no_event_slug, no_end_date, shares, yes_avg_price,
+                no_avg_price, total_cost, min_payout, guaranteed_profit,
+                edge_per_share, executable, reason, detected_at
+            )
+            values (
+                'newer', 'same_market', 'm1', 'y1', 'Will Bitcoin reach $70,000 in June?', '', '',
+                'm1', 'n1', 'Will Bitcoin reach $70,000 in June?', '', '', 100, 0.40,
+                0.57, 97, 100, 3, 0.03, 1, 'executable', '2026-06-27T12:00:00+00:00'
+            )
+            """
+        )
+        conn.execute(
+            """
+            insert into paper_trades (
+                pair_key, yes_market_id, yes_token_id, yes_question, yes_event_slug, yes_end_date, yes_avg_price,
+                no_market_id, no_token_id, no_question, no_event_slug, no_end_date, no_avg_price, shares,
+                total_cost, min_payout, guaranteed_profit, is_virtual, detected_at
+            )
+            values (
+                'older', 'm2', 'y2', 'Will Bitcoin reach $65,000 in June?', '', '', 0.40,
+                'm2', 'n2', 'Will Bitcoin reach $65,000 in June?', '', '', 0.57, 100,
+                97, 100, 3, 0, '2026-06-26T08:30:00+00:00'
+            )
+            """
+        )
+    state = WebState(config=config, store=store, asset=BTC_ASSET, runner=PaperRunner(config, BTC_ASSET))
+
+    html = render_dashboard(state)
+
+    assert 'data-started-at="2026-06-26T08:30:00+00:00"' in html
+
+
 def test_dashboard_refresh_preserves_table_scroll_positions(tmp_path):
     config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
     store = PaperStore(config.database_path)

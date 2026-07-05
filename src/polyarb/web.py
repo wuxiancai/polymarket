@@ -215,7 +215,7 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
     id_map = _dashboard_id_map(panels)
     portfolio = _portfolio_payload(panels, id_map)
     asset_sections = "\n".join(_asset_section(state, id_map) for state in panels)
-    started_at = escape(APP_STARTED_AT.isoformat())
+    started_at = escape(_runtime_started_at(panels).isoformat())
     return f"""<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -530,6 +530,13 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
   </script>
 </body>
 </html>"""
+
+
+def _runtime_started_at(states: list[WebState]) -> datetime:
+    if not states:
+        return APP_STARTED_AT
+    first_data_at = states[0].store.first_data_at()
+    return first_data_at or APP_STARTED_AT
 
 
 def dashboard_payload(states: Union[WebState, list[WebState]]) -> dict:
