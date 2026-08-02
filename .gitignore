@@ -4,3 +4,4 @@ __pycache__/
 .venv/
 data/*.sqlite3
 *.egg-info/
+nohup.out

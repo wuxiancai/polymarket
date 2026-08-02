@@ -1,5 +1,14 @@
 # Handoff
 
+## 2026-08-02 v1.0.0 正式版基线
+
+- 将当前完整实现正式标记为 `v1.0.0`，后续 v1.0.1 开发从该基线之后开始。
+- `pyproject.toml` 与 `src/polyarb/__init__.py` 的版本号统一为 `1.0.0`。
+- `nohup.out` 已加入 `.gitignore`，避免把运行日志当项目文件提交。
+- 已创建 git tag `v1.0.0`，作为无条件回退点。
+- 回退代码：`git reset --hard v1.0.0`；该操作只恢复 git 跟踪文件，不删除 `data/*.sqlite3` 和 `nohup.out` 等运行产物。
+- 验证：完整 pytest 与 `bash -n start.sh deploy.sh` 均通过。
+
 ## 2026-07-05 Dashboard mobile browser adaptation
 
 - Adapted the dashboard for mobile browsers without changing Polymarket scan,
