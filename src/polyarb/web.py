@@ -1046,12 +1046,14 @@ def _infer_event_slug(question: str) -> str:
 
 def _parse_market_question(question: str) -> Optional[tuple[str, str, str, str]]:
     match = re.search(
-        r"Will the price of ([A-Za-z]+) be (above|below) \$([0-9][0-9,]*(?:\.[0-9]+)?k?) on (.+)\?",
+        r"Will the price of ([A-Za-z]+) be (above|below|greater than|less than) "
+        r"\$([0-9][0-9,]*(?:\.[0-9]+)?k?) on (.+)\?",
         question,
         re.IGNORECASE,
     )
     if match:
         asset, direction, threshold, period = match.groups()
+        direction = "above" if direction in {"above", "greater than"} else "below"
         return asset, direction, threshold, period
 
     match = re.search(

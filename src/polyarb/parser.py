@@ -105,14 +105,14 @@ def _parse_threshold(
     asset = re.escape(asset_name)
     amount_pattern = r"([0-9][0-9,]*(?:\.[0-9]+)?k?)"
     daily_price_match = re.search(
-        rf"Will the price of {asset} be (above|below) \${amount_pattern} on "
+        rf"Will the price of {asset} be (above|below|greater than|less than) \${amount_pattern} on "
         r"([A-Za-z]+) (\d{1,2})(?:, (\d{4}))?\?",
         question,
         re.IGNORECASE,
     )
     if daily_price_match:
         direction, amount_text, month_name, day, explicit_year = daily_price_match.groups()
-        kind = "above" if direction == "above" else "below"
+        kind = "above" if direction in {"above", "greater than"} else "below"
         amount = _parse_amount(amount_text)
         year = _year_for_question(end, month_name, int(day), explicit_year)
         start = _et_midnight(year, month_name, int(day))

@@ -77,6 +77,37 @@ def test_parser_accepts_daily_above_below_range_and_hit_price():
         assert parsed.threshold == expected_threshold
 
 
+def test_parser_accepts_daily_greater_and_less_than_price():
+    cases = [
+        (
+            "Will the price of Bitcoin be greater than $72,000 on August 4?",
+            "2026-08-04T16:00:00Z",
+            "above",
+            72000,
+        ),
+        (
+            "Will the price of Bitcoin be less than $54,000 on August 4?",
+            "2026-08-04T16:00:00Z",
+            "below",
+            54000,
+        ),
+        (
+            "Will the price of XRP be less than $0.60 on August 4?",
+            "2026-08-04T16:00:00Z",
+            "below",
+            0.60,
+        ),
+    ]
+    for question, end_date, expected_kind, expected_threshold in cases:
+        asset_name = "XRP" if "XRP" in question else "Bitcoin"
+        parsed = parse_market(question, end_date, AUG_2, asset_name=asset_name)
+
+        assert parsed is not None
+        assert parsed.period == "day"
+        assert parsed.kind == expected_kind
+        assert parsed.threshold == expected_threshold
+
+
 def test_parser_rejects_current_month_and_far_future_year_end():
     monthly = parse_market(
         "Will Bitcoin reach $80,000 in August?",

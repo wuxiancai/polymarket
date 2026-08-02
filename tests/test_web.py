@@ -129,6 +129,45 @@ def test_dashboard_collapses_condition_prices_by_event(tmp_path):
     assert "其他 1 个条件" in html
 
 
+def test_dashboard_renders_greater_less_than_price_event(tmp_path):
+    config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
+    store = PaperStore(config.database_path)
+    store.initialize()
+    state = WebState(config=config, store=store, asset=BTC_ASSET, runner=PaperRunner(config, BTC_ASSET))
+    state.latest_result = ScanResult(
+        markets=[
+            monitored_market(
+                "less",
+                "Will the price of Bitcoin be less than $54,000 on August 4?",
+                "2026-08-04T16:00:00Z",
+                event_slug="bitcoin-price-on-august-4-2026",
+            ),
+            monitored_market(
+                "greater",
+                "Will the price of Bitcoin be greater than $72,000 on August 4?",
+                "2026-08-04T16:00:00Z",
+                event_slug="bitcoin-price-on-august-4-2026",
+            ),
+            monitored_market(
+                "range",
+                "Will the price of Bitcoin be between $54,000 and $56,000 on August 4?",
+                "2026-08-04T16:00:00Z",
+                event_slug="bitcoin-price-on-august-4-2026",
+            ),
+        ],
+        pairs=3,
+        opportunities=[],
+        scanned_at=datetime(2026, 8, 2, 12, 0, tzinfo=timezone.utc),
+    )
+
+    html = dashboard_payload([state])["monitored_pairs_html"]
+
+    assert "What price will Bitcoin be on August 4?" in html
+    assert "↓ 54,000" in html
+    assert "↑ 72,000" in html
+    assert "54,000-56,000" in html
+
+
 def test_dashboard_monitored_pairs_falls_back_to_realtime_runner_markets(tmp_path):
     config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
     store = PaperStore(config.database_path)

@@ -2,7 +2,7 @@
 
 Polyarb 是一个 Polymarket BTC / ETH / XRP / SOL 日线及以上周期套利扫描与纸面模拟交易系统。
 
-> 当前版本：`v1.0.6`；稳定回退点：`v1.0.0`。
+> 当前版本：`v1.0.7`；稳定回退点：`v1.0.0`。
 
 系统只读取公开行情并执行本地模拟交易：
 
@@ -15,7 +15,7 @@ Polyarb 是一个 Polymarket BTC / ETH / XRP / SOL 日线及以上周期套利�
 
 纳入市场：
 
-- BTC / ETH / XRP / SOL 的四类日线市场：`Up or Down on <日期>`、`above/below $X on <日期>`、`between $X and $Y on <日期>`、`reach/hit $X on <日期>`
+- BTC / ETH / XRP / SOL 的日线市场：`Up or Down on <日期>`、`above/below $X on <日期>`（含 `greater than / less than` 写法）、`between $X and $Y on <日期>`、`reach/hit $X on <日期>`
 - BTC / ETH / XRP / SOL 的 `reach/dip` 周单
 - 季单、年单仅在距结束日期小于 30 天时纳入
 

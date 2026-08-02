@@ -1,5 +1,13 @@
 # Handoff
 
+## 2026-08-03 v1.0.7 补齐 price on <日期> 的 less/greater than 条件
+
+- 根因：Polymarket 的 `Bitcoin price on August 4?` / `Ethereum price on August 4?` / `XRP price on August 4?` / `Solana price on August 4?` 事件里，两端条件使用 `less than $X` / `greater than $X`，而 parser 之前只识别 `below` / `above`，所以这两个端点条件没有纳入监控。
+- 修复：parser 将 `less than` 映射为 `below`、`greater than` 映射为 `above`，dashboard 的事件标题和条件标签同步支持这两种写法。
+- 实时验证：只读 Gamma 实测四个 `price on August 4` 事件均解析 11 个条件（1 个 less + 9 个 range + 1 个 greater），并渲染为 `What price will <Asset> be on August 4?`。
+- 版本号提升为 `1.0.7`，完成后打 tag `v1.0.7`；`v1.0.0` 仍可回退。
+- 验证：`python3 -m pytest -p no:cacheprovider tests -q`：54 passed；`bash -n start.sh deploy.sh` 通过。
+
 ## 2026-08-02 v1.0.6 实时交易对空态与实时 runner 兜底
 
 - `实时交易对` 现在会从 `RealtimePaperRunner` 当前 markets/books 兜底读取，避免首次扫描完成前或 `latest_result` 未更新时显示为空。
