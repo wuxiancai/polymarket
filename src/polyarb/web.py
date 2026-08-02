@@ -12,9 +12,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Optional, Union
 from zoneinfo import ZoneInfo
 
-from .arbitrage import build_pairs
 from .config import Config
-from .models import DEFAULT_ASSETS, ArbPair, AssetSpec
+from .models import DEFAULT_ASSETS, AssetSpec
 from .runner import MIN_SPREAD_TO_OPEN_CENTS, PaperRunner, RealtimePaperRunner, ScanResult
 from .store import PaperStore
 
@@ -35,6 +34,7 @@ class WebState:
     last_event_at: Optional[datetime] = None
     connection_logs: list[dict] = field(default_factory=list)
     lock: threading.Lock = field(default_factory=threading.Lock)
+
 
     def run_scan(self) -> None:
         with self.lock:
@@ -129,6 +129,15 @@ class WebState:
         }
 
 
+@dataclass
+class MonitoredEventGroup:
+    event_slug: str
+    title: str
+    end_at: datetime
+    near_condition: str
+    conditions: list[str]
+
+
 def serve(config: Config, host: str = "127.0.0.1", port: int = 8787, auto_scan: bool = True) -> None:
     store = PaperStore(config.database_path)
     store.initialize()
@@ -215,7 +224,7 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
     error_html = _error_html(panels)
     id_map = _dashboard_id_map(panels)
     portfolio = _portfolio_payload(panels, id_map)
-    monitored_pairs_html = _monitored_pairs_html(_monitored_pairs(panels))
+    monitored_pairs_html = _monitored_event_groups_html(_monitored_event_groups(panels))
     asset_sections = "\n".join(_asset_section(state, id_map) for state in panels)
     started_at = escape(_runtime_started_at(panels).isoformat())
     return f"""<!doctype html>
@@ -358,6 +367,11 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
     .table-scroll thead th {{ position: sticky; top: 0; z-index: 1; }}
     .log-scroll {{ max-height: 356px; overflow-y: auto; overflow-x: auto; }}
     .monitored-pairs-scroll {{ max-height: 250px; overflow-y: auto; overflow-x: auto; }}
+    .monitored-pair-table .condition-details {{ margin-top: 6px; }}
+    .monitored-pair-table .condition-details summary {{ cursor: pointer; color: var(--accent); font-weight: 700; }}
+    .monitored-pair-table .condition-tags {{ display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }}
+    .monitored-pair-table .condition-tag {{ display: inline-block; padding: 2px 8px; border: 1px solid var(--line); border-radius: 999px; background: #fbfcfd; color: var(--ink); font-weight: 700; }}
+    .near-condition {{ margin-top: 6px; font-weight: 800; color: var(--accent); }}
     .log-table td:first-child {{ white-space: nowrap; color: var(--muted); }}
     .log-level {{ font-weight: 700; }}
     .log-ok {{ color: var(--accent); }}
@@ -411,9 +425,8 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
       .portfolio-table td:nth-child(6)::before {{ content: "收益率"; }}
       .portfolio-table td:nth-child(7)::before {{ content: "持仓数"; }}
       .monitored-pair-table td:nth-child(1)::before {{ content: "序号"; }}
-      .monitored-pair-table td:nth-child(2)::before {{ content: "YES 交易对"; }}
-      .monitored-pair-table td:nth-child(3)::before {{ content: "NO 交易对"; }}
-      .monitored-pair-table td:nth-child(4)::before {{ content: "到期日期"; }}
+      .monitored-pair-table td:nth-child(2)::before {{ content: "事件 / 实时条件"; }}
+      .monitored-pair-table td:nth-child(3)::before {{ content: "到期日期"; }}
       .opportunity-table td:nth-child(1)::before {{ content: "ID"; }}
       .opportunity-table td:nth-child(2)::before {{ content: "状态"; }}
       .opportunity-table td:nth-child(3)::before {{ content: "价差"; }}
@@ -640,7 +653,7 @@ def dashboard_payload(states: Union[WebState, list[WebState]]) -> dict:
     id_map = _dashboard_id_map(panels)
     return {
         "error_html": _error_html(panels),
-        "monitored_pairs_html": _monitored_pairs_html(_monitored_pairs(panels)),
+        "monitored_pairs_html": _monitored_event_groups_html(_monitored_event_groups(panels)),
         "portfolio": _portfolio_payload(panels, id_map),
         "assets": [_asset_payload(state, id_map) for state in panels],
         "connection_log_html": _connection_log_html(panels),
@@ -694,45 +707,94 @@ def _scroll_table(table_html: str) -> str:
     return f"<div class='table-scroll'>{table_html}</div>"
 
 
-def _monitored_pairs(states: list[WebState]) -> list[ArbPair]:
-    pairs = []
+def _monitored_event_groups(states: list[WebState]) -> list[MonitoredEventGroup]:
+    groups = {}
+    books = {}
     for state in states:
         with state.lock:
             result = state.latest_result
             markets = list(result.markets) if result else []
-        for pair in build_pairs(markets):
-            pairs.append(pair)
-    pairs.sort(key=_pair_end_at)
-    return pairs
+            books.update(dict(result.books) if result else {})
+        for market in markets:
+            slug = market.event_slug or market.slug or market.id
+            group = groups.setdefault(slug, {"markets": [], "conditions": set(), "end_at": None})
+            group["markets"].append(market)
+            group["conditions"].add(_market_condition_text(market))
+            parsed_end = _parse_time_value(market.end_date)
+            if parsed_end is not None and (group["end_at"] is None or parsed_end > group["end_at"]):
+                group["end_at"] = parsed_end
+
+    result = []
+    for slug, group in groups.items():
+        conditions = sorted(group["conditions"])
+        near_condition = _near_condition(group["markets"], books)
+        if near_condition not in conditions:
+            conditions.insert(0, near_condition)
+        result.append(
+            MonitoredEventGroup(
+                event_slug=slug,
+                title=_event_title(group["markets"][0].question),
+                end_at=group["end_at"] or datetime.max.replace(tzinfo=timezone.utc),
+                near_condition=near_condition,
+                conditions=conditions,
+            )
+        )
+    result.sort(key=lambda item: item.end_at)
+    return result
 
 
-def _pair_end_at(pair: ArbPair) -> datetime:
-    dates = []
-    for value in (pair.yes_market.end_date, pair.no_market.end_date):
-        parsed = _parse_time_value(value)
-        if parsed is not None:
-            dates.append(parsed)
-    return max(dates) if dates else datetime.max.replace(tzinfo=timezone.utc)
+def _market_condition_text(market) -> str:
+    return _condition_label(market.question) or "Up or Down"
 
 
-def _monitored_pairs_html(pairs: list[ArbPair]) -> str:
-    if not pairs:
+def _near_condition(markets, books) -> str:
+    best = None
+    for market in markets:
+        book = books.get(market.yes_token_id)
+        score = None
+        if book is not None:
+            prices = []
+            if book.best_ask is not None:
+                prices.append(book.best_ask)
+            if book.best_bid is not None:
+                prices.append(book.best_bid)
+            if prices:
+                score = abs(sum(prices) / len(prices) - 0.5)
+        if score is not None and (best is None or score < best[0]):
+            best = (score, _market_condition_text(market))
+    if best is not None:
+        return best[1]
+    top = max(markets, key=lambda market: market.volume_24h)
+    return _market_condition_text(top)
+
+
+def _monitored_event_groups_html(groups: list[MonitoredEventGroup]) -> str:
+    if not groups:
         return "<div class='empty'>暂无交易对。</div>"
     rows = []
-    for index, pair in enumerate(pairs, start=1):
-        end_at = _pair_end_at(pair)
+    for index, group in enumerate(groups, start=1):
+        other_conditions = [item for item in group.conditions if item != group.near_condition]
+        details = ""
+        if other_conditions:
+            tags = "".join(f"<span class='condition-tag'>{escape(item)}</span>" for item in other_conditions)
+            details = (
+                "<details class='condition-details'>"
+                f"<summary>其他 {len(other_conditions)} 个条件</summary>"
+                f"<div class='condition-tags'>{tags}</div>"
+                "</details>"
+            )
         rows.append(
             "<tr>"
             f"<td>{index}</td>"
-            f"<td class='market-text'>{_market_link(pair.yes_market.question, pair.yes_market.event_slug)}</td>"
-            f"<td class='market-text'>{_market_link(pair.no_market.question, pair.no_market.event_slug)}</td>"
-            f"<td class='time-cell'>{_time_html(_format_time_value(end_at))}</td>"
+            f"<td class='market-text'>{_market_link(group.title, group.event_slug)}"
+            f"<div class='near-condition'>{escape(group.near_condition)}</div>{details}</td>"
+            f"<td class='time-cell'>{_time_html(_format_time_value(group.end_at))}</td>"
             "</tr>"
         )
     return (
         "<div class='table-scroll monitored-pairs-scroll'>"
         "<table class='monitored-pair-table'>"
-        "<thead><tr><th>序号</th><th>YES 交易对</th><th>NO 交易对</th><th>到期日期</th></tr></thead>"
+        "<thead><tr><th>序号</th><th>事件 / 实时条件</th><th>到期日期</th></tr></thead>"
         "<tbody>"
         + "".join(rows)
         + "</tbody></table></div>"

@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import time
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from typing import Callable, Dict, List, Optional
 
@@ -37,23 +37,27 @@ class ScanResult:
     pairs: int
     opportunities: List[ArbOpportunity]
     scanned_at: datetime
+    books: Dict[str, OrderBook] = field(default_factory=dict)
 
 
 def scan_once(config: Config) -> ScanResult:
     markets: List[Market] = []
     pairs = 0
     opportunities: List[ArbOpportunity] = []
+    books: Dict[str, OrderBook] = {}
     for asset in DEFAULT_ASSETS:
         result = scan_asset_once(config, asset)
         markets.extend(result.markets)
         pairs += result.pairs
         opportunities.extend(result.opportunities)
+        books.update(result.books)
     opportunities.sort(key=lambda item: item.guaranteed_profit, reverse=True)
     return ScanResult(
         markets=markets,
         pairs=pairs,
         opportunities=opportunities,
         scanned_at=datetime.now(timezone.utc),
+        books=books,
     )
 
 
@@ -70,6 +74,7 @@ def scan_asset_once(config: Config, asset: AssetSpec) -> ScanResult:
         pairs=len(pairs),
         opportunities=opportunities,
         scanned_at=datetime.now(timezone.utc),
+        books=books,
     )
 
 
@@ -230,6 +235,7 @@ class RealtimePaperRunner(PaperRunner):
             pairs=self.pairs,
             opportunities=opportunities,
             scanned_at=datetime.now(timezone.utc),
+            books=self.books,
         )
 
     def _log(self, callback: Optional[Callable[[str, str], None]], level: str, message: str) -> None:

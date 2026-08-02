@@ -48,13 +48,13 @@ def test_dashboard_renders_chinese_status(tmp_path):
     assert "profit-positive" in html
 
 
-def monitored_market(market_id: str, question: str, end_date: str) -> Market:
+def monitored_market(market_id: str, question: str, end_date: str, event_slug: str = "") -> Market:
     end = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
     return Market(
         id=market_id,
         question=question,
         slug=f"m-{market_id}",
-        event_slug=f"event-{market_id}",
+        event_slug=event_slug or f"event-{market_id}",
         end_date=end_date,
         yes_token_id=f"{market_id}-y",
         no_token_id=f"{market_id}-n",
@@ -78,8 +78,8 @@ def test_dashboard_shows_monitored_pairs_sorted_by_expiry(tmp_path):
     state = WebState(config=config, store=store, asset=BTC_ASSET, runner=PaperRunner(config, BTC_ASSET))
     state.latest_result = ScanResult(
         markets=[
-            monitored_market("far", "Will Bitcoin be above $60,000 on August 5?", "2026-08-05T16:00:00Z"),
-            monitored_market("near", "Will Bitcoin be above $60,000 on August 4?", "2026-08-04T16:00:00Z"),
+            monitored_market("far", "Will the price of Bitcoin be above $60,000 on August 5?", "2026-08-05T16:00:00Z"),
+            monitored_market("near", "Will the price of Bitcoin be above $60,000 on August 4?", "2026-08-04T16:00:00Z"),
         ],
         pairs=2,
         opportunities=[],
@@ -95,6 +95,38 @@ def test_dashboard_shows_monitored_pairs_sorted_by_expiry(tmp_path):
     page = render_dashboard([state])
     assert page.index("<h2>实时交易对</h2>") < page.index("<h2>模拟持仓</h2>")
     assert "monitored-pairs-scroll" in page
+
+
+def test_dashboard_collapses_condition_prices_by_event(tmp_path):
+    config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
+    store = PaperStore(config.database_path)
+    store.initialize()
+    state = WebState(config=config, store=store, asset=BTC_ASSET, runner=PaperRunner(config, BTC_ASSET))
+    state.latest_result = ScanResult(
+        markets=[
+            monitored_market(
+                "near",
+                "Will the price of Bitcoin be above $60,000 on August 4?",
+                "2026-08-04T16:00:00Z",
+                event_slug="price-event",
+            ),
+            monitored_market(
+                "far",
+                "Will the price of Bitcoin be above $65,000 on August 4?",
+                "2026-08-04T16:00:00Z",
+                event_slug="price-event",
+            ),
+        ],
+        pairs=1,
+        opportunities=[],
+        scanned_at=datetime(2026, 8, 2, 12, 0, tzinfo=timezone.utc),
+    )
+
+    html = dashboard_payload([state])["monitored_pairs_html"]
+
+    assert html.count("<td>1</td>") == 1
+    assert "<td>2</td>" not in html
+    assert "其他 1 个条件" in html
 
 
 def test_dashboard_renders_xrp_and_solana_asset_panels(tmp_path):
