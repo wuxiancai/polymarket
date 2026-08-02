@@ -1,5 +1,13 @@
 # Handoff
 
+## 2026-08-02 v1.0.3 实时交易对区块
+
+- 在 `模拟持仓` 上方新增 `实时交易对` 区块，展示当前扫描构建的所有交易对。
+- 交易对按结束/到期时间最近优先排序，显示序号、YES/NO 交易对和到期日期。
+- 区块默认显示 5 行，其余通过滚动查看；局部刷新时保留滚动位置。
+- 版本号提升为 `1.0.3`，完成后打 tag `v1.0.3`；`v1.0.0` 仍可回退。
+- 验证：`python3 -m pytest -p no:cacheprovider tests -q`：51 passed；`bash -n start.sh deploy.sh` 通过。
+
 ## 2026-08-02 v1.0.2 四类日线市场与最近到期优先
 
 - 纳入 crypto 四类日线市场：`up/down`、`above/below`、`price range`（between）、`hit price`（reach/hit）。

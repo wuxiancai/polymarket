@@ -3,8 +3,8 @@ from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
 from polyarb.config import Config
-from polyarb.models import DEFAULT_ASSETS, BTC_ASSET, ETH_ASSET, ArbOpportunity
-from polyarb.runner import PaperRunner
+from polyarb.models import DEFAULT_ASSETS, BTC_ASSET, ETH_ASSET, ArbOpportunity, Market, Predicate
+from polyarb.runner import PaperRunner, ScanResult
 from polyarb.store import PaperStore
 from polyarb.web import WebState, _profit_class, dashboard_payload, format_standard_time, render_dashboard
 
@@ -46,6 +46,55 @@ def test_dashboard_renders_chinese_status(tmp_path):
     assert "最近盘口事件" not in html
     assert "location.reload" not in html
     assert "profit-positive" in html
+
+
+def monitored_market(market_id: str, question: str, end_date: str) -> Market:
+    end = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
+    return Market(
+        id=market_id,
+        question=question,
+        slug=f"m-{market_id}",
+        event_slug=f"event-{market_id}",
+        end_date=end_date,
+        yes_token_id=f"{market_id}-y",
+        no_token_id=f"{market_id}-n",
+        volume_24h=1500.0,
+        liquidity=1000.0,
+        predicate=Predicate(
+            kind="above",
+            threshold=60000,
+            period="day",
+            start=datetime(2026, 8, 1, tzinfo=timezone.utc),
+            end=end,
+            duration_minutes=1440,
+        ),
+    )
+
+
+def test_dashboard_shows_monitored_pairs_sorted_by_expiry(tmp_path):
+    config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
+    store = PaperStore(config.database_path)
+    store.initialize()
+    state = WebState(config=config, store=store, asset=BTC_ASSET, runner=PaperRunner(config, BTC_ASSET))
+    state.latest_result = ScanResult(
+        markets=[
+            monitored_market("far", "Will Bitcoin be above $60,000 on August 5?", "2026-08-05T16:00:00Z"),
+            monitored_market("near", "Will Bitcoin be above $60,000 on August 4?", "2026-08-04T16:00:00Z"),
+        ],
+        pairs=2,
+        opportunities=[],
+        scanned_at=datetime(2026, 8, 2, 12, 0, tzinfo=timezone.utc),
+    )
+
+    payload = dashboard_payload([state])
+    html = payload["monitored_pairs_html"]
+
+    assert "<th>序号</th>" in html
+    assert html.index("on August 4") < html.index("on August 5")
+    assert html.index("<td>1</td>") < html.index("<td>2</td>")
+    page = render_dashboard([state])
+    assert page.index("<h2>实时交易对</h2>") < page.index("<h2>模拟持仓</h2>")
+    assert "monitored-pairs-scroll" in page
 
 
 def test_dashboard_renders_xrp_and_solana_asset_panels(tmp_path):

@@ -12,8 +12,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Optional, Union
 from zoneinfo import ZoneInfo
 
+from .arbitrage import build_pairs
 from .config import Config
-from .models import DEFAULT_ASSETS, AssetSpec
+from .models import DEFAULT_ASSETS, ArbPair, AssetSpec
 from .runner import MIN_SPREAD_TO_OPEN_CENTS, PaperRunner, RealtimePaperRunner, ScanResult
 from .store import PaperStore
 
@@ -214,6 +215,7 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
     error_html = _error_html(panels)
     id_map = _dashboard_id_map(panels)
     portfolio = _portfolio_payload(panels, id_map)
+    monitored_pairs_html = _monitored_pairs_html(_monitored_pairs(panels))
     asset_sections = "\n".join(_asset_section(state, id_map) for state in panels)
     started_at = escape(_runtime_started_at(panels).isoformat())
     return f"""<!doctype html>
@@ -355,6 +357,7 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
     .table-scroll {{ max-height: 356px; overflow-y: auto; overflow-x: auto; }}
     .table-scroll thead th {{ position: sticky; top: 0; z-index: 1; }}
     .log-scroll {{ max-height: 356px; overflow-y: auto; overflow-x: auto; }}
+    .monitored-pairs-scroll {{ max-height: 250px; overflow-y: auto; overflow-x: auto; }}
     .log-table td:first-child {{ white-space: nowrap; color: var(--muted); }}
     .log-level {{ font-weight: 700; }}
     .log-ok {{ color: var(--accent); }}
@@ -385,6 +388,7 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
       .portfolio-detail {{ margin-top: 8px; overflow: visible; }}
       .table-scroll, .log-scroll {{ max-height: none; overflow: visible; }}
       .table-scroll thead th {{ position: static; }}
+      .monitored-pairs-scroll {{ max-height: 250px; overflow-y: auto; overflow-x: auto; }}
       table {{ width: 100%; min-width: 0; font-size: 13px; }}
       table thead {{ display: none; }}
       table tbody, table tr, table td {{ display: block; width: 100%; }}
@@ -406,6 +410,10 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
       .portfolio-table td:nth-child(5)::before {{ content: "收益"; }}
       .portfolio-table td:nth-child(6)::before {{ content: "收益率"; }}
       .portfolio-table td:nth-child(7)::before {{ content: "持仓数"; }}
+      .monitored-pair-table td:nth-child(1)::before {{ content: "序号"; }}
+      .monitored-pair-table td:nth-child(2)::before {{ content: "YES 交易对"; }}
+      .monitored-pair-table td:nth-child(3)::before {{ content: "NO 交易对"; }}
+      .monitored-pair-table td:nth-child(4)::before {{ content: "到期日期"; }}
       .opportunity-table td:nth-child(1)::before {{ content: "ID"; }}
       .opportunity-table td:nth-child(2)::before {{ content: "状态"; }}
       .opportunity-table td:nth-child(3)::before {{ content: "价差"; }}
@@ -505,6 +513,10 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
       <div id="portfolioSummary">{portfolio["summary_html"]}</div>
     </section>
     <section>
+      <h2>实时交易对</h2>
+      <div id="monitoredPairs">{monitored_pairs_html}</div>
+    </section>
+    <section>
       <h2>模拟持仓</h2>
       <div id="positionTable">{portfolio["positions_html"]}</div>
     </section>
@@ -589,6 +601,7 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
       const response = await fetch('/api/dashboard');
       const payload = await response.json();
       updateHtmlPreservingScroll('errorBox', payload.error_html);
+      updateHtmlPreservingScroll('monitoredPairs', payload.monitored_pairs_html);
       updateHtmlPreservingScroll('portfolioSummary', payload.portfolio.summary_html);
       updateHtmlPreservingScroll('positionTable', payload.portfolio.positions_html);
       updateHtmlPreservingScroll('virtualPositionTable', payload.portfolio.virtual_positions_html);
@@ -638,6 +651,7 @@ def dashboard_payload(states: Union[WebState, list[WebState]]) -> dict:
     id_map = _dashboard_id_map(panels)
     return {
         "error_html": _error_html(panels),
+        "monitored_pairs_html": _monitored_pairs_html(_monitored_pairs(panels)),
         "portfolio": _portfolio_payload(panels, id_map),
         "assets": [_asset_payload(state, id_map) for state in panels],
         "connection_log_html": _connection_log_html(panels),
@@ -691,6 +705,51 @@ def _dashboard_id(row: dict, id_map: dict[str, int]) -> str:
 
 def _scroll_table(table_html: str) -> str:
     return f"<div class='table-scroll'>{table_html}</div>"
+
+
+def _monitored_pairs(states: list[WebState]) -> list[ArbPair]:
+    pairs = []
+    for state in states:
+        with state.lock:
+            result = state.latest_result
+            markets = list(result.markets) if result else []
+        for pair in build_pairs(markets):
+            pairs.append(pair)
+    pairs.sort(key=_pair_end_at)
+    return pairs
+
+
+def _pair_end_at(pair: ArbPair) -> datetime:
+    dates = []
+    for value in (pair.yes_market.end_date, pair.no_market.end_date):
+        parsed = _parse_time_value(value)
+        if parsed is not None:
+            dates.append(parsed)
+    return max(dates) if dates else datetime.max.replace(tzinfo=timezone.utc)
+
+
+def _monitored_pairs_html(pairs: list[ArbPair]) -> str:
+    if not pairs:
+        return "<div class='empty'>暂无交易对。</div>"
+    rows = []
+    for index, pair in enumerate(pairs, start=1):
+        end_at = _pair_end_at(pair)
+        rows.append(
+            "<tr>"
+            f"<td>{index}</td>"
+            f"<td class='market-text'>{_market_link(pair.yes_market.question, pair.yes_market.event_slug)}</td>"
+            f"<td class='market-text'>{_market_link(pair.no_market.question, pair.no_market.event_slug)}</td>"
+            f"<td class='time-cell'>{_time_html(_format_time_value(end_at))}</td>"
+            "</tr>"
+        )
+    return (
+        "<div class='table-scroll monitored-pairs-scroll'>"
+        "<table class='monitored-pair-table'>"
+        "<thead><tr><th>序号</th><th>YES 交易对</th><th>NO 交易对</th><th>到期日期</th></tr></thead>"
+        "<tbody>"
+        + "".join(rows)
+        + "</tbody></table></div>"
+    )
 
 
 def _portfolio_payload(states: list[WebState], id_map: dict[str, int]) -> dict:
