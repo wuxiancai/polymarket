@@ -711,10 +711,8 @@ def _monitored_event_groups(states: list[WebState]) -> list[MonitoredEventGroup]
     groups = {}
     books = {}
     for state in states:
-        with state.lock:
-            result = state.latest_result
-            markets = list(result.markets) if result else []
-            books.update(dict(result.books) if result else {})
+        markets, state_books = _latest_markets_and_books(state)
+        books.update(state_books)
         for market in markets:
             slug = market.event_slug or market.slug or market.id
             group = groups.setdefault(slug, {"markets": [], "conditions": set(), "end_at": None})
@@ -741,6 +739,17 @@ def _monitored_event_groups(states: list[WebState]) -> list[MonitoredEventGroup]
         )
     result.sort(key=lambda item: item.end_at)
     return result
+
+
+def _latest_markets_and_books(state: WebState) -> tuple[list, dict]:
+    with state.lock:
+        result = state.latest_result
+        markets = list(result.markets) if result else []
+        books = dict(result.books) if result else {}
+    if not markets and isinstance(state.runner, RealtimePaperRunner):
+        markets = list(state.runner.markets)
+        books = dict(state.runner.books)
+    return markets, books
 
 
 def _market_condition_text(market) -> str:
@@ -770,7 +779,7 @@ def _near_condition(markets, books) -> str:
 
 def _monitored_event_groups_html(groups: list[MonitoredEventGroup]) -> str:
     if not groups:
-        return "<div class='empty'>暂无交易对。</div>"
+        return "<div class='empty'>暂无交易对，等待首次扫描或行情源恢复。</div>"
     rows = []
     for index, group in enumerate(groups, start=1):
         other_conditions = [item for item in group.conditions if item != group.near_condition]

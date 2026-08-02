@@ -1,5 +1,12 @@
 # Handoff
 
+## 2026-08-02 v1.0.6 实时交易对空态与实时 runner 兜底
+
+- `实时交易对` 现在会从 `RealtimePaperRunner` 当前 markets/books 兜底读取，避免首次扫描完成前或 `latest_result` 未更新时显示为空。
+- 空态文案改为“暂无交易对，等待首次扫描或行情源恢复。”，便于区分“还没扫到”和“确实没有数据”。
+- 版本号提升为 `1.0.6`，完成后打 tag `v1.0.6`；`v1.0.0` 仍可回退。
+- 验证：`python3 -m pytest -p no:cacheprovider tests -q`：52 passed；`bash -n start.sh deploy.sh` 通过。
+
 ## 2026-08-02 v1.0.5 实时交易对按 event 折叠
 
 - `实时交易对` 改为按 event_slug 分组，一个 event 只占一个序号。

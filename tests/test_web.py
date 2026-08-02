@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 from polyarb.config import Config
 from polyarb.models import DEFAULT_ASSETS, BTC_ASSET, ETH_ASSET, ArbOpportunity, Market, Predicate
-from polyarb.runner import PaperRunner, ScanResult
+from polyarb.runner import PaperRunner, RealtimePaperRunner, ScanResult
 from polyarb.store import PaperStore
 from polyarb.web import WebState, _profit_class, dashboard_payload, format_standard_time, render_dashboard
 
@@ -127,6 +127,27 @@ def test_dashboard_collapses_condition_prices_by_event(tmp_path):
     assert html.count("<td>1</td>") == 1
     assert "<td>2</td>" not in html
     assert "其他 1 个条件" in html
+
+
+def test_dashboard_monitored_pairs_falls_back_to_realtime_runner_markets(tmp_path):
+    config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
+    store = PaperStore(config.database_path)
+    store.initialize()
+    runner = RealtimePaperRunner(config, BTC_ASSET)
+    state = WebState(config=config, store=store, asset=BTC_ASSET, runner=runner)
+    runner.markets = [
+        monitored_market(
+            "near",
+            "Will the price of Bitcoin be above $60,000 on August 4?",
+            "2026-08-04T16:00:00Z",
+            event_slug="price-event",
+        )
+    ]
+
+    html = dashboard_payload([state])["monitored_pairs_html"]
+
+    assert "What price will Bitcoin be on August 4?" in html
+    assert "等待首次扫描" not in html
 
 
 def test_dashboard_renders_xrp_and_solana_asset_panels(tmp_path):
