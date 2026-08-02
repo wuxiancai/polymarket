@@ -41,6 +41,42 @@ def test_parser_accepts_xrp_and_solana_daily_updown():
         assert parsed.period == "day"
 
 
+def test_parser_accepts_daily_above_below_range_and_hit_price():
+    cases = [
+        (
+            "Will the price of Bitcoin be above $54,000 on August 4?",
+            "2026-08-04T16:00:00Z",
+            "above",
+            54000,
+        ),
+        (
+            "Will the price of Bitcoin be below $54,000 on August 4?",
+            "2026-08-04T16:00:00Z",
+            "below",
+            54000,
+        ),
+        (
+            "Will the price of Bitcoin be between $54,000 and $56,000 on August 4?",
+            "2026-08-04T16:00:00Z",
+            "range",
+            54000,
+        ),
+        (
+            "Will Bitcoin hit $60,000 on August 4?",
+            "2026-08-04T16:00:00Z",
+            "reach",
+            60000,
+        ),
+    ]
+    for question, end_date, expected_kind, expected_threshold in cases:
+        parsed = parse_market(question, end_date, AUG_2)
+
+        assert parsed is not None
+        assert parsed.period == "day"
+        assert parsed.kind == expected_kind
+        assert parsed.threshold == expected_threshold
+
+
 def test_parser_rejects_current_month_and_far_future_year_end():
     monthly = parse_market(
         "Will Bitcoin reach $80,000 in August?",

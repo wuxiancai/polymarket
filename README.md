@@ -2,7 +2,7 @@
 
 Polyarb 是一个 Polymarket BTC / ETH / XRP / SOL 日线及以上周期套利扫描与纸面模拟交易系统。
 
-> 当前版本：`v1.0.1`；稳定回退点：`v1.0.0`。
+> 当前版本：`v1.0.2`；稳定回退点：`v1.0.0`。
 
 系统只读取公开行情并执行本地模拟交易：
 
@@ -15,7 +15,7 @@ Polyarb 是一个 Polymarket BTC / ETH / XRP / SOL 日线及以上周期套利�
 
 纳入市场：
 
-- BTC / ETH / XRP / SOL 的 `Up or Down on <日期>` 日线市场
+- BTC / ETH / XRP / SOL 的四类日线市场：`Up or Down on <日期>`、`above/below $X on <日期>`、`between $X and $Y on <日期>`、`reach/hit $X on <日期>`
 - BTC / ETH / XRP / SOL 的 `reach/dip` 周单
 - 季单、年单仅在距结束日期小于 30 天时纳入
 
@@ -178,5 +178,6 @@ PORT=8888 SERVICE_NAME=polyarb bash start.sh
 - Web 页面通过 `/api/dashboard` 局部更新数据，避免整页刷新抖动。
 - 纸面交易默认保存到 `data/paper.sqlite3`。
 - 收益统计默认初始本金为 `10000`，BTC 分配 `40%`，ETH 分配 `30%`，XRP 分配 `15%`，SOL 分配 `15%`。
+- 同一资产同时有多个可执行机会时，按结束日期最近优先执行，再进入下一次扫描。
 - 页面收益按已执行纸面成交的累计保证利润计算，不做未结算市值浮盈浮亏。
 - 如果页面显示“行情源连接失败”，说明服务器无法访问 Polymarket 行情 API，需要检查服务器出站网络、DNS、代理或防火墙。

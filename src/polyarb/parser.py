@@ -104,6 +104,59 @@ def _parse_threshold(
     amount = None
     asset = re.escape(asset_name)
     amount_pattern = r"([0-9][0-9,]*(?:\.[0-9]+)?k?)"
+    daily_price_match = re.search(
+        rf"Will the price of {asset} be (above|below) \${amount_pattern} on "
+        r"([A-Za-z]+) (\d{1,2})(?:, (\d{4}))?\?",
+        question,
+        re.IGNORECASE,
+    )
+    if daily_price_match:
+        direction, amount_text, month_name, day, explicit_year = daily_price_match.groups()
+        kind = "above" if direction == "above" else "below"
+        amount = _parse_amount(amount_text)
+        year = _year_for_question(end, month_name, int(day), explicit_year)
+        start = _et_midnight(year, month_name, int(day))
+        return _parsed(kind, amount, "day", start.astimezone(timezone.utc), end)
+
+    daily_range_match = re.search(
+        rf"Will the price of {asset} be between \${amount_pattern} and "
+        rf"\${amount_pattern} on ([A-Za-z]+) (\d{{1,2}})(?:, (\d{{4}}))?\?",
+        question,
+        re.IGNORECASE,
+    )
+    if daily_range_match:
+        low_text, _high_text, month_name, day, explicit_year = daily_range_match.groups()
+        amount = _parse_amount(low_text)
+        year = _year_for_question(end, month_name, int(day), explicit_year)
+        start = _et_midnight(year, month_name, int(day))
+        return _parsed("range", amount, "day", start.astimezone(timezone.utc), end)
+
+    daily_hit_match = re.search(
+        rf"Will {asset} (?:reach|hit) \${amount_pattern} on "
+        r"([A-Za-z]+) (\d{1,2})(?:, (\d{4}))?\?",
+        question,
+        re.IGNORECASE,
+    )
+    if daily_hit_match:
+        amount_text, month_name, day, explicit_year = daily_hit_match.groups()
+        amount = _parse_amount(amount_text)
+        year = _year_for_question(end, month_name, int(day), explicit_year)
+        start = _et_midnight(year, month_name, int(day))
+        return _parsed("reach", amount, "day", start.astimezone(timezone.utc), end)
+
+    daily_dip_match = re.search(
+        rf"Will {asset} dip to \${amount_pattern} on "
+        r"([A-Za-z]+) (\d{1,2})(?:, (\d{4}))?\?",
+        question,
+        re.IGNORECASE,
+    )
+    if daily_dip_match:
+        amount_text, month_name, day, explicit_year = daily_dip_match.groups()
+        amount = _parse_amount(amount_text)
+        year = _year_for_question(end, month_name, int(day), explicit_year)
+        start = _et_midnight(year, month_name, int(day))
+        return _parsed("dip", amount, "day", start.astimezone(timezone.utc), end)
+
     reach = re.search(rf"Will {asset} (?:reach|hit) \${amount_pattern} ", question, re.IGNORECASE)
     dip = re.search(rf"Will {asset} dip to \${amount_pattern} ", question, re.IGNORECASE)
     if reach:

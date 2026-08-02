@@ -22,6 +22,16 @@ THIRTY_PERCENT_MAX_SPREAD_CENTS = 3.5
 SIXTY_PERCENT_MAX_SPREAD_CENTS = 4.3
 
 
+def _settlement_at(opportunity: ArbOpportunity) -> datetime:
+    parsed = []
+    for value in (opportunity.yes_end_date, opportunity.no_end_date):
+        try:
+            parsed.append(datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(timezone.utc))
+        except ValueError:
+            continue
+    return max(parsed) if parsed else datetime.max.replace(tzinfo=timezone.utc)
+
+
 @dataclass
 class ScanResult:
     markets: List[Market]
@@ -79,18 +89,23 @@ class PaperRunner:
 
     def run_iteration(self) -> ScanResult:
         result = scan_asset_once(self.config, self.asset)
+        self._record_result(result)
+        return result
+
+    def _record_result(self, result: ScanResult) -> None:
         for opportunity in result.opportunities:
             self.store.record_opportunity(opportunity)
-            if self._should_execute(opportunity):
-                sized, is_virtual = self._sized_opportunity(opportunity)
-                if sized is None:
-                    continue
-                if is_virtual:
-                    self.store.record_virtual_trade(sized)
-                else:
-                    self.store.record_paper_trade(sized)
-                self.last_execution[opportunity.pair_key] = time.time()
-        return result
+        for opportunity in sorted((item for item in result.opportunities if item.executable), key=_settlement_at):
+            if not self._should_execute(opportunity):
+                continue
+            sized, is_virtual = self._sized_opportunity(opportunity)
+            if sized is None:
+                continue
+            if is_virtual:
+                self.store.record_virtual_trade(sized)
+            else:
+                self.store.record_paper_trade(sized)
+            self.last_execution[opportunity.pair_key] = time.time()
 
     def _should_execute(self, opportunity: ArbOpportunity) -> bool:
         if not opportunity.executable:
@@ -223,19 +238,6 @@ class RealtimePaperRunner(PaperRunner):
             opportunities=opportunities,
             scanned_at=datetime.now(timezone.utc),
         )
-
-    def _record_result(self, result: ScanResult) -> None:
-        for opportunity in result.opportunities:
-            self.store.record_opportunity(opportunity)
-            if self._should_execute(opportunity):
-                sized, is_virtual = self._sized_opportunity(opportunity)
-                if sized is None:
-                    continue
-                if is_virtual:
-                    self.store.record_virtual_trade(sized)
-                else:
-                    self.store.record_paper_trade(sized)
-                self.last_execution[opportunity.pair_key] = time.time()
 
     def _log(self, callback: Optional[Callable[[str, str], None]], level: str, message: str) -> None:
         if callback:

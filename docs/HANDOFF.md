@@ -1,5 +1,13 @@
 # Handoff
 
+## 2026-08-02 v1.0.2 四类日线市场与最近到期优先
+
+- 纳入 crypto 四类日线市场：`up/down`、`above/below`、`price range`（between）、`hit price`（reach/hit）。
+- 日线解析补充 `Will the price of <asset> be above/below $X on <date>?`、`between $X and $Y on <date>?`、`reach/hit $X on <date>?`。
+- 同一资产同时有多个可执行机会时，按结束日期最近优先执行，提高资金周转。
+- 版本号提升为 `1.0.2`，完成后打 tag `v1.0.2`；`v1.0.0` 仍可回退。
+- 验证：`python3 -m pytest -p no:cacheprovider tests -q`：50 passed；`bash -n start.sh deploy.sh` 通过；只读 Gamma 实测四个资产均解析 `above day` 44、`range day` 36、`reach/dip week` 各 7 个左右。
+
 ## 2026-08-02 v1.0.1 XRP/SOLANA 与周期规则调整
 
 - 新增 XRP、SOL 资产，Web 默认启动 BTC / ETH / XRP / SOL 四个面板；CLI `scan --once` 也扫描全部已配置资产。

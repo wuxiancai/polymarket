@@ -916,7 +916,9 @@ def _event_title(question: str) -> str:
     parsed = _parse_market_question(question)
     if parsed is None:
         return question
-    asset, _direction, _threshold, period = parsed
+    asset, direction, _threshold, period = parsed
+    if direction in {"above", "below", "range"}:
+        return f"What price will {asset} be on {period}?"
     return f"What price will {asset} hit {period}?"
 
 
@@ -925,7 +927,9 @@ def _condition_label(question: str) -> str:
     if parsed is None:
         return ""
     _asset, direction, threshold, _period = parsed
-    arrow = "↓" if direction == "dip" else "↑"
+    if direction == "range":
+        return threshold
+    arrow = "↓" if direction in {"dip", "below"} else "↑"
     return f"{arrow} {threshold}"
 
 
@@ -942,6 +946,25 @@ def _infer_event_slug(question: str) -> str:
 
 
 def _parse_market_question(question: str) -> Optional[tuple[str, str, str, str]]:
+    match = re.search(
+        r"Will the price of ([A-Za-z]+) be (above|below) \$([0-9][0-9,]*(?:\.[0-9]+)?k?) on (.+)\?",
+        question,
+        re.IGNORECASE,
+    )
+    if match:
+        asset, direction, threshold, period = match.groups()
+        return asset, direction, threshold, period
+
+    match = re.search(
+        r"Will the price of ([A-Za-z]+) be between \$([0-9][0-9,]*(?:\.[0-9]+)?k?) "
+        r"and \$([0-9][0-9,]*(?:\.[0-9]+)?k?) on (.+)\?",
+        question,
+        re.IGNORECASE,
+    )
+    if match:
+        asset, low, high, period = match.groups()
+        return asset, "range", f"{low}-{high}", period
+
     match = re.search(
         r"Will ([A-Za-z]+) (dip to|reach|hit) \$([0-9][0-9,]*(?:\.[0-9]+)?k?) (.+)\?",
         question,
