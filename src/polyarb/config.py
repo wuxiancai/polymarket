@@ -11,8 +11,8 @@ class Config:
     min_arbitrage_depth_usd: float = 100.0
     slippage_buffer_cents: int = 2
     fee_buffer: float = 0.0
-    min_interval_minutes: int = 15
-    allow_current_month_only: bool = True
+    allow_near_expiry_long_periods: bool = True
+    near_expiry_days: int = 30
     gamma_events_url: str = "https://gamma-api.polymarket.com/events"
     clob_url: str = "https://clob.polymarket.com"
     database_path: Path = Path("data/paper.sqlite3")
@@ -37,8 +37,8 @@ class Config:
             min_arbitrage_depth_usd=_float_env("MIN_ARBITRAGE_DEPTH_USD", 100.0),
             slippage_buffer_cents=_int_env("SLIPPAGE_BUFFER_CENTS", 2),
             fee_buffer=_float_env("FEE_BUFFER", 0.0),
-            min_interval_minutes=_int_env("MIN_INTERVAL_MINUTES", 15),
-            allow_current_month_only=_bool_env("ALLOW_CURRENT_MONTH_ONLY", True),
+            allow_near_expiry_long_periods=_bool_env("ALLOW_NEAR_EXPIRY_LONG_PERIODS", True),
+            near_expiry_days=_int_env("NEAR_EXPIRY_DAYS", 30),
             database_path=Path(os.getenv("POLYARB_DB", "data/paper.sqlite3")),
             refresh_seconds=_int_env("REFRESH_SECONDS", 30),
             cooldown_seconds=_int_env("COOLDOWN_SECONDS", 30),

@@ -9,7 +9,7 @@ from typing import Callable, Dict, List, Optional
 
 from .arbitrage import build_pairs, find_opportunities
 from .config import Config
-from .models import BTC_ASSET, AssetSpec, ArbOpportunity, Market, OrderBook
+from .models import BTC_ASSET, DEFAULT_ASSETS, AssetSpec, ArbOpportunity, Market, OrderBook
 from .polymarket import ClobClient, GammaClient
 from .store import PaperStore
 from .websocket import apply_market_message, market_subscription_message
@@ -31,7 +31,21 @@ class ScanResult:
 
 
 def scan_once(config: Config) -> ScanResult:
-    return scan_asset_once(config, BTC_ASSET)
+    markets: List[Market] = []
+    pairs = 0
+    opportunities: List[ArbOpportunity] = []
+    for asset in DEFAULT_ASSETS:
+        result = scan_asset_once(config, asset)
+        markets.extend(result.markets)
+        pairs += result.pairs
+        opportunities.extend(result.opportunities)
+    opportunities.sort(key=lambda item: item.guaranteed_profit, reverse=True)
+    return ScanResult(
+        markets=markets,
+        pairs=pairs,
+        opportunities=opportunities,
+        scanned_at=datetime.now(timezone.utc),
+    )
 
 
 def scan_asset_once(config: Config, asset: AssetSpec) -> ScanResult:

@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import time
 from typing import List, Optional
 
 from .config import Config
+from .models import DEFAULT_ASSETS
 from .runner import PaperRunner, format_opportunities, scan_once
 from .store import PaperStore
 
@@ -13,7 +15,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m polyarb")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    scan_parser = subparsers.add_parser("scan", help="scan once for short-cycle BTC arbitrage")
+    scan_parser = subparsers.add_parser("scan", help="scan once for all configured assets")
     scan_parser.add_argument("--once", action="store_true", help="run one scan and exit")
     scan_parser.add_argument("--json", action="store_true", help="print JSON output")
 
@@ -24,7 +26,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     report_parser = subparsers.add_parser("report", help="show paper trades and recent opportunities")
     report_parser.add_argument("--limit", type=int, default=20)
 
-    web_parser = subparsers.add_parser("web", help="serve BTC/ETH web dashboard")
+    web_parser = subparsers.add_parser("web", help="serve web dashboard")
     web_parser.add_argument("--host", default="127.0.0.1")
     web_parser.add_argument("--port", type=int, default=8787)
     web_parser.add_argument("--no-auto-scan", action="store_true", help="start UI without background scanner")
@@ -45,14 +47,19 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.command == "run":
         if not args.paper:
             parser.error("run refuses to start without --paper; real trading is not implemented")
-        runner = PaperRunner(config)
-        runner.store.initialize()
+        runners = [PaperRunner(config, asset) for asset in DEFAULT_ASSETS]
+        for runner in runners:
+            runner.store.initialize()
         if args.iterations:
             for _ in range(args.iterations):
-                result = runner.run_iteration()
-                print(format_opportunities(result, limit=5))
+                for runner in runners:
+                    result = runner.run_iteration()
+                    print(format_opportunities(result, limit=5))
             return 0
-        runner.run_forever()
+        while True:
+            for runner in runners:
+                runner.run_iteration()
+            time.sleep(config.refresh_seconds)
         return 0
 
     if args.command == "report":

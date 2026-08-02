@@ -55,20 +55,20 @@ def test_runner_uses_position_size_tiers_by_spread(tmp_path):
 
     assert full is not None
     assert full_virtual is False
-    assert round(full.total_cost, 2) == 700.00
-    assert round(full.shares, 2) == 700.00
+    assert round(full.total_cost, 2) == 400.00
+    assert round(full.shares, 2) == 400.00
     assert sixty is not None
     assert sixty_virtual is False
-    assert round(sixty.total_cost, 2) == 420.00
-    assert round(sixty.shares, 2) == 420.00
+    assert round(sixty.total_cost, 2) == 240.00
+    assert round(sixty.shares, 2) == 240.00
     assert thirty is not None
     assert thirty_virtual is False
-    assert round(thirty.total_cost, 2) == 210.00
-    assert round(thirty.shares, 2) == 210.00
+    assert round(thirty.total_cost, 2) == 120.00
+    assert round(thirty.shares, 2) == 120.00
     assert just_above_min is not None
     assert just_above_min_virtual is False
-    assert round(just_above_min.total_cost, 2) == 210.00
-    assert round(just_above_min.shares, 2) == 210.00
+    assert round(just_above_min.total_cost, 2) == 120.00
+    assert round(just_above_min.shares, 2) == 120.00
     assert too_small is None
     assert too_small_virtual is False
 

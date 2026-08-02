@@ -1,5 +1,19 @@
 # Handoff
 
+## 2026-08-02 v1.0.1 XRP/SOLANA 与周期规则调整
+
+- 新增 XRP、SOL 资产，Web 默认启动 BTC / ETH / XRP / SOL 四个面板；CLI `scan --once` 也扫描全部已配置资产。
+- 周期规则改为日线及以上：
+  - 接受 `Up or Down on <日期>` 日线市场；
+  - 小时、分钟 `Up or Down` 不纳入；
+  - `in <月份>` 月单不纳入；
+  - 季单、年单仅在距结束小于 30 天时纳入。
+- `Config` 增加 `allow_near_expiry_long_periods` / `near_expiry_days`，替换旧的 `min_interval_minutes` / `allow_current_month_only`。
+- XRP 小数阈值解析支持（如 `$1.50`）。
+- 默认分配：BTC 40%、ETH 30%、XRP 15%、SOL 15%。
+- 版本号提升为 `1.0.1`，完成后打 tag `v1.0.1`；`v1.0.0` 仍可回退。
+- 验证：`python3 -m pytest -p no:cacheprovider tests -q`：48 passed；`bash -n start.sh deploy.sh` 通过；只读 Gamma 实测 BTC 14 / ETH 13 / XRP 14 / SOL 14 个市场进入 parser。
+
 ## 2026-08-02 v1.0.0 正式版基线
 
 - 将当前完整实现正式标记为 `v1.0.0`，后续 v1.0.1 开发从该基线之后开始。

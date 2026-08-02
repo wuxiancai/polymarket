@@ -16,15 +16,17 @@ class AssetSpec:
     allocation_ratio: float
 
 
-BTC_ASSET = AssetSpec(symbol="BTC", tag_slug="bitcoin", title_name="Bitcoin", allocation_ratio=0.70)
+BTC_ASSET = AssetSpec(symbol="BTC", tag_slug="bitcoin", title_name="Bitcoin", allocation_ratio=0.40)
 ETH_ASSET = AssetSpec(symbol="ETH", tag_slug="ethereum", title_name="Ethereum", allocation_ratio=0.30)
-DEFAULT_ASSETS = (BTC_ASSET, ETH_ASSET)
+XRP_ASSET = AssetSpec(symbol="XRP", tag_slug="xrp", title_name="XRP", allocation_ratio=0.15)
+SOL_ASSET = AssetSpec(symbol="SOL", tag_slug="solana", title_name="Solana", allocation_ratio=0.15)
+DEFAULT_ASSETS = (BTC_ASSET, ETH_ASSET, XRP_ASSET, SOL_ASSET)
 
 
 @dataclass(frozen=True)
 class Predicate:
     kind: str
-    threshold: Optional[int]
+    threshold: Optional[float]
     period: str
     start: datetime
     end: datetime

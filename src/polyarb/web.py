@@ -480,7 +480,7 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
     <div class="wrap top">
       <div>
         <h1>Polymarket 套利模拟系统</h1>
-        <p>只读 Polymarket BTC / ETH 行情，执行纸面模拟交易；不连接钱包，不真实下单。</p>
+        <p>只读 Polymarket BTC / ETH / XRP / SOL 行情，执行纸面模拟交易；不连接钱包，不真实下单。</p>
       </div>
       <div class="toolbar">
         <div class="runtime-panel" data-started-at="{started_at}">
@@ -943,7 +943,7 @@ def _infer_event_slug(question: str) -> str:
 
 def _parse_market_question(question: str) -> Optional[tuple[str, str, str, str]]:
     match = re.search(
-        r"Will ([A-Za-z]+) (dip to|reach|hit) \$([0-9,]+) (.+)\?",
+        r"Will ([A-Za-z]+) (dip to|reach|hit) \$([0-9][0-9,]*(?:\.[0-9]+)?k?) (.+)\?",
         question,
         re.IGNORECASE,
     )

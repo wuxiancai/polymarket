@@ -3,7 +3,7 @@ from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
 from polyarb.config import Config
-from polyarb.models import BTC_ASSET, ETH_ASSET, ArbOpportunity
+from polyarb.models import DEFAULT_ASSETS, BTC_ASSET, ETH_ASSET, ArbOpportunity
 from polyarb.runner import PaperRunner
 from polyarb.store import PaperStore
 from polyarb.web import WebState, _profit_class, dashboard_payload, format_standard_time, render_dashboard
@@ -46,6 +46,23 @@ def test_dashboard_renders_chinese_status(tmp_path):
     assert "最近盘口事件" not in html
     assert "location.reload" not in html
     assert "profit-positive" in html
+
+
+def test_dashboard_renders_xrp_and_solana_asset_panels(tmp_path):
+    config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
+    store = PaperStore(config.database_path)
+    store.initialize()
+    states = [
+        WebState(config=config, store=store, asset=asset, runner=PaperRunner(config, asset))
+        for asset in DEFAULT_ASSETS
+    ]
+
+    html = render_dashboard(states)
+
+    for symbol in ("BTC", "ETH", "XRP", "SOL"):
+        assert f"{symbol} 套利模拟" in html
+        assert f"{symbol}StatusValue" in html
+        assert f"{symbol}OpportunityTable" in html
 
 
 def test_dashboard_tables_are_left_aligned_and_content_sized(tmp_path):
@@ -453,7 +470,7 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "<th>收益率</th>" in payload["portfolio"]["summary_html"]
     assert "<th>预估收益</th>" not in payload["portfolio"]["summary_html"]
     assert "<th>预估收益率</th>" not in payload["portfolio"]["summary_html"]
-    assert "7,000.00" in payload["portfolio"]["summary_html"]
+    assert "4,000.00" in payload["portfolio"]["summary_html"]
     assert "3,000.00" in payload["portfolio"]["summary_html"]
     assert "USDT" not in payload["portfolio"]["summary_html"]
     position_html = payload["portfolio"]["positions_html"]
