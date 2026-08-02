@@ -28,7 +28,7 @@ def test_dashboard_renders_chinese_status(tmp_path):
     assert "触发扫描" in html
     assert "收益概览" in html
     assert "模拟持仓" in html
-    assert "已结束虚拟持仓收益" in html
+    assert "虚拟" not in html
     assert "纸面模拟持仓" not in html
     assert "模拟成交" in html
     assert "纸面模拟成交" not in html
@@ -271,25 +271,20 @@ def test_dashboard_refresh_preserves_table_scroll_positions(tmp_path):
     assert "scroller.scrollLeft = position.left" in html
     for target in (
         "settledPositionTable",
-        "settledVirtualPositionTable",
     ):
         assert f"updateHtmlPreservingScroll('{target}'" in html
         assert f"document.getElementById('{target}').innerHTML" not in html
     for target in (
         "BTCOpportunityTable",
         "BTCTradeTable",
-        "BTCVirtualTradeTable",
         "ETHOpportunityTable",
         "ETHTradeTable",
-        "ETHVirtualTradeTable",
     ):
         assert f'id="{target}"' in html
     assert "updateHtmlPreservingScroll(asset.symbol + 'OpportunityTable', asset.opportunities_html)" in html
     assert "updateHtmlPreservingScroll(asset.symbol + 'TradeTable', asset.trades_html)" in html
-    assert "updateHtmlPreservingScroll(asset.symbol + 'VirtualTradeTable', asset.virtual_trades_html)" in html
     assert "document.getElementById(asset.symbol + 'OpportunityTable').innerHTML" not in html
     assert "document.getElementById(asset.symbol + 'TradeTable').innerHTML" not in html
-    assert "document.getElementById(asset.symbol + 'VirtualTradeTable').innerHTML" not in html
 
 
 def test_dashboard_payload_contains_fragments(tmp_path):
@@ -313,7 +308,6 @@ def test_dashboard_payload_contains_fragments(tmp_path):
     assert payload["assets"][1]["symbol"] == "ETH"
     assert "暂无成交" in payload["assets"][1]["trades_html"]
     assert "summary_html" in payload["portfolio"]
-    assert "settled_virtual_positions_html" in payload["portfolio"]
     assert "connection_log_html" in payload
 
 
@@ -435,31 +429,6 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
         detected_at=datetime(2026, 6, 27, 12, 0, tzinfo=timezone.utc),
     )
     store.record_paper_trade(opportunity)
-    virtual_opportunity = ArbOpportunity(
-        pair_key="virtual-btc",
-        kind="implication",
-        yes_market_id="virtual-month75",
-        yes_token_id="virtual-y-month",
-        yes_question="Will Bitcoin reach $75,000 in June?",
-        no_market_id="virtual-week75",
-        no_token_id="virtual-n-week",
-        no_question="Will Bitcoin reach $75,000 June 22-28?",
-        yes_event_slug="will-bitcoin-reach-75000-in-june",
-        no_event_slug="will-bitcoin-reach-75000-june-22-28-2026",
-        yes_end_date="2099-07-01T00:00:00+00:00",
-        no_end_date="2099-06-29T00:00:00+00:00",
-        shares=1000.0,
-        yes_avg_price=0.40,
-        no_avg_price=0.57,
-        total_cost=970.0,
-        min_payout=1000.0,
-        guaranteed_profit=30.0,
-        edge_per_share=0.03,
-        executable=True,
-        reason="executable",
-        detected_at=datetime(2026, 6, 27, 12, 30, tzinfo=timezone.utc),
-    )
-    store.record_virtual_trade(virtual_opportunity)
     settled_opportunity = ArbOpportunity(
         pair_key="settled-btc",
         kind="implication",
@@ -492,7 +461,6 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
 
     settled_html = payload["portfolio"]["settled_positions_html"]
     assert "已结束持仓收益" in render_dashboard([btc, eth])
-    assert "虚拟持仓" in render_dashboard([btc, eth])
     assert "settled-btc" not in settled_html
     assert "<th>交易对</th>" not in settled_html
     assert "<th>币种</th>" in settled_html
@@ -529,7 +497,6 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert position_html.index("<th>结算时间UTC+8</th>") < position_html.index("<th>YES 持仓腿</th>")
     assert "<th>结算时间</th>" not in position_html
     assert "pair-btc" not in payload["portfolio"]["positions_html"]
-    assert "virtual-btc" not in payload["portfolio"]["positions_html"]
     assert "<th>交易对</th>" not in payload["portfolio"]["positions_html"]
     assert "Will Bitcoin reach $70,000 in June?" not in payload["portfolio"]["positions_html"]
     assert "https://polymarket.com/event/what-price-will-bitcoin-hit-in-june" in payload["portfolio"]["positions_html"]
@@ -565,16 +532,6 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "2026-06-27 20:00:00" not in payload["portfolio"]["positions_html"]
     assert "2099-07-01 08:00:00" not in payload["portfolio"]["positions_html"]
     assert "2026-06-27T12:00:00+00:00" not in payload["portfolio"]["positions_html"]
-
-    virtual_html = payload["portfolio"]["virtual_positions_html"]
-    assert "virtual-btc" not in virtual_html
-    assert "Will Bitcoin reach $75,000 in June?" not in virtual_html
-    assert "What price will Bitcoin hit in June?" in virtual_html
-    assert "条件：↑ 75,000" in virtual_html
-    assert "<span class='spread-value'>3.00¢</span>" in virtual_html
-    assert "+30.00" in virtual_html
-    assert "1,000.00" in virtual_html
-    assert "970.00" in virtual_html
 
     trade_html = payload["assets"][0]["trades_html"]
     assert "https://polymarket.com/event/what-price-will-bitcoin-hit-in-june" in trade_html
@@ -806,53 +763,6 @@ def test_opportunity_table_shows_spread_and_execution_state(tmp_path):
     assert "<span class='pill watch'>仅观察</span></td><td><span class='spread-value'>2.50¢</span>" in html
     assert "<span class='pill exec'>可模拟成交</span></td><td><span class='spread-value'>2.60¢</span>" in html
     assert "<span class='spread-value'>1.50¢</span>" in html
-
-
-def test_virtual_trade_marks_matching_opportunity_as_executed(tmp_path):
-    config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
-    store = PaperStore(config.database_path)
-    store.initialize()
-    opportunity = ArbOpportunity(
-        pair_key="virtual-btc",
-        kind="same_market",
-        yes_market_id="m1",
-        yes_token_id="y1",
-        yes_question="Will Bitcoin reach $70,000 in June?",
-        no_market_id="m1",
-        no_token_id="n1",
-        no_question="Will Bitcoin reach $70,000 in June?",
-        yes_event_slug="what-price-will-bitcoin-hit-in-june",
-        no_event_slug="what-price-will-bitcoin-hit-in-june",
-        yes_end_date="2026-07-01T00:00:00+00:00",
-        no_end_date="2026-07-01T00:00:00+00:00",
-        shares=1000.0,
-        yes_avg_price=0.40,
-        no_avg_price=0.57,
-        total_cost=970.0,
-        min_payout=1000.0,
-        guaranteed_profit=30.0,
-        edge_per_share=0.03,
-        executable=True,
-        reason="executable",
-        detected_at=datetime(2026, 6, 27, 12, 0, tzinfo=timezone.utc),
-    )
-    virtual_trade = replace(opportunity, shares=1000.0, total_cost=970.0, min_payout=1000.0, guaranteed_profit=30.0)
-    discovered_opportunity = replace(opportunity, shares=21559.29, total_cost=20922.52, min_payout=21559.29, guaranteed_profit=603.67)
-    store.record_opportunity(discovered_opportunity)
-    store.record_virtual_trade(virtual_trade)
-    state = WebState(config=config, store=store, asset=BTC_ASSET, runner=PaperRunner(config, BTC_ASSET))
-
-    payload = dashboard_payload([state])
-
-    assert "虚拟成交" in payload["assets"][0]["opportunities_html"]
-    assert "已成交" not in payload["assets"][0]["opportunities_html"]
-    assert "30.00" in payload["assets"][0]["opportunities_html"]
-    assert "603.67" not in payload["assets"][0]["opportunities_html"]
-    assert "暂无成交" in payload["assets"][0]["trades_html"]
-    assert "30.00" in payload["assets"][0]["virtual_trades_html"]
-    assert "virtual-btc" not in payload["portfolio"]["virtual_positions_html"]
-    assert "What price will Bitcoin hit in June?" in payload["portfolio"]["settled_virtual_positions_html"]
-    assert "+30.00" in payload["portfolio"]["settled_virtual_positions_html"]
 
 
 def test_dashboard_infers_event_link_and_condition_for_legacy_rows(tmp_path):

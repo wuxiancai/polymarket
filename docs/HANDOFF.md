@@ -1,5 +1,14 @@
 # Handoff
 
+## 2026-08-02 v1.0.4 取消虚拟成交
+
+- 移除虚拟成交回退：资金不足时不再写入固定 `1000 USDT` 虚拟成交，直接跳过该机会。
+- 页面移除 `虚拟持仓`、`已结束虚拟持仓收益`、每资产 `虚拟成交` 区块及对应局部刷新。
+- `PaperStore` 移除 `record_virtual_trade()`、`latest_virtual_trades()`、`latest_virtual_positions()`、`latest_settled_virtual_trades()`。
+- 旧数据库里的 `is_virtual=1` 记录继续从正常成交/持仓中隐藏。
+- 版本号提升为 `1.0.4`，完成后打 tag `v1.0.4`；`v1.0.0` 仍可回退。
+- 验证：`python3 -m pytest -p no:cacheprovider tests -q`：50 passed；`bash -n start.sh deploy.sh` 通过。
+
 ## 2026-08-02 v1.0.3 实时交易对区块
 
 - 在 `模拟持仓` 上方新增 `实时交易对` 区块，展示当前扫描构建的所有交易对。

@@ -45,32 +45,27 @@ def runner(tmp_path) -> PaperRunner:
 def test_runner_uses_position_size_tiers_by_spread(tmp_path):
     item = runner(tmp_path)
 
-    full, full_virtual = item._sized_opportunity(opportunity(profit=44.0, total_cost=1000.0, spread_cents=4.4))
-    sixty, sixty_virtual = item._sized_opportunity(opportunity(profit=43.0, total_cost=1000.0, spread_cents=4.3))
-    thirty, thirty_virtual = item._sized_opportunity(opportunity(profit=35.0, total_cost=1000.0, spread_cents=3.5))
-    just_above_min, just_above_min_virtual = item._sized_opportunity(
+    full = item._sized_opportunity(opportunity(profit=44.0, total_cost=1000.0, spread_cents=4.4))
+    sixty = item._sized_opportunity(opportunity(profit=43.0, total_cost=1000.0, spread_cents=4.3))
+    thirty = item._sized_opportunity(opportunity(profit=35.0, total_cost=1000.0, spread_cents=3.5))
+    just_above_min = item._sized_opportunity(
         opportunity(profit=26.0, total_cost=1000.0, spread_cents=2.6)
     )
-    too_small, too_small_virtual = item._sized_opportunity(opportunity(profit=25.0, total_cost=1000.0, spread_cents=2.5))
+    too_small = item._sized_opportunity(opportunity(profit=25.0, total_cost=1000.0, spread_cents=2.5))
 
     assert full is not None
-    assert full_virtual is False
     assert round(full.total_cost, 2) == 400.00
     assert round(full.shares, 2) == 400.00
     assert sixty is not None
-    assert sixty_virtual is False
     assert round(sixty.total_cost, 2) == 240.00
     assert round(sixty.shares, 2) == 240.00
     assert thirty is not None
-    assert thirty_virtual is False
     assert round(thirty.total_cost, 2) == 120.00
     assert round(thirty.shares, 2) == 120.00
     assert just_above_min is not None
-    assert just_above_min_virtual is False
     assert round(just_above_min.total_cost, 2) == 120.00
     assert round(just_above_min.shares, 2) == 120.00
     assert too_small is None
-    assert too_small_virtual is False
 
 
 def test_runner_sizes_spread_tiers_against_current_asset_allocation(tmp_path):
@@ -78,23 +73,16 @@ def test_runner_sizes_spread_tiers_against_current_asset_allocation(tmp_path):
     item = PaperRunner(config, ETH_ASSET)
     item.store.initialize()
 
-    sized, is_virtual = item._sized_opportunity(opportunity(profit=26.0, total_cost=1000.0, spread_cents=2.6))
+    sized = item._sized_opportunity(opportunity(profit=26.0, total_cost=1000.0, spread_cents=2.6))
 
-    assert is_virtual is False
     assert sized is not None
     assert round(sized.total_cost, 2) == 90.00
     assert round(sized.shares, 2) == 90.00
 
 
-def test_runner_records_fixed_size_virtual_trade_when_capital_is_insufficient(tmp_path):
+def test_runner_skips_opportunity_when_capital_is_insufficient(tmp_path):
     item = runner(tmp_path)
     used = opportunity(profit=27.9998, total_cost=699.995)
     item.store.record_paper_trade(used)
 
-    sized, is_virtual = item._sized_opportunity(opportunity(profit=30.0, total_cost=1000.0))
-
-    assert is_virtual is True
-    assert sized is not None
-    assert round(sized.total_cost, 2) == 1000.00
-    assert round(sized.shares, 2) == 1000.00
-    assert round(sized.guaranteed_profit, 2) == 30.00
+    assert item._sized_opportunity(opportunity(profit=30.0, total_cost=1000.0)) is None

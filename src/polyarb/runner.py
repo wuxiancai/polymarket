@@ -16,7 +16,6 @@ from .websocket import apply_market_message, market_subscription_message
 
 WEBSOCKET_RECONNECT_DELAY_SECONDS = 10
 MIN_DISPLAYED_POSITION_VALUE = 0.01
-VIRTUAL_TRADE_BUDGET = 1000.0
 MIN_SPREAD_TO_OPEN_CENTS = 2.5
 THIRTY_PERCENT_MAX_SPREAD_CENTS = 3.5
 SIXTY_PERCENT_MAX_SPREAD_CENTS = 4.3
@@ -98,13 +97,10 @@ class PaperRunner:
         for opportunity in sorted((item for item in result.opportunities if item.executable), key=_settlement_at):
             if not self._should_execute(opportunity):
                 continue
-            sized, is_virtual = self._sized_opportunity(opportunity)
+            sized = self._sized_opportunity(opportunity)
             if sized is None:
                 continue
-            if is_virtual:
-                self.store.record_virtual_trade(sized)
-            else:
-                self.store.record_paper_trade(sized)
+            self.store.record_paper_trade(sized)
             self.last_execution[opportunity.pair_key] = time.time()
 
     def _should_execute(self, opportunity: ArbOpportunity) -> bool:
@@ -115,12 +111,12 @@ class PaperRunner:
             return True
         return time.time() - last >= self.config.cooldown_seconds
 
-    def _sized_opportunity(self, opportunity: ArbOpportunity) -> tuple[Optional[ArbOpportunity], bool]:
+    def _sized_opportunity(self, opportunity: ArbOpportunity) -> Optional[ArbOpportunity]:
         if opportunity.total_cost <= 0:
-            return None, False
+            return None
         spread_cents = _spread_cents(opportunity)
         if spread_cents <= MIN_SPREAD_TO_OPEN_CENTS:
-            return None, False
+            return None
         if spread_cents <= THIRTY_PERCENT_MAX_SPREAD_CENTS:
             position_ratio = 0.3
         elif spread_cents <= SIXTY_PERCENT_MAX_SPREAD_CENTS:
@@ -132,24 +128,21 @@ class PaperRunner:
         used = self._used_capital()
         available = max(0.0, allocation - used)
         target_budget = min(opportunity.total_cost, allocation * position_ratio)
-        is_virtual = available < target_budget
-        budget = VIRTUAL_TRADE_BUDGET if is_virtual else target_budget
-        scale = budget / opportunity.total_cost
+        if available < target_budget:
+            return None
+        scale = target_budget / opportunity.total_cost
         shares = opportunity.shares * scale
         total_cost = opportunity.total_cost * scale
         min_payout = opportunity.min_payout * scale
         guaranteed_profit = opportunity.guaranteed_profit * scale
         if shares < MIN_DISPLAYED_POSITION_VALUE or guaranteed_profit < MIN_DISPLAYED_POSITION_VALUE:
-            return None, False
-        return (
-            replace(
-                opportunity,
-                shares=shares,
-                total_cost=total_cost,
-                min_payout=min_payout,
-                guaranteed_profit=guaranteed_profit,
-            ),
-            is_virtual,
+            return None
+        return replace(
+            opportunity,
+            shares=shares,
+            total_cost=total_cost,
+            min_payout=min_payout,
+            guaranteed_profit=guaranteed_profit,
         )
 
     def _used_capital(self) -> float:
