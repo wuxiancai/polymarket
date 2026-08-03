@@ -440,49 +440,46 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
       .trade-table td:nth-child(2)::before {{ content: "价差"; }}
       .trade-table td:nth-child(3)::before {{ content: "预估收益"; }}
       .trade-table td:nth-child(4)::before {{ content: "结算时间"; }}
-      .trade-table td:nth-child(5)::before {{ content: "YES 持仓腿"; }}
+      .trade-table td:nth-child(5)::before {{ content: "交易币对"; }}
       .trade-table td:nth-child(6)::before {{ content: "YES 数量"; }}
       .trade-table td:nth-child(7)::before {{ content: "YES 价格"; }}
       .trade-table td:nth-child(8)::before {{ content: "YES 金额"; }}
-      .trade-table td:nth-child(9)::before {{ content: "NO 持仓腿"; }}
-      .trade-table td:nth-child(10)::before {{ content: "NO 数量"; }}
-      .trade-table td:nth-child(11)::before {{ content: "NO 价格"; }}
-      .trade-table td:nth-child(12)::before {{ content: "NO 金额"; }}
-      .trade-table td:nth-child(13)::before {{ content: "成本"; }}
-      .trade-table td:nth-child(14)::before {{ content: "时间"; }}
+      .trade-table td:nth-child(9)::before {{ content: "NO 数量"; }}
+      .trade-table td:nth-child(10)::before {{ content: "NO 价格"; }}
+      .trade-table td:nth-child(11)::before {{ content: "NO 金额"; }}
+      .trade-table td:nth-child(12)::before {{ content: "成本"; }}
+      .trade-table td:nth-child(13)::before {{ content: "时间"; }}
       .open-position-table td:nth-child(1)::before {{ content: "ID"; }}
       .open-position-table td:nth-child(2)::before {{ content: "币种"; }}
       .open-position-table td:nth-child(3)::before {{ content: "预估收益"; }}
       .open-position-table td:nth-child(4)::before {{ content: "价差"; }}
       .open-position-table td:nth-child(5)::before {{ content: "结算时间"; }}
-      .open-position-table td:nth-child(6)::before {{ content: "YES 持仓腿"; }}
+      .open-position-table td:nth-child(6)::before {{ content: "交易币对"; }}
       .open-position-table td:nth-child(7)::before {{ content: "YES 数量"; }}
       .open-position-table td:nth-child(8)::before {{ content: "YES 价格"; }}
       .open-position-table td:nth-child(9)::before {{ content: "YES 金额"; }}
-      .open-position-table td:nth-child(10)::before {{ content: "NO 持仓腿"; }}
-      .open-position-table td:nth-child(11)::before {{ content: "NO 数量"; }}
-      .open-position-table td:nth-child(12)::before {{ content: "NO 价格"; }}
-      .open-position-table td:nth-child(13)::before {{ content: "NO 金额"; }}
-      .open-position-table td:nth-child(14)::before {{ content: "成本"; }}
-      .open-position-table td:nth-child(15)::before {{ content: "最低赔付"; }}
-      .open-position-table td:nth-child(16)::before {{ content: "开仓时间"; }}
+      .open-position-table td:nth-child(10)::before {{ content: "NO 数量"; }}
+      .open-position-table td:nth-child(11)::before {{ content: "NO 价格"; }}
+      .open-position-table td:nth-child(12)::before {{ content: "NO 金额"; }}
+      .open-position-table td:nth-child(13)::before {{ content: "成本"; }}
+      .open-position-table td:nth-child(14)::before {{ content: "最低赔付"; }}
+      .open-position-table td:nth-child(15)::before {{ content: "开仓时间"; }}
       .settled-position-table td:nth-child(1)::before {{ content: "ID"; }}
       .settled-position-table td:nth-child(2)::before {{ content: "币种"; }}
       .settled-position-table td:nth-child(3)::before {{ content: "收益"; }}
       .settled-position-table td:nth-child(4)::before {{ content: "收益率"; }}
       .settled-position-table td:nth-child(5)::before {{ content: "价差"; }}
       .settled-position-table td:nth-child(6)::before {{ content: "结束时间"; }}
-      .settled-position-table td:nth-child(7)::before {{ content: "YES 持仓腿"; }}
+      .settled-position-table td:nth-child(7)::before {{ content: "交易币对"; }}
       .settled-position-table td:nth-child(8)::before {{ content: "YES 数量"; }}
       .settled-position-table td:nth-child(9)::before {{ content: "YES 价格"; }}
       .settled-position-table td:nth-child(10)::before {{ content: "YES 金额"; }}
-      .settled-position-table td:nth-child(11)::before {{ content: "NO 持仓腿"; }}
-      .settled-position-table td:nth-child(12)::before {{ content: "NO 数量"; }}
-      .settled-position-table td:nth-child(13)::before {{ content: "NO 价格"; }}
-      .settled-position-table td:nth-child(14)::before {{ content: "NO 金额"; }}
-      .settled-position-table td:nth-child(15)::before {{ content: "成本"; }}
-      .settled-position-table td:nth-child(16)::before {{ content: "最低赔付"; }}
-      .settled-position-table td:nth-child(17)::before {{ content: "开仓时间"; }}
+      .settled-position-table td:nth-child(11)::before {{ content: "NO 数量"; }}
+      .settled-position-table td:nth-child(12)::before {{ content: "NO 价格"; }}
+      .settled-position-table td:nth-child(13)::before {{ content: "NO 金额"; }}
+      .settled-position-table td:nth-child(14)::before {{ content: "成本"; }}
+      .settled-position-table td:nth-child(15)::before {{ content: "最低赔付"; }}
+      .settled-position-table td:nth-child(16)::before {{ content: "开仓时间"; }}
       .log-table td:nth-child(1)::before {{ content: "时间"; }}
       .log-table td:nth-child(2)::before {{ content: "资产"; }}
       .log-table td:nth-child(3)::before {{ content: "级别"; }}
@@ -913,7 +910,6 @@ def _position_table_html(rows: list, states: list[WebState], id_map: dict[str, i
             f"<td>{_number(row.get('shares', 0))}</td>"
             f"<td>{_price(row.get('yes_avg_price', 0))}</td>"
             f"<td>{_money(_leg_amount(row, 'yes_avg_price'))}</td>"
-            f"<td class='market-text'>{_market_link(row.get('no_question', ''), row.get('no_event_slug', ''))}</td>"
             f"<td>{_number(row.get('shares', 0))}</td>"
             f"<td>{_price(row.get('no_avg_price', 0))}</td>"
             f"<td>{_money(_leg_amount(row, 'no_avg_price'))}</td>"
@@ -925,10 +921,10 @@ def _position_table_html(rows: list, states: list[WebState], id_map: dict[str, i
     return _scroll_table(
         "<table class='trade-table wide-table position-table open-position-table'>"
         "<colgroup><col class='id-col'><col class='asset-col'><col class='profit-col'><col class='spread-col'><col class='time-col'><col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'>"
-        "<col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'><col class='money-col'>"
+        "<col class='qty-col'><col class='price-col'><col class='amount-col'><col class='money-col'>"
         "<col class='money-col'><col class='time-col'></colgroup>"
-        "<thead><tr><th>ID</th><th>币种</th><th>预估收益</th><th>价差</th><th>结算时间UTC+8</th><th>YES 持仓腿</th><th>YES 数量</th><th>YES 价格</th><th>YES 金额</th>"
-        "<th>NO 持仓腿</th><th>NO 数量</th><th>NO 价格</th><th>NO 金额</th><th>成本</th><th>最低赔付</th><th>开仓时间</th></tr></thead><tbody>"
+        "<thead><tr><th>ID</th><th>币种</th><th>预估收益</th><th>价差</th><th>结算时间UTC+8</th><th>交易币对</th><th>YES 数量</th><th>YES 价格</th><th>YES 金额</th>"
+        "<th>NO 数量</th><th>NO 价格</th><th>NO 金额</th><th>成本</th><th>最低赔付</th><th>开仓时间</th></tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table>"
     )
@@ -961,7 +957,6 @@ def _settled_position_table_html(rows: list, states: list[WebState], id_map: dic
             f"<td>{_number(row.get('shares', 0))}</td>"
             f"<td>{_price(row.get('yes_avg_price', 0))}</td>"
             f"<td>{_money(_leg_amount(row, 'yes_avg_price'))}</td>"
-            f"<td class='market-text'>{_market_link(row.get('no_question', ''), row.get('no_event_slug', ''))}</td>"
             f"<td>{_number(row.get('shares', 0))}</td>"
             f"<td>{_price(row.get('no_avg_price', 0))}</td>"
             f"<td>{_money(_leg_amount(row, 'no_avg_price'))}</td>"
@@ -973,10 +968,10 @@ def _settled_position_table_html(rows: list, states: list[WebState], id_map: dic
     return _scroll_table(
         "<table class='trade-table wide-table position-table settled-position-table'>"
         "<colgroup><col class='id-col'><col class='asset-col'><col class='profit-col'><col class='profit-col'><col class='spread-col'><col class='time-col'><col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'>"
-        "<col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'><col class='money-col'>"
+        "<col class='qty-col'><col class='price-col'><col class='amount-col'><col class='money-col'>"
         "<col class='money-col'><col class='time-col'></colgroup>"
-        "<thead><tr><th>ID</th><th>币种</th><th>收益</th><th>收益率</th><th>价差</th><th>结束时间UTC+8</th><th>YES 持仓腿</th><th>YES 数量</th><th>YES 价格</th><th>YES 金额</th>"
-        "<th>NO 持仓腿</th><th>NO 数量</th><th>NO 价格</th><th>NO 金额</th><th>成本</th><th>最低赔付</th><th>开仓时间</th></tr></thead><tbody>"
+        "<thead><tr><th>ID</th><th>币种</th><th>收益</th><th>收益率</th><th>价差</th><th>结束时间UTC+8</th><th>交易币对</th><th>YES 数量</th><th>YES 价格</th><th>YES 金额</th>"
+        "<th>NO 数量</th><th>NO 价格</th><th>NO 金额</th><th>成本</th><th>最低赔付</th><th>开仓时间</th></tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table>"
     )
@@ -1487,7 +1482,6 @@ def _trade_table(rows: list, id_map: dict[str, int], empty_text: str = "暂无�
             f"<td>{_number(row.get('shares', 0))}</td>"
             f"<td>{_price(row.get('yes_avg_price', 0))}</td>"
             f"<td>{_money(_leg_amount(row, 'yes_avg_price'))}</td>"
-            f"<td class='market-text'>{_market_link(row.get('no_question', ''), row.get('no_event_slug', ''))}</td>"
             f"<td>{_number(row.get('shares', 0))}</td>"
             f"<td>{_price(row.get('no_avg_price', 0))}</td>"
             f"<td>{_money(_leg_amount(row, 'no_avg_price'))}</td>"
@@ -1498,10 +1492,10 @@ def _trade_table(rows: list, id_map: dict[str, int], empty_text: str = "暂无�
     return _scroll_table(
         "<table class='trade-table wide-table'>"
         "<colgroup><col class='id-col'><col class='spread-col'><col class='profit-col'><col class='time-col'><col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'>"
-        "<col class='market-col'><col class='qty-col'><col class='price-col'><col class='amount-col'><col class='money-col'>"
+        "<col class='qty-col'><col class='price-col'><col class='amount-col'><col class='money-col'>"
         "<col class='time-col'></colgroup>"
-        "<thead><tr><th>ID</th><th>价差</th><th>预估收益</th><th>结算时间UTC+8</th><th>YES 持仓腿</th><th>YES 数量</th><th>YES 价格</th><th>YES 金额</th>"
-        "<th>NO 持仓腿</th><th>NO 数量</th><th>NO 价格</th><th>NO 金额</th><th>成本</th><th>时间</th></tr></thead><tbody>"
+        "<thead><tr><th>ID</th><th>价差</th><th>预估收益</th><th>结算时间UTC+8</th><th>交易币对</th><th>YES 数量</th><th>YES 价格</th><th>YES 金额</th>"
+        "<th>NO 数量</th><th>NO 价格</th><th>NO 金额</th><th>成本</th><th>时间</th></tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table>"
     )

@@ -265,8 +265,13 @@ def test_dashboard_has_mobile_browser_layout_css(tmp_path):
     assert "table td { display: grid; grid-template-columns: 96px minmax(0, 1fr);" in html
     assert ".portfolio-table td:nth-child(2)::before { content: \"分配本金\"; }" in html
     assert ".opportunity-table td:nth-child(5)::before { content: \"YES 交易对\"; }" in html
-    assert ".open-position-table td:nth-child(16)::before { content: \"开仓时间\"; }" in html
-    assert ".settled-position-table td:nth-child(17)::before { content: \"开仓时间\"; }" in html
+    assert ".trade-table td:nth-child(5)::before { content: \"交易币对\"; }" in html
+    assert ".open-position-table td:nth-child(6)::before { content: \"交易币对\"; }" in html
+    assert ".settled-position-table td:nth-child(7)::before { content: \"交易币对\"; }" in html
+    assert ".open-position-table td:nth-child(15)::before { content: \"开仓时间\"; }" in html
+    assert ".settled-position-table td:nth-child(16)::before { content: \"开仓时间\"; }" in html
+    assert "YES 持仓腿" not in html
+    assert "NO 持仓腿" not in html
     assert ".log-table td:nth-child(4)::before { content: \"事件\"; }" in html
     assert "<table class='portfolio-table'>" in html
     assert "<table class='opportunity-table'>" in html
@@ -555,6 +560,9 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "已结束持仓收益" in render_dashboard([btc, eth])
     assert "settled-btc" not in settled_html
     assert "<th>交易对</th>" not in settled_html
+    assert "<th>交易币对</th>" in settled_html
+    assert "<th>YES 持仓腿</th>" not in settled_html
+    assert "<th>NO 持仓腿</th>" not in settled_html
     assert "<th>币种</th>" in settled_html
     assert "<th>收益</th>" in settled_html
     assert "<th>收益率</th>" in settled_html
@@ -586,7 +594,9 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert position_html.index("<th>币种</th>") < position_html.index("<th>预估收益</th>")
     assert position_html.index("<th>预估收益</th>") < position_html.index("<th>价差</th>")
     assert position_html.index("<th>价差</th>") < position_html.index("<th>结算时间UTC+8</th>")
-    assert position_html.index("<th>结算时间UTC+8</th>") < position_html.index("<th>YES 持仓腿</th>")
+    assert position_html.index("<th>结算时间UTC+8</th>") < position_html.index("<th>交易币对</th>")
+    assert "<th>YES 持仓腿</th>" not in position_html
+    assert "<th>NO 持仓腿</th>" not in position_html
     assert "<th>结算时间</th>" not in position_html
     assert "pair-btc" not in payload["portfolio"]["positions_html"]
     assert "<th>交易对</th>" not in payload["portfolio"]["positions_html"]
@@ -639,7 +649,9 @@ def test_dashboard_shows_profit_and_positions(tmp_path):
     assert "YES 金额" in trade_html
     assert trade_html.index("<th>价差</th>") < trade_html.index("<th>预估收益</th>")
     assert trade_html.index("<th>预估收益</th>") < trade_html.index("<th>结算时间UTC+8</th>")
-    assert trade_html.index("<th>结算时间UTC+8</th>") < trade_html.index("<th>YES 持仓腿</th>")
+    assert trade_html.index("<th>结算时间UTC+8</th>") < trade_html.index("<th>交易币对</th>")
+    assert "<th>YES 持仓腿</th>" not in trade_html
+    assert "<th>NO 持仓腿</th>" not in trade_html
     assert "<th>结算时间</th>" not in trade_html
     assert "NO 数量" in trade_html
     assert "NO 价格" in trade_html

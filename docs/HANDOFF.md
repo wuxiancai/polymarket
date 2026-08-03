@@ -1,5 +1,13 @@
 # Handoff
 
+## 2026-08-03 v1.0.8 模拟持仓列名调整
+
+- `模拟持仓`、`已结束持仓收益`、每资产 `模拟成交` 表格中的 `YES 持仓腿` 列更名为 `交易币对`。
+- 删除这三张表格中的 `NO 持仓腿` 列；NO 数量、NO 价格、NO 金额和原有数据/刷新逻辑不变。
+- 同步调整移动端表格字段标签和表头/单元格列数。
+- 版本号提升为 `1.0.8`，完成后打 tag `v1.0.8`；`v1.0.0` 仍可回退。
+- 验证：`python3 -m pytest -p no:cacheprovider tests -q`：54 passed；`bash -n start.sh deploy.sh` 通过。
+
 ## 2026-08-03 v1.0.7 补齐 price on <日期> 的 less/greater than 条件
 
 - 根因：Polymarket 的 `Bitcoin price on August 4?` / `Ethereum price on August 4?` / `XRP price on August 4?` / `Solana price on August 4?` 事件里，两端条件使用 `less than $X` / `greater than $X`，而 parser 之前只识别 `below` / `above`，所以这两个端点条件没有纳入监控。
