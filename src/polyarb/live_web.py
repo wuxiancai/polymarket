@@ -110,6 +110,10 @@ def render_live_page(session: dict, markets: List[dict]) -> str:
     async function liveRefresh() {{
       const response = await fetch('/api/live/dashboard');
       const payload = await response.json();
+      if (!payload.logged_in) {{
+        setHtml('liveError', payload.error_html || '');
+        return;
+      }}
       setHtml('liveError', payload.error_html || '');
       setHtml('liveAccount', payload.account_html || '');
       setHtml('livePositions', payload.positions_html || '');

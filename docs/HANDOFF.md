@@ -1,5 +1,13 @@
 # Handoff
 
+## 2026-08-07 v2.0.1 登录表单不被自动刷新清空
+
+- 修复首页未登录时每 5 秒自动刷新会重建登录表单，导致正在输入的 API key / 地址被清空的问题。
+- 未登录时 `liveRefresh` 只更新错误信息，不再替换登录表单 DOM；登录后仍按原有节奏刷新账户、持仓、订单和成交。
+- 版本号提升为 `2.0.1`，完成后打 tag `v2.0.1`；`v1.0.0` 仍可回退。
+- 验证：`python3 -m pytest -p no:cacheprovider tests -q`：67 passed；`bash -n deploy.sh start.sh` 与 `git diff --check` 通过。
+- 运行态验证：Playwright 实际输入钱包地址、签名私钥、Relayer API Key、Relayer 地址后等待 6 秒，四个输入框值均保留。
+
 ## 2026-08-06 v2.0.0 首页真实交易系统与模拟页拆分
 
 - 首页 `/` 改为 Polymarket 真实交易系统；`/simulation` 保留原模拟系统，模拟逻辑、页面和 API 不改变。

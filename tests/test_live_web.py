@@ -39,6 +39,7 @@ def test_live_page_has_simulation_button_and_login_form_when_logged_out():
     assert "连接 Polymarket 账户" in html
     assert "真实下单" not in html
     assert "0xsecret" not in html
+    assert "if (!payload.logged_in)" in html
 
 
 def test_live_page_renders_account_positions_and_order_form_when_logged_in():
