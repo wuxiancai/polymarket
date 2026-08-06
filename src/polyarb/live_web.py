@@ -12,7 +12,8 @@ def render_live_page(session: dict, markets: List[dict]) -> str:
     closed_html = _closed_html(session.get("closed_positions", [])) if logged_in else ""
     orders_html = _orders_html(session.get("open_orders", [])) if logged_in else ""
     trades_html = _trades_html(session.get("trades", [])) if logged_in else ""
-    order_html = _order_html(markets) if logged_in else ""
+    auto_trade_html = _auto_trade_html(session) if logged_in else ""
+    execution_log_html = _execution_log_html(session.get("execution_log", [])) if logged_in else ""
     return f"""<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -92,7 +93,8 @@ def render_live_page(session: dict, markets: List[dict]) -> str:
   <main class="wrap">
     <div id="liveError">{error_html}</div>
     <div id="liveAccount">{account_html}</div>
-    {order_html}
+    {auto_trade_html}
+    {execution_log_html}
     <div id="livePositions">{positions_html}</div>
     <div id="liveClosed">{closed_html}</div>
     <div id="liveOrders">{orders_html}</div>
@@ -116,6 +118,8 @@ def render_live_page(session: dict, markets: List[dict]) -> str:
       }}
       setHtml('liveError', payload.error_html || '');
       setHtml('liveAccount', payload.account_html || '');
+      setHtml('liveAutoTrade', payload.auto_trade_html || '');
+      setHtml('liveExecutionLog', payload.execution_log_html || '');
       setHtml('livePositions', payload.positions_html || '');
       setHtml('liveClosed', payload.closed_html || '');
       setHtml('liveOrders', payload.orders_html || '');
@@ -155,51 +159,16 @@ def render_live_page(session: dict, markets: List[dict]) -> str:
       await fetch('/api/live/logout', {{ method: 'POST' }});
       window.location.reload();
     }}
-    function updateOrderFields() {{
-      const side = document.getElementById('liveSide')?.value || 'BUY';
-      const type = document.getElementById('liveOrderType')?.value || 'market';
-      const amountRow = document.getElementById('liveAmountRow');
-      const sharesRow = document.getElementById('liveSharesRow');
-      const priceRow = document.getElementById('livePriceRow');
-      if (!amountRow || !sharesRow || !priceRow) return;
-      amountRow.style.display = type === 'limit' || side === 'SELL' ? 'none' : '';
-      sharesRow.style.display = type === 'limit' || side === 'SELL' ? '' : 'none';
-      priceRow.style.display = type === 'limit' ? '' : 'none';
-    }}
-    async function liveOrder() {{
-      const message = document.getElementById('liveOrderMessage');
-      const button = document.getElementById('liveOrderBtn');
-      if (!message || !button) return;
-      const confirm = document.getElementById('liveConfirm').checked;
-      if (!confirm) {{
-        message.textContent = '请先勾选真实订单确认';
-        message.className = 'message error';
-        return;
-      }}
-      button.disabled = true;
-      button.textContent = '提交中';
-      try {{
-        const response = await fetch('/api/live/order', {{
-          method: 'POST',
-          headers: {{ 'Content-Type': 'application/json' }},
-          body: JSON.stringify({{
-            token_id: document.getElementById('liveTokenId').value,
-            side: document.getElementById('liveSide').value,
-            order_type: document.getElementById('liveOrderType').value,
-            amount: document.getElementById('liveAmount').value,
-            shares: document.getElementById('liveShares').value,
-            price: document.getElementById('livePrice').value,
-            confirm: true,
-          }}),
-        }});
-        const payload = await response.json();
-        message.textContent = payload.message || (payload.ok ? '订单已提交' : '订单失败');
-        message.className = payload.ok ? 'message ok' : 'message error';
-        if (payload.ok) await liveRefresh();
-      }} finally {{
-        button.disabled = false;
-        button.textContent = '提交真实订单';
-      }}
+    async function liveAutoToggle() {{
+      const enabled = !document.getElementById('liveAutoTradeBtn')?.dataset.enabled;
+      const response = await fetch('/api/live/auto', {{
+        method: 'POST',
+        headers: {{ 'Content-Type': 'application/json' }},
+        body: JSON.stringify({{ enabled: Boolean(enabled) }}),
+      }});
+      const payload = await response.json();
+      window.alert(payload.message || '自动交易状态已更新');
+      await liveRefresh();
     }}
     async function liveCancel(orderId) {{
       if (!window.confirm('确认取消订单 ' + orderId + '?')) return;
@@ -215,16 +184,9 @@ def render_live_page(session: dict, markets: List[dict]) -> str:
     function bindLiveEvents() {{
       document.getElementById('liveLoginBtn')?.addEventListener('click', liveLogin);
       document.getElementById('liveLogoutBtn')?.addEventListener('click', liveLogout);
-      document.getElementById('liveOrderBtn')?.addEventListener('click', liveOrder);
-      document.getElementById('liveSide')?.addEventListener('change', updateOrderFields);
-      document.getElementById('liveOrderType')?.addEventListener('change', updateOrderFields);
-      document.getElementById('liveMarketSelect')?.addEventListener('change', (event) => {{
-        const input = document.getElementById('liveTokenId');
-        if (input) input.value = event.target.value;
-      }});
+      document.getElementById('liveAutoTradeBtn')?.addEventListener('click', liveAutoToggle);
     }}
     bindLiveEvents();
-    updateOrderFields();
     setInterval(liveRefresh, 5000);
   </script>
 </body>
@@ -237,6 +199,8 @@ def live_dashboard_payload(session: dict, markets: List[dict]) -> dict:
         "logged_in": logged_in,
         "error_html": _error_html(session),
         "account_html": _account_html(session) if logged_in else _login_html(),
+        "auto_trade_html": _auto_trade_html(session) if logged_in else "",
+        "execution_log_html": _execution_log_html(session.get("execution_log", [])) if logged_in else "",
         "positions_html": _positions_html(session.get("positions", [])) if logged_in else "",
         "closed_html": _closed_html(session.get("closed_positions", [])) if logged_in else "",
         "orders_html": _orders_html(session.get("open_orders", [])) if logged_in else "",
@@ -299,27 +263,46 @@ def _account_html(session: dict) -> str:
     )
 
 
-def _order_html(markets: List[dict]) -> str:
-    options = ["<option value=''>手动输入 Token ID</option>"]
-    for market in markets:
-        label = f"{escape(str(market.get('asset') or ''))} {escape(str(market.get('outcome') or ''))} - {escape(str(market.get('question') or ''))}"
-        options.append(f"<option value='{escape(str(market.get('token_id') or ''))}'>{label}</option>")
+def _auto_trade_html(session: dict) -> str:
+    enabled = bool(session.get("auto_trading_enabled"))
+    status = "自动交易已启用" if enabled else "自动交易已停止"
+    button_text = "停止自动交易" if enabled else "启用自动交易"
+    enabled_flag = "1" if enabled else "0"
+    error = session.get("auto_trader_error")
     return (
         "<div class='panel'>"
-        "<h2>真实下单</h2>"
-        "<div class='form-grid'>"
-        f"<label>市场/Token ID<select id='liveMarketSelect'>{''.join(options)}</select></label>"
-        "<label>Token ID<input id='liveTokenId' type='text' autocomplete='off'></label>"
-        "<label>方向<select id='liveSide'><option value='BUY'>买入</option><option value='SELL'>卖出</option></select></label>"
-        "<label>订单类型<select id='liveOrderType'><option value='market'>市价</option><option value='limit'>限价</option></select></label>"
-        "<label id='liveAmountRow'>市价买入支出 pUSD<input id='liveAmount' type='number' min='0' step='0.01'></label>"
-        "<label id='liveSharesRow'>份额<input id='liveShares' type='number' min='0' step='1'></label>"
-        "<label id='livePriceRow'>限价<input id='livePrice' type='number' min='0' step='0.01'></label>"
-        "<label><input id='liveConfirm' type='checkbox'> 我已确认这是真实订单</label>"
-        "</div>"
-        "<div class='form-actions'><button id='liveOrderBtn'>提交真实订单</button>"
-        "<span class='message' id='liveOrderMessage'></span></div>"
-        "</div>"
+        "<h2>自动真实交易</h2>"
+        f"<div class='label'>状态：{escape(status)}</div>"
+        f"<div class='form-actions'><button id='liveAutoTradeBtn' data-enabled='{enabled_flag}'>{escape(button_text)}</button></div>"
+        + (f"<div class='error'>{escape(str(error))}</div>" if error else "")
+        + "</div>"
+    )
+
+
+def _execution_log_html(rows: List[dict]) -> str:
+    if not rows:
+        return "<div class='panel'><h2>自动成交记录</h2><div class='empty'>暂无记录。</div></div>"
+    body = []
+    for row in rows:
+        ok = "成功" if row.get("ok") else "失败"
+        body.append(
+            "<tr>"
+            f"<td>{escape(_text(row.get('time')))}</td>"
+            f"<td>{escape(_text(row.get('asset')))}</td>"
+            f"<td>{escape(_text(row.get('pair_key')))}</td>"
+            f"<td>{escape(_text(row.get('yes_order_id')))}</td>"
+            f"<td>{escape(_text(row.get('no_order_id')))}</td>"
+            f"<td>{escape(ok)}</td>"
+            f"<td>{escape(_text(row.get('detail')))}</td>"
+            "</tr>"
+        )
+    return (
+        "<div class='panel'><h2>自动成交记录</h2>"
+        "<div class='table-scroll'><table><thead><tr>"
+        "<th>时间</th><th>币种</th><th>交易对</th><th>YES 订单</th><th>NO 订单</th><th>状态</th><th>说明</th>"
+        "</tr></thead><tbody>"
+        + "".join(body)
+        + "</tbody></table></div></div>"
     )
 
 

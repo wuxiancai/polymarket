@@ -14,6 +14,19 @@ def logged_session():
         "portfolio_value": 1234.5,
         "unrealized_pnl": 12.3,
         "realized_pnl": -4.5,
+        "auto_trading_enabled": True,
+        "auto_trader_error": None,
+        "execution_log": [
+            {
+                "time": "2026-08-07T00:00:00+00:00",
+                "asset": "BTC",
+                "pair_key": "pair-1",
+                "yes_order_id": "yes-order",
+                "no_order_id": "no-order",
+                "ok": True,
+                "detail": "YES=订单已提交。; NO=订单已提交。",
+            }
+        ],
         "positions": [
             {
                 "title": "Will Bitcoin be above $60,000?",
@@ -38,17 +51,21 @@ def test_live_page_has_simulation_button_and_login_form_when_logged_out():
     assert "模拟交易" in html
     assert "连接 Polymarket 账户" in html
     assert "真实下单" not in html
+    assert "自动真实交易" not in html
     assert "0xsecret" not in html
     assert "if (!payload.logged_in)" in html
 
 
-def test_live_page_renders_account_positions_and_order_form_when_logged_in():
+def test_live_page_renders_account_positions_and_auto_trading_when_logged_in():
     html = render_live_page(logged_session(), [])
 
     assert "真实账户" in html
     assert "当前持仓" in html
-    assert "真实下单" in html
-    assert "提交真实订单" in html
+    assert "自动真实交易" in html
+    assert "自动交易已启用" in html
+    assert "自动成交记录" in html
+    assert "真实下单" not in html
+    assert "提交真实订单" not in html
     assert "模拟交易" in html
     assert "Polymarket 真实交易系统" in html
 
@@ -58,3 +75,4 @@ def test_live_dashboard_payload_keeps_login_form_when_logged_out():
 
     assert "连接 Polymarket 账户" in payload["account_html"]
     assert payload["positions_html"] == ""
+    assert payload["auto_trade_html"] == ""

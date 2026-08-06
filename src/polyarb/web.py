@@ -15,6 +15,7 @@ from zoneinfo import ZoneInfo
 
 from .config import Config
 from .live import LiveCredentials, LiveSession, live_credentials_from_env
+from .live_trader import LiveAutoTrader
 from .live_web import live_dashboard_payload, render_live_page
 from .models import DEFAULT_ASSETS, AssetSpec
 from .runner import MIN_SPREAD_TO_OPEN_CENTS, PaperRunner, RealtimePaperRunner, ScanResult
@@ -37,6 +38,7 @@ class WebState:
     last_event_at: Optional[datetime] = None
     connection_logs: list[dict] = field(default_factory=list)
     lock: threading.Lock = field(default_factory=threading.Lock)
+    live_trader: Optional[LiveAutoTrader] = None
 
 
     def run_scan(self) -> None:
@@ -50,6 +52,8 @@ class WebState:
             with self.lock:
                 self.latest_result = result
                 self.latest_error = None
+            if self.live_trader is not None:
+                self.live_trader.on_result(result)
             self.add_connection_log(
                 "ok",
                 f"手动扫描完成：市场 {len(result.markets)}，交易对 {result.pairs}，机会 {len(result.opportunities)}",
@@ -93,6 +97,8 @@ class WebState:
         with self.lock:
             self.latest_result = result
             self.latest_error = None
+        if self.live_trader is not None:
+            self.live_trader.on_result(result)
 
     def update_event(self, event_at: datetime) -> None:
         with self.lock:
@@ -157,6 +163,8 @@ def serve(config: Config, host: str = "127.0.0.1", port: int = 8787, auto_scan: 
         WebState(config=config, store=store, asset=asset, runner=PaperRunner(config, asset))
         for asset in DEFAULT_ASSETS
     ]
+    for state in states:
+        state.live_trader = LiveAutoTrader(live_session, config, state.asset)
     if auto_scan:
         for state in states:
             _start_realtime_loop(state)
@@ -225,6 +233,9 @@ class PolyarbHandler(BaseHTTPRequestHandler):
             self.live_session.logout()
             self._json({"ok": True, "message": "已退出登录。"})
             return
+        if self.path == "/api/live/auto":
+            self._live_auto()
+            return
         if self.path == "/api/live/order":
             self._live_order()
             return
@@ -276,6 +287,21 @@ class PolyarbHandler(BaseHTTPRequestHandler):
             self._json(live_dashboard_payload(data, _live_markets(self.web_states)))
         except Exception as exc:
             self._json({"ok": False, "message": f"登录失败：{exc}"}, HTTPStatus.UNAUTHORIZED)
+
+    def _live_auto(self) -> None:
+        payload = self._read_json_body()
+        if payload is None:
+            self._json({"ok": False, "message": "请求格式错误。"}, HTTPStatus.BAD_REQUEST)
+            return
+        enabled = bool(payload.get("enabled"))
+        self.live_session.set_auto_trading(enabled)
+        self._json(
+            {
+                "ok": True,
+                "auto_trading_enabled": enabled,
+                "message": "自动交易已启用。" if enabled else "自动交易已停止。",
+            }
+        )
 
     def _live_order(self) -> None:
         payload = self._read_json_body()

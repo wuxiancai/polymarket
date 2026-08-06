@@ -142,6 +142,17 @@ class LiveTradingClient:
             )
         return _order_response_dict(response)
 
+    def place_market_buy(self, token_id: str, amount: float) -> dict:
+        if not token_id or amount <= 0:
+            raise LiveTradingError("自动买入需要 token_id 和正数金额。")
+        client = self._ensure_sdk_client()
+        response = client.place_market_order(
+            token_id=token_id,
+            side="BUY",
+            amount=str(round(amount, 6)),
+        )
+        return _order_response_dict(response)
+
     def cancel_order(self, order_id: str) -> dict:
         if not order_id:
             raise LiveTradingError("order_id 不能为空。")
@@ -164,6 +175,9 @@ class LiveSession:
         self._lock = threading.Lock()
         self._client: Optional[LiveTradingClient] = None
         self.last_error: Optional[str] = None
+        self.auto_trading_enabled = False
+        self.auto_trader_error: Optional[str] = None
+        self.execution_log: List[dict] = []
 
     def is_logged_in(self) -> bool:
         with self._lock:
@@ -172,10 +186,15 @@ class LiveSession:
     def connect(self, credentials: LiveCredentials) -> dict:
         client = LiveTradingClient(credentials)
         snapshot = client.snapshot()
+        snapshot["auto_trading_enabled"] = True
+        snapshot["auto_trader_error"] = None
+        snapshot["execution_log"] = []
         with self._lock:
             old_client = self._client
             self._client = client
             self.last_error = None
+            self.auto_trading_enabled = True
+            self.auto_trader_error = None
         if old_client is not None:
             old_client.close()
         return snapshot
@@ -188,10 +207,44 @@ class LiveSession:
             try:
                 data = client.snapshot()
                 data["logged_in"] = True
-                return data
             except Exception as exc:
                 self.last_error = str(exc)
-                return {"logged_in": True, "error": str(exc)}
+                return {
+                    "logged_in": True,
+                    "error": str(exc),
+                    "auto_trading_enabled": self.auto_trading_enabled,
+                    "auto_trader_error": self.last_error,
+                    "execution_log": list(self.execution_log[-200:]),
+                }
+            data["auto_trading_enabled"] = self.auto_trading_enabled
+            data["auto_trader_error"] = self.auto_trader_error
+            data["execution_log"] = list(self.execution_log[-200:])
+            return data
+
+    def is_auto_trading_enabled(self) -> bool:
+        with self._lock:
+            return self.auto_trading_enabled
+
+    def set_auto_trading(self, enabled: bool) -> bool:
+        with self._lock:
+            self.auto_trading_enabled = bool(enabled)
+            if self.auto_trading_enabled:
+                self.auto_trader_error = None
+            return self.auto_trading_enabled
+
+    def add_execution_log(self, entry: dict) -> None:
+        with self._lock:
+            self.execution_log.append(entry)
+            self.execution_log = self.execution_log[-200:]
+
+    def set_auto_trader_error(self, message: Optional[str]) -> None:
+        with self._lock:
+            self.auto_trader_error = message
+
+    def place_market_buy(self, token_id: str, amount: float) -> dict:
+        with self._lock:
+            client = self._require_client()
+            return client.place_market_buy(token_id=token_id, amount=amount)
 
     def place_order(
         self,
@@ -226,6 +279,9 @@ class LiveSession:
             client = self._client
             self._client = None
             self.last_error = None
+            self.auto_trading_enabled = False
+            self.auto_trader_error = None
+            self.execution_log = []
         if client is not None:
             client.close()
 
@@ -261,6 +317,7 @@ def _position_dict(item: Any) -> dict:
         "token_id": _safe_text(getattr(item, "token_id", "")),
         "size": _safe_float(getattr(item, "size", 0)),
         "avg_price": _safe_float(getattr(item, "avg_price", 0)),
+        "initial_value": _safe_float(getattr(item, "initial_value", 0)),
         "current_value": _safe_float(getattr(item, "current_value", 0)),
         "cash_pnl": _safe_float(getattr(item, "cash_pnl", 0)),
         "percent_pnl": _safe_float(getattr(item, "percent_pnl", 0)),
