@@ -129,7 +129,8 @@ class PaperRunner:
         else:
             position_ratio = 1.0
 
-        allocation = self.config.initial_capital_usdt * self.asset.allocation_ratio
+        allocation_ratio = self._allocation_ratio()
+        allocation = self.config.initial_capital_usdt * allocation_ratio
         used = self._used_capital()
         available = max(0.0, allocation - used)
         target_budget = min(opportunity.total_cost, allocation * position_ratio)
@@ -149,6 +150,13 @@ class PaperRunner:
             min_payout=min_payout,
             guaranteed_profit=guaranteed_profit,
         )
+
+    def _allocation_ratio(self) -> float:
+        ratios = self.config.allocation_ratios or {}
+        try:
+            return float(ratios.get(self.asset.symbol, self.asset.allocation_ratio))
+        except (TypeError, ValueError):
+            return self.asset.allocation_ratio
 
     def _used_capital(self) -> float:
         total = 0.0

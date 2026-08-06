@@ -6,7 +6,14 @@ from polyarb.config import Config
 from polyarb.models import DEFAULT_ASSETS, BTC_ASSET, ETH_ASSET, ArbOpportunity, Market, Predicate
 from polyarb.runner import PaperRunner, RealtimePaperRunner, ScanResult
 from polyarb.store import PaperStore
-from polyarb.web import WebState, _profit_class, dashboard_payload, format_standard_time, render_dashboard
+from polyarb.web import (
+    WebState,
+    _profit_class,
+    dashboard_payload,
+    format_standard_time,
+    render_dashboard,
+    save_allocation_settings,
+)
 
 
 def test_dashboard_renders_chinese_status(tmp_path):
@@ -46,6 +53,80 @@ def test_dashboard_renders_chinese_status(tmp_path):
     assert "最近盘口事件" not in html
     assert "location.reload" not in html
     assert "profit-positive" in html
+
+
+def test_dashboard_renders_allocation_settings_above_earnings_overview(tmp_path):
+    config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
+    store = PaperStore(config.database_path)
+    store.initialize()
+    state = WebState(config=config, store=store, asset=BTC_ASSET, runner=PaperRunner(config, BTC_ASSET))
+
+    html = render_dashboard(state)
+
+    assert html.index('id="allocationSettings"') < html.index("<h2>收益概览</h2>")
+    for symbol in ("BTC", "ETH", "XRP", "SOL"):
+        assert f'id="alloc{symbol}"' in html
+    assert 'id="settingsPassword"' in html
+    assert 'id="saveSettingsBtn"' in html
+    assert "noneboy780308" not in html
+
+
+def test_save_allocation_settings_updates_running_state_and_dashboard(tmp_path):
+    config = Config(database_path=Path(tmp_path) / "paper.sqlite3", initial_capital_usdt=1000.0)
+    store = PaperStore(config.database_path)
+    store.initialize()
+    states = [
+        WebState(config=config, store=store, asset=asset, runner=PaperRunner(config, asset))
+        for asset in DEFAULT_ASSETS
+    ]
+
+    ok, message, allocations, status = save_allocation_settings(
+        states,
+        {
+            "allocations": {"BTC": 100, "ETH": 0, "XRP": 0, "SOL": 0},
+            "password": "noneboy780308",
+        },
+    )
+
+    assert ok is True
+    assert status == 200
+    assert message == "资金分配设置已保存。"
+    assert allocations == {"BTC": 100.0, "ETH": 0.0, "XRP": 0.0, "SOL": 0.0}
+    assert store.allocation_ratios() == {"BTC": 1.0, "ETH": 0.0, "XRP": 0.0, "SOL": 0.0}
+    assert states[0].config.allocation_ratios["BTC"] == 1.0
+    assert states[0].runner.config.allocation_ratios["ETH"] == 0.0
+    payload = dashboard_payload(states)
+    assert payload["settings"]["allocation_ratios"] == {"BTC": 1.0, "ETH": 0.0, "XRP": 0.0, "SOL": 0.0}
+    assert "1,000.00" in payload["portfolio"]["summary_html"]
+
+
+def test_save_allocation_settings_requires_password_and_100_percent_total(tmp_path):
+    config = Config(database_path=Path(tmp_path) / "paper.sqlite3", initial_capital_usdt=1000.0)
+    store = PaperStore(config.database_path)
+    store.initialize()
+    state = WebState(config=config, store=store, asset=BTC_ASSET, runner=PaperRunner(config, BTC_ASSET))
+
+    ok, message, _allocations, status = save_allocation_settings(
+        [state],
+        {
+            "allocations": {"BTC": 100, "ETH": 0, "XRP": 0, "SOL": 0},
+            "password": "wrong-password",
+        },
+    )
+    assert ok is False
+    assert status == 401
+    assert "密码错误" in message
+
+    ok, message, _allocations, status = save_allocation_settings(
+        [state],
+        {
+            "allocations": {"BTC": 100, "ETH": 1, "XRP": 0, "SOL": 0},
+            "password": "noneboy780308",
+        },
+    )
+    assert ok is False
+    assert status == 400
+    assert "100%" in message
 
 
 def monitored_market(market_id: str, question: str, end_date: str, event_slug: str = "") -> Market:

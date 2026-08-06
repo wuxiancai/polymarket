@@ -80,6 +80,26 @@ def test_runner_sizes_spread_tiers_against_current_asset_allocation(tmp_path):
     assert round(sized.shares, 2) == 90.00
 
 
+def test_runner_uses_config_allocation_ratios(tmp_path):
+    config = Config(
+        database_path=Path(tmp_path) / "paper.sqlite3",
+        initial_capital_usdt=1000.0,
+        allocation_ratios={"BTC": 1.0, "ETH": 0.0, "XRP": 0.0, "SOL": 0.0},
+    )
+    btc = PaperRunner(config, BTC_ASSET)
+    btc.store.initialize()
+
+    sized = btc._sized_opportunity(opportunity(profit=44.0, total_cost=1000.0, spread_cents=4.4))
+
+    assert sized is not None
+    assert round(sized.total_cost, 2) == 1000.00
+
+    eth = PaperRunner(config, ETH_ASSET)
+    eth.store.initialize()
+
+    assert eth._sized_opportunity(opportunity(profit=44.0, total_cost=1000.0, spread_cents=4.4)) is None
+
+
 def test_runner_skips_opportunity_when_capital_is_insufficient(tmp_path):
     item = runner(tmp_path)
     used = opportunity(profit=27.9998, total_cost=699.995)

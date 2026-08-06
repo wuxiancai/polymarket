@@ -21,6 +21,7 @@ ETH_ASSET = AssetSpec(symbol="ETH", tag_slug="ethereum", title_name="Ethereum", 
 XRP_ASSET = AssetSpec(symbol="XRP", tag_slug="xrp", title_name="XRP", allocation_ratio=0.15)
 SOL_ASSET = AssetSpec(symbol="SOL", tag_slug="solana", title_name="Solana", allocation_ratio=0.15)
 DEFAULT_ASSETS = (BTC_ASSET, ETH_ASSET, XRP_ASSET, SOL_ASSET)
+DEFAULT_ALLOCATION_RATIOS = {asset.symbol: asset.allocation_ratio for asset in DEFAULT_ASSETS}
 
 
 @dataclass(frozen=True)

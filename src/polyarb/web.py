@@ -4,7 +4,7 @@ import asyncio
 import json
 import re
 import threading
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from html import escape
 from http import HTTPStatus
@@ -141,6 +141,7 @@ class MonitoredEventGroup:
 def serve(config: Config, host: str = "127.0.0.1", port: int = 8787, auto_scan: bool = True) -> None:
     store = PaperStore(config.database_path)
     store.initialize()
+    config = replace(config, allocation_ratios=store.allocation_ratios())
     states = [
         WebState(config=config, store=store, asset=asset, runner=PaperRunner(config, asset))
         for asset in DEFAULT_ASSETS
@@ -197,14 +198,34 @@ class PolyarbHandler(BaseHTTPRequestHandler):
                 thread.start()
             self._json({"ok": True, "message": "扫描已触发"})
             return
+        if self.path == "/api/settings":
+            self._save_settings()
+            return
         self.send_error(HTTPStatus.NOT_FOUND)
+
+    def _save_settings(self) -> None:
+        try:
+            length = int(self.headers.get("Content-Length") or "0")
+            raw = self.rfile.read(length).decode("utf-8") if length else "{}"
+            payload = json.loads(raw)
+        except (TypeError, ValueError):
+            self._json({"ok": False, "message": "请求格式错误，设置未保存。"}, HTTPStatus.BAD_REQUEST)
+            return
+        if not isinstance(payload, dict):
+            self._json({"ok": False, "message": "请求格式错误，设置未保存。"}, HTTPStatus.BAD_REQUEST)
+            return
+        ok, message, allocations, status = save_allocation_settings(self.web_states, payload)
+        if not ok:
+            self._json({"ok": False, "message": message}, status)
+            return
+        self._json({"ok": True, "message": message, "allocations": allocations})
 
     def log_message(self, format: str, *args) -> None:
         return
 
-    def _json(self, data: dict) -> None:
+    def _json(self, data: dict, status: int = HTTPStatus.OK) -> None:
         payload = json.dumps(data, ensure_ascii=False, default=str).encode("utf-8")
-        self.send_response(HTTPStatus.OK)
+        self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(payload)))
         self.end_headers()
@@ -224,6 +245,7 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
     error_html = _error_html(panels)
     id_map = _dashboard_id_map(panels)
     portfolio = _portfolio_payload(panels, id_map)
+    settings_html = _settings_html(panels)
     monitored_pairs_html = _monitored_event_groups_html(_monitored_event_groups(panels))
     asset_sections = "\n".join(_asset_section(state, id_map) for state in panels)
     started_at = escape(_runtime_started_at(panels).isoformat())
@@ -315,6 +337,35 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
       gap: 12px;
       margin-bottom: 12px;
     }}
+    .settings-row {{
+      display: grid;
+      grid-template-columns: auto repeat(4, minmax(92px, 1fr)) minmax(170px, 1fr) auto auto;
+      align-items: end;
+      gap: 10px;
+      margin-bottom: 16px;
+      padding: 12px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }}
+    .settings-title {{ align-self: center; font-weight: 800; white-space: nowrap; }}
+    .settings-field {{ display: grid; gap: 4px; min-width: 0; }}
+    .settings-field label {{ color: var(--muted); font-size: 13px; font-weight: 700; }}
+    .settings-input {{
+      width: 100%;
+      min-width: 0;
+      min-height: 40px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      font-size: 15px;
+      color: var(--ink);
+      background: #fff;
+    }}
+    .settings-field.settings-password-field {{ min-width: 170px; }}
+    .settings-message {{ align-self: center; min-width: 120px; min-height: 18px; font-size: 13px; }}
+    .settings-message.ok {{ color: var(--accent); }}
+    .settings-message.error {{ color: var(--danger); }}
     .portfolio-detail {{ margin-top: 12px; overflow-x: auto; }}
     .asset-panel {{ margin-top: 28px; margin-bottom: 56px; }}
     .asset-title {{ margin: 0 0 14px; font-size: 22px; line-height: 1.2; }}
@@ -386,6 +437,11 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
       .runtime-panel {{ grid-column: 1 / -1; width: 100%; min-width: 0; padding: 10px 12px; border-radius: 10px; }}
       .runtime-row {{ gap: 8px; }}
       button {{ width: 100%; min-height: 44px; border-radius: 10px; }}
+      .settings-row {{ grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }}
+      .settings-title {{ grid-column: 1 / -1; }}
+      .settings-field.settings-password-field {{ grid-column: 1 / -1; min-width: 0; }}
+      #saveSettingsBtn {{ grid-column: 1 / -1; }}
+      .settings-message {{ grid-column: 1 / -1; min-width: 0; }}
       .metrics, .portfolio-grid {{ grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }}
       .metric {{ min-width: 0; padding: 11px 10px; border-radius: 10px; }}
       .label {{ font-size: 12px; }}
@@ -487,6 +543,7 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
     }}
     @media (max-width: 420px) {{
       .metrics, .portfolio-grid {{ grid-template-columns: 1fr; }}
+      .settings-row {{ grid-template-columns: 1fr; }}
       .toolbar {{ grid-template-columns: 1fr; }}
       table tr {{ margin: 8px; }}
       table td {{ grid-template-columns: 88px minmax(0, 1fr); }}
@@ -518,6 +575,7 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
   </header>
   <main class="wrap">
     <div id="errorBox">{error_html}</div>
+    {settings_html}
     <section>
       <h2>收益概览</h2>
       <div id="portfolioSummary">{portfolio["summary_html"]}</div>
@@ -628,8 +686,43 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
         btn.textContent = '触发扫描';
       }}, 2000);
     }}
+    async function saveSettings() {{
+      const allocations = {{}};
+      for (const symbol of ['BTC', 'ETH', 'XRP', 'SOL']) {{
+        allocations[symbol] = Number(document.getElementById('alloc' + symbol).value || 0);
+      }}
+      const password = document.getElementById('settingsPassword').value;
+      const button = document.getElementById('saveSettingsBtn');
+      const message = document.getElementById('settingsMessage');
+      button.disabled = true;
+      button.textContent = '保存中';
+      try {{
+        const response = await fetch('/api/settings', {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify({{ allocations, password }}),
+        }});
+        const payload = await response.json();
+        message.textContent = payload.message || (response.ok ? '已保存' : '保存失败');
+        message.className = 'settings-message ' + (response.ok ? 'ok' : 'error');
+        if (response.ok) {{
+          document.getElementById('settingsPassword').value = '';
+          await refreshDashboard();
+        }}
+      }} finally {{
+        button.disabled = false;
+        button.textContent = '保存设置';
+      }}
+    }}
     document.getElementById('scanBtn').addEventListener('click', triggerScan);
     document.getElementById('refreshBtn').addEventListener('click', refreshDashboard);
+    document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
+    document.getElementById('settingsPassword').addEventListener('keydown', (event) => {{
+      if (event.key === 'Enter') {{
+        event.preventDefault();
+        saveSettings();
+      }}
+    }});
     updateRuntimeClock();
     setInterval(updateRuntimeClock, 1000);
     setInterval(refreshDashboard, 5000);
@@ -652,6 +745,7 @@ def dashboard_payload(states: Union[WebState, list[WebState]]) -> dict:
         "error_html": _error_html(panels),
         "monitored_pairs_html": _monitored_event_groups_html(_monitored_event_groups(panels)),
         "portfolio": _portfolio_payload(panels, id_map),
+        "settings": _settings_payload(panels),
         "assets": [_asset_payload(state, id_map) for state in panels],
         "connection_log_html": _connection_log_html(panels),
     }
@@ -659,6 +753,99 @@ def dashboard_payload(states: Union[WebState, list[WebState]]) -> dict:
 
 def _as_states(states: Union[WebState, list[WebState]]) -> list[WebState]:
     return states if isinstance(states, list) else [states]
+
+
+def save_allocation_settings(
+    states: list[WebState],
+    payload: dict,
+) -> tuple[bool, str, dict, int]:
+    if not states:
+        return False, "暂无运行状态，设置未保存。", {}, HTTPStatus.BAD_REQUEST
+    allocations = payload.get("allocations") if isinstance(payload, dict) else None
+    password = payload.get("password") if isinstance(payload, dict) else None
+    if not isinstance(allocations, dict) or not isinstance(password, str) or not password:
+        return False, "请输入各币种百分比和确认密码。", {}, HTTPStatus.BAD_REQUEST
+    raw_allocations = {str(key).upper(): value for key, value in allocations.items()}
+    ratios = {}
+    try:
+        for asset in DEFAULT_ASSETS:
+            if asset.symbol not in raw_allocations:
+                return False, f"缺少 {asset.symbol} 分配比例。", {}, HTTPStatus.BAD_REQUEST
+            percent = float(raw_allocations[asset.symbol])
+            if percent < 0 or percent > 100:
+                return False, "百分比必须在 0-100 之间。", {}, HTTPStatus.BAD_REQUEST
+            ratios[asset.symbol] = percent / 100.0
+    except (TypeError, ValueError):
+        return False, "分配比例必须是有效数字。", {}, HTTPStatus.BAD_REQUEST
+    if abs(sum(ratios.values()) - 1.0) > 0.0001:
+        return False, "四个币种百分比之和必须为 100%。", {}, HTTPStatus.BAD_REQUEST
+    store = states[0].store
+    if not store.verify_settings_password(password):
+        return False, "密码错误，设置未保存。", {}, HTTPStatus.UNAUTHORIZED
+    store.save_allocation_ratios(ratios)
+    _apply_allocation_ratios(states, ratios)
+    percentages = {symbol: round(value * 100, 6) for symbol, value in ratios.items()}
+    return True, "资金分配设置已保存。", percentages, HTTPStatus.OK
+
+
+def _apply_allocation_ratios(states: list[WebState], ratios: dict) -> None:
+    for state in states:
+        new_config = replace(state.config, allocation_ratios=dict(ratios))
+        state.config = new_config
+        if state.runner is not None:
+            state.runner.config = new_config
+
+
+def _allocation_ratio(state: WebState) -> float:
+    ratios = state.config.allocation_ratios or {}
+    try:
+        return float(ratios.get(state.asset.symbol, state.asset.allocation_ratio))
+    except (TypeError, ValueError):
+        return state.asset.allocation_ratio
+
+
+def _allocation_ratios(states: list[WebState]) -> dict:
+    if not states:
+        return {}
+    ratios = states[0].config.allocation_ratios or {}
+    return {
+        asset.symbol: ratios.get(asset.symbol, asset.allocation_ratio)
+        for asset in DEFAULT_ASSETS
+    }
+
+
+def _settings_payload(states: list[WebState]) -> dict:
+    return {"allocation_ratios": _allocation_ratios(states)}
+
+
+def _settings_html(states: list[WebState]) -> str:
+    if not states:
+        return ""
+    ratios = _allocation_ratios(states)
+    fields = []
+    for asset in DEFAULT_ASSETS:
+        percent = ratios.get(asset.symbol, asset.allocation_ratio) * 100
+        fields.append(
+            "<div class='settings-field'>"
+            f"<label for=\"alloc{escape(asset.symbol)}\">{escape(asset.symbol)}</label>"
+            f"<input class='settings-input' id=\"alloc{escape(asset.symbol)}\" type='number' min='0' max='100' step='0.1' value='{escape(f'{percent:g}')}'>"
+            "</div>"
+        )
+    password_field = (
+        "<div class='settings-field settings-password-field'>"
+        "<label for=\"settingsPassword\">确认密码</label>"
+        "<input class='settings-input' id=\"settingsPassword\" type='password' autocomplete='off' placeholder='请输入密码'>"
+        "</div>"
+    )
+    return (
+        "<div class='settings-row' id=\"allocationSettings\">"
+        "<span class='settings-title'>资金分配</span>"
+        + "".join(fields)
+        + password_field
+        + "<button class='secondary' id=\"saveSettingsBtn\" type='button'>保存设置</button>"
+        + "<span class='settings-message' id=\"settingsMessage\"></span>"
+        + "</div>"
+    )
 
 
 def _dashboard_id_map(states: list[WebState]) -> dict[str, int]:
@@ -825,7 +1012,7 @@ def _portfolio_payload(states: list[WebState], id_map: dict[str, int]) -> dict:
         settled_rows = _filter_rows_by_asset(settled_trades, state.asset)
         cost = _sum_float(rows, "total_cost")
         profit = _sum_float(settled_rows, "guaranteed_profit")
-        allocation = state.config.initial_capital_usdt * state.asset.allocation_ratio
+        allocation = state.config.initial_capital_usdt * _allocation_ratio(state)
         asset_summaries.append(
             {
                 "symbol": state.asset.symbol,

@@ -51,6 +51,32 @@ def test_paper_store_records_opportunity_and_trade(tmp_path):
     assert rows[0]["no_avg_price"] == 0.57
 
 
+def test_paper_store_initializes_masked_default_settings(tmp_path):
+    db_path = tmp_path / "paper.sqlite3"
+    store = PaperStore(db_path)
+    store.initialize()
+
+    assert store.allocation_ratios() == {"BTC": 0.40, "ETH": 0.30, "XRP": 0.15, "SOL": 0.15}
+    assert store.verify_settings_password("noneboy780308") is True
+    assert store.verify_settings_password("wrong-password") is False
+
+    with sqlite3.connect(db_path) as conn:
+        values = [row[0] for row in conn.execute("select value from settings")]
+
+    assert all("noneboy780308" not in value for value in values)
+
+
+def test_paper_store_saves_allocation_ratios(tmp_path):
+    db_path = tmp_path / "paper.sqlite3"
+    store = PaperStore(db_path)
+    store.initialize()
+
+    store.save_allocation_ratios({"BTC": 1.0, "ETH": 0.0, "XRP": 0.0, "SOL": 0.0})
+
+    assert store.allocation_ratios() == {"BTC": 1.0, "ETH": 0.0, "XRP": 0.0, "SOL": 0.0}
+    assert store.verify_settings_password("noneboy780308") is True
+
+
 def test_paper_store_first_data_at_uses_earliest_opportunity_or_trade(tmp_path):
     db_path = tmp_path / "paper.sqlite3"
     store = PaperStore(db_path)

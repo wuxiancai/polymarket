@@ -1,6 +1,11 @@
 from __future__ import annotations
 
+import base64
 import calendar
+import hashlib
+import hmac
+import json
+import os
 import re
 import sqlite3
 from datetime import datetime, timedelta, timezone
@@ -8,11 +13,13 @@ from pathlib import Path
 from typing import Dict, List, Optional
 from zoneinfo import ZoneInfo
 
-from .models import ArbOpportunity
+from .models import DEFAULT_ALLOCATION_RATIOS, ArbOpportunity
 
 ET = ZoneInfo("America/New_York")
 MONTHS = {name.lower(): i for i, name in enumerate(calendar.month_name) if name}
 MIN_DISPLAYED_TRADE_VALUE = 0.01
+DEFAULT_SETTINGS_PASSWORD = "noneboy780308"
+SETTINGS_PASSWORD_ITERATIONS = 100_000
 
 
 class PaperStore:
@@ -73,9 +80,65 @@ class PaperStore:
                 );
                 create index if not exists idx_opportunities_detected_at on opportunities(detected_at);
                 create index if not exists idx_trades_detected_at on paper_trades(detected_at);
+                create table if not exists settings (
+                    key text primary key,
+                    value text not null
+                );
                 """
             )
             self._ensure_paper_trade_columns(conn)
+            self._ensure_default_settings(conn)
+
+    def _ensure_default_settings(self, conn: sqlite3.Connection) -> None:
+        rows = {row["key"]: row["value"] for row in conn.execute("select key, value from settings")}
+        if "allocation_ratios" not in rows:
+            conn.execute(
+                "insert or replace into settings(key, value) values (?, ?)",
+                ("allocation_ratios", json.dumps(DEFAULT_ALLOCATION_RATIOS)),
+            )
+        if "settings_password" not in rows:
+            salt = os.urandom(16)
+            conn.execute(
+                "insert or replace into settings(key, value) values (?, ?)",
+                ("settings_password", _password_hash(DEFAULT_SETTINGS_PASSWORD, salt)),
+            )
+
+    def allocation_ratios(self) -> Dict[str, float]:
+        with self._connect() as conn:
+            row = conn.execute("select value from settings where key = 'allocation_ratios'").fetchone()
+        if row is None:
+            return dict(DEFAULT_ALLOCATION_RATIOS)
+        try:
+            raw = json.loads(row["value"])
+        except (TypeError, ValueError):
+            return dict(DEFAULT_ALLOCATION_RATIOS)
+        ratios = {}
+        for symbol, default in DEFAULT_ALLOCATION_RATIOS.items():
+            try:
+                ratios[symbol] = float(raw.get(symbol, default))
+            except (TypeError, ValueError):
+                ratios[symbol] = default
+        return ratios
+
+    def save_allocation_ratios(self, ratios: Dict[str, float]) -> None:
+        values = {symbol: float(ratios[symbol]) for symbol in DEFAULT_ALLOCATION_RATIOS}
+        with self._connect() as conn:
+            conn.execute(
+                "insert or replace into settings(key, value) values (?, ?)",
+                ("allocation_ratios", json.dumps(values)),
+            )
+
+    def verify_settings_password(self, password: str) -> bool:
+        with self._connect() as conn:
+            row = conn.execute("select value from settings where key = 'settings_password'").fetchone()
+        if row is None:
+            return False
+        try:
+            digest, salt, iterations = _parse_password_hash(row["value"])
+        except (TypeError, ValueError):
+            return False
+        candidate = hashlib.pbkdf2_hmac("sha256", str(password).encode("utf-8"), salt, iterations)
+        return hmac.compare_digest(candidate, digest)
 
     def record_opportunity(self, opportunity: ArbOpportunity) -> None:
         with self._connect() as conn:
@@ -381,3 +444,24 @@ def _infer_end_date(question: object, detected_at: object) -> str:
             end_et = datetime(year, month + 1, 1, tzinfo=ET)
         return end_et.astimezone(timezone.utc).isoformat()
     return ""
+
+
+def _password_hash(password: str, salt: bytes) -> str:
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, SETTINGS_PASSWORD_ITERATIONS)
+    return (
+        f"pbkdf2_sha256${SETTINGS_PASSWORD_ITERATIONS}$"
+        f"{base64.b64encode(salt).decode('ascii')}$"
+        f"{base64.b64encode(digest).decode('ascii')}"
+    )
+
+
+def _parse_password_hash(value: str) -> tuple[bytes, bytes, int]:
+    parts = value.split("$")
+    if len(parts) != 4 or parts[0] != "pbkdf2_sha256":
+        raise ValueError("unsupported password hash")
+    iterations = int(parts[1])
+    salt = base64.b64decode(parts[2])
+    digest = base64.b64decode(parts[3])
+    if iterations <= 0:
+        raise ValueError("invalid password hash")
+    return digest, salt, iterations

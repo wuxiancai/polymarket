@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import time
+from dataclasses import replace
 from typing import List, Optional
 
 from .config import Config
@@ -47,6 +48,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.command == "run":
         if not args.paper:
             parser.error("run refuses to start without --paper; real trading is not implemented")
+        store = PaperStore(config.database_path)
+        store.initialize()
+        config = replace(config, allocation_ratios=store.allocation_ratios())
         runners = [PaperRunner(config, asset) for asset in DEFAULT_ASSETS]
         for runner in runners:
             runner.store.initialize()

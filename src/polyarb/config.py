@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Dict
+
+from .models import DEFAULT_ALLOCATION_RATIOS
 
 
 @dataclass(frozen=True)
@@ -20,6 +23,7 @@ class Config:
     cooldown_seconds: int = 30
     websocket_url: str = "wss://ws-subscriptions-clob.polymarket.com/ws/market"
     initial_capital_usdt: float = 10000.0
+    allocation_ratios: Dict[str, float] = field(default_factory=lambda: dict(DEFAULT_ALLOCATION_RATIOS))
 
     @property
     def slippage_buffer(self) -> float:
