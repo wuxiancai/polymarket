@@ -14,6 +14,10 @@ def render_live_page(session: dict, markets: List[dict]) -> str:
     trades_html = _trades_html(session.get("trades", [])) if logged_in else ""
     auto_trade_html = _auto_trade_html(session) if logged_in else ""
     execution_log_html = _execution_log_html(session.get("execution_log", [])) if logged_in else ""
+    events_html = _live_events_html(session.get("live_events", [])) if logged_in else ""
+    opportunities_html = (
+        _live_opportunities_html(session.get("live_opportunities", [])) if logged_in else ""
+    )
     return f"""<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -95,6 +99,8 @@ def render_live_page(session: dict, markets: List[dict]) -> str:
     <div id="liveAccount">{account_html}</div>
     {auto_trade_html}
     {execution_log_html}
+    {events_html}
+    {opportunities_html}
     <div id="livePositions">{positions_html}</div>
     <div id="liveClosed">{closed_html}</div>
     <div id="liveOrders">{orders_html}</div>
@@ -120,6 +126,8 @@ def render_live_page(session: dict, markets: List[dict]) -> str:
       setHtml('liveAccount', payload.account_html || '');
       setHtml('liveAutoTrade', payload.auto_trade_html || '');
       setHtml('liveExecutionLog', payload.execution_log_html || '');
+      setHtml('liveEvents', payload.events_html || '');
+      setHtml('liveOpportunities', payload.opportunities_html || '');
       setHtml('livePositions', payload.positions_html || '');
       setHtml('liveClosed', payload.closed_html || '');
       setHtml('liveOrders', payload.orders_html || '');
@@ -201,6 +209,10 @@ def live_dashboard_payload(session: dict, markets: List[dict]) -> dict:
         "account_html": _account_html(session) if logged_in else _login_html(),
         "auto_trade_html": _auto_trade_html(session) if logged_in else "",
         "execution_log_html": _execution_log_html(session.get("execution_log", [])) if logged_in else "",
+        "events_html": _live_events_html(session.get("live_events", [])) if logged_in else "",
+        "opportunities_html": (
+            _live_opportunities_html(session.get("live_opportunities", [])) if logged_in else ""
+        ),
         "positions_html": _positions_html(session.get("positions", [])) if logged_in else "",
         "closed_html": _closed_html(session.get("closed_positions", [])) if logged_in else "",
         "orders_html": _orders_html(session.get("open_orders", [])) if logged_in else "",
@@ -300,6 +312,73 @@ def _execution_log_html(rows: List[dict]) -> str:
         "<div class='panel'><h2>自动成交记录</h2>"
         "<div class='table-scroll'><table><thead><tr>"
         "<th>时间</th><th>币种</th><th>交易对</th><th>YES 订单</th><th>NO 订单</th><th>状态</th><th>说明</th>"
+        "</tr></thead><tbody>"
+        + "".join(body)
+        + "</tbody></table></div></div>"
+    )
+
+
+def _live_events_html(rows: List[dict]) -> str:
+    if not rows:
+        return "<div class='panel'><h2>监控事件</h2><div class='empty'>暂无事件。</div></div>"
+    body = []
+    for row in rows:
+        markets = row.get("markets") or []
+        market_text = "；".join(
+            str(market.get("question") or "")
+            for market in markets[:3]
+            if market.get("question")
+        )
+        body.append(
+            "<tr>"
+            f"<td>{escape(_text(row.get('id')))}</td>"
+            f"<td>{escape(_text(row.get('title')))}</td>"
+            f"<td>{escape(_text(row.get('slug')))}</td>"
+            f"<td>{escape(str(len(markets)))}</td>"
+            f"<td>{escape(market_text)}</td>"
+            "</tr>"
+        )
+    return (
+        "<div class='panel'><h2>监控事件</h2>"
+        "<div class='table-scroll'><table><thead><tr>"
+        "<th>事件 ID</th><th>标题</th><th>Slug</th><th>市场数</th><th>市场</th>"
+        "</tr></thead><tbody>"
+        + "".join(body)
+        + "</tbody></table></div></div>"
+    )
+
+
+def _live_opportunities_html(rows: List[dict]) -> str:
+    if not rows:
+        return "<div class='panel'><h2>实时套利机会</h2><div class='empty'>暂无交易机会。</div></div>"
+    body = []
+    for row in rows:
+        status = str(row.get("status") or "仅观察")
+        status_class = {
+            "已成交": "profit-positive",
+            "可成交": "profit-positive",
+            "资金不足": "profit-negative",
+        }.get(status, "")
+        try:
+            spread_text = f"{float(row.get('spread_cents') or 0):.2f}¢"
+        except (TypeError, ValueError):
+            spread_text = "0.00¢"
+        body.append(
+            "<tr>"
+            f"<td>{escape(_text(row.get('time')))}</td>"
+            f"<td>{escape(_text(row.get('asset')))}</td>"
+            f"<td>{escape(_text(row.get('yes_question')))}</td>"
+            f"<td>{escape(_text(row.get('no_question')))}</td>"
+            f"<td>{escape(_money(row.get('guaranteed_profit')))}</td>"
+            f"<td>{escape(spread_text)}</td>"
+            f"<td class='{status_class}'>{escape(status)}</td>"
+            f"<td>{escape(_text(row.get('detail')))}</td>"
+            "</tr>"
+        )
+    return (
+        "<div class='panel'><h2>实时套利机会</h2>"
+        "<div class='table-scroll'><table><thead><tr>"
+        "<th>时间</th><th>币种</th><th>YES 交易对</th><th>NO 交易对</th><th>保证利润</th><th>价差</th><th>状态</th><th>说明</th>"
         "</tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table></div></div>"

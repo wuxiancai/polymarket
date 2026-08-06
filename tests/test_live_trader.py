@@ -7,11 +7,14 @@ from polyarb.runner import ScanResult
 
 
 class FakeLiveSession:
-    def __init__(self, enabled=True):
+    def __init__(self, enabled=True, balance=1000.0, positions=None):
         self.enabled = enabled
+        self.balance = balance
+        self.positions = positions or []
         self.buys = []
         self.logs = []
         self.errors = []
+        self.opportunities = []
 
     def is_logged_in(self):
         return True
@@ -20,7 +23,7 @@ class FakeLiveSession:
         return self.enabled
 
     def dashboard(self):
-        return {"logged_in": True, "balance_pusd": 1000.0, "positions": []}
+        return {"logged_in": True, "balance_pusd": self.balance, "positions": self.positions}
 
     def place_market_buy(self, token_id, amount):
         self.buys.append((token_id, amount))
@@ -31,6 +34,9 @@ class FakeLiveSession:
 
     def set_auto_trader_error(self, message):
         self.errors.append(message)
+
+    def upsert_live_opportunity(self, entry):
+        self.opportunities.append(entry)
 
 
 def opportunity() -> ArbOpportunity:
@@ -90,6 +96,7 @@ def test_live_auto_trader_places_yes_and_no_market_buys():
     assert round(session.buys[1][1], 2) == 556.0
     assert len(session.logs) == 1
     assert session.logs[0]["ok"] is True
+    assert session.opportunities[-1]["status"] == "已成交"
     assert item.last_execution["pair-1"] > 0
 
 
@@ -107,3 +114,25 @@ def test_live_auto_trader_skips_when_disabled():
 
     assert session.buys == []
     assert session.logs == []
+    assert session.opportunities[-1]["status"] == "可成交"
+
+
+def test_live_auto_trader_marks_insufficient_funds():
+    item, session = trader(
+        FakeLiveSession(
+            balance=1.0,
+            positions=[{"title": "Will Bitcoin be above $60,000 on August 10?", "initial_value": 0.5}],
+        )
+    )
+
+    item.on_result(
+        ScanResult(
+            markets=[],
+            pairs=1,
+            opportunities=[opportunity()],
+            scanned_at=datetime(2026, 8, 7, 12, 0, tzinfo=timezone.utc),
+        )
+    )
+
+    assert session.buys == []
+    assert session.opportunities[-1]["status"] == "资金不足"

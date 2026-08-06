@@ -14,7 +14,12 @@ from typing import Optional, Union
 from zoneinfo import ZoneInfo
 
 from .config import Config
-from .live import LiveCredentials, LiveSession, live_credentials_from_env
+from .live import (
+    LiveCredentials,
+    LiveSession,
+    live_credentials_from_env,
+    live_event_ids_from_env,
+)
 from .live_trader import LiveAutoTrader
 from .live_web import live_dashboard_payload, render_live_page
 from .models import DEFAULT_ASSETS, AssetSpec
@@ -153,10 +158,12 @@ def serve(config: Config, host: str = "127.0.0.1", port: int = 8787, auto_scan: 
     config = replace(config, allocation_ratios=store.allocation_ratios())
     live_session = LiveSession()
     env_credentials = live_credentials_from_env()
+    live_event_ids = live_event_ids_from_env()
     auto_login = os.getenv("POLYMARKET_AUTO_LOGIN", "").lower() in {"1", "true", "yes", "on"}
     if auto_login and env_credentials is not None:
         try:
             live_session.connect(env_credentials)
+            live_session.load_events(live_event_ids, DEFAULT_ASSETS)
         except Exception as exc:
             print(f"真实账户环境登录失败：{exc}")
     states = [
@@ -284,6 +291,13 @@ class PolyarbHandler(BaseHTTPRequestHandler):
         )
         try:
             data = self.live_session.connect(credentials)
+            try:
+                data["live_events"] = self.live_session.load_events(
+                    live_event_ids_from_env(),
+                    DEFAULT_ASSETS,
+                )
+            except Exception:
+                data["live_events"] = []
             self._json(live_dashboard_payload(data, _live_markets(self.web_states)))
         except Exception as exc:
             self._json({"ok": False, "message": f"登录失败：{exc}"}, HTTPStatus.UNAUTHORIZED)

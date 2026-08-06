@@ -1,5 +1,14 @@
 # Handoff
 
+## 2026-08-07 v2.2.0 首页事件监控与实时套利机会状态
+
+- 真实交易首页新增“监控事件”区块，优先按 `POLYMARKET_EVENT_IDS` 或 `BTC_EVENT_ID` / `ETH_EVENT_ID` / `XRP_EVENT_ID` / `SOL_EVENT_ID` 通过官方 SDK `get_event(id=...)` 获取事件；未配置 ID 时自动按 tag slug 拉取 BTC / ETH / XRP / SOL 活跃事件。
+- 首页新增“实时套利机会”区块，和模拟盘共用实时扫描结果，机会出现后立即显示。
+- 机会状态列支持“已成交”“资金不足”“可成交”“部分成交”“仅观察”：自动交易成功显示“已成交”，真实账户预算不足或下单返回余额不足显示“资金不足”。
+- `start.sh` 会把事件 ID 环境变量写入 systemd。
+- 版本号提升为 `2.2.0`，完成后打 tag `v2.2.0`；`v1.0.0` 仍可回退。
+- 验证：`python3 -m pytest -p no:cacheprovider tests -q`：72 passed；`bash -n deploy.sh start.sh` 与 `git diff --check` 通过。
+
 ## 2026-08-07 v2.1.0 真实自动交易
 
 - 首页真实交易从“手动下单”改为“自动真实交易”：登录后自动交易默认启用，和模拟盘共用扫描、交易对、价差档位和资金分配逻辑。
