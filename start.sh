@@ -9,6 +9,11 @@ if [[ ! -x ".venv/bin/python" ]]; then
   exit 1
 fi
 
+if ! .venv/bin/python -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)' >/dev/null 2>&1; then
+  echo "当前 .venv 使用 Python 3.11 以下版本；请删除 .venv 后重新执行 bash deploy.sh"
+  exit 1
+fi
+
 if ! command -v systemctl >/dev/null 2>&1; then
   echo "未发现 systemd/systemctl；服务器启动必须使用 systemd。"
   exit 1
@@ -43,6 +48,11 @@ PAPER_INITIAL_CAPITAL_USDT="${PAPER_INITIAL_CAPITAL_USDT:-10000}"
 REFRESH_SECONDS="${REFRESH_SECONDS:-30}"
 HOST="${HOST:-0.0.0.0}"
 PORT="${PORT:-8787}"
+POLYMARKET_WALLET_ADDRESS="${POLYMARKET_WALLET_ADDRESS:-}"
+POLYMARKET_PRIVATE_KEY="${POLYMARKET_PRIVATE_KEY:-}"
+POLYMARKET_RELAYER_API_KEY="${POLYMARKET_RELAYER_API_KEY:-}"
+POLYMARKET_RELAYER_API_KEY_ADDRESS="${POLYMARKET_RELAYER_API_KEY_ADDRESS:-}"
+POLYMARKET_AUTO_LOGIN="${POLYMARKET_AUTO_LOGIN:-false}"
 
 mkdir -p data
 
@@ -81,8 +91,19 @@ for env_name in \
   fi
 done
 
+LIVE_ENV_LINES=""
+for env_name in \
+  POLYMARKET_WALLET_ADDRESS POLYMARKET_PRIVATE_KEY \
+  POLYMARKET_RELAYER_API_KEY POLYMARKET_RELAYER_API_KEY_ADDRESS \
+  POLYMARKET_AUTO_LOGIN; do
+  line="$(systemd_env_line "$env_name")"
+  if [[ -n "$line" ]]; then
+    LIVE_ENV_LINES+="${line}"$'\n'
+  fi
+done
+
 SERVICE_CONTENT="[Unit]
-Description=Polyarb Polymarket BTC/ETH paper arbitrage dashboard
+Description=Polyarb Polymarket BTC/ETH/XRP/SOL live + paper dashboard
 After=network-online.target
 Wants=network-online.target
 
@@ -99,6 +120,7 @@ Environment=ALLOW_CURRENT_MONTH_ONLY=${ALLOW_CURRENT_MONTH_ONLY}
 Environment=PAPER_INITIAL_CAPITAL_USDT=${PAPER_INITIAL_CAPITAL_USDT}
 Environment=REFRESH_SECONDS=${REFRESH_SECONDS}
 ${PROXY_ENV_LINES}
+${LIVE_ENV_LINES}
 ExecStart=${ROOT_DIR}/.venv/bin/python -m polyarb web --host ${HOST} --port ${PORT}
 Restart=always
 RestartSec=5

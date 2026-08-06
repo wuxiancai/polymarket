@@ -2,14 +2,16 @@
 
 Polyarb 是一个 Polymarket BTC / ETH / XRP / SOL 日线及以上周期套利扫描与纸面模拟交易系统。
 
-> 当前版本：`v1.0.9`；稳定回退点：`v1.0.0`。
+> 当前版本：`v2.0.0`；稳定回退点：`v1.0.0`。
 
-系统只读取公开行情并执行本地模拟交易：
+系统默认首页为真实交易系统，模拟系统独立保留在 `/simulation`。
 
-- 不连接钱包
-- 不读取私钥
-- 不提交真实订单
-- 不做长期交易对
+- 首页：用户登录 Polymarket 账户，读取账户余额、持仓、已实现/未实现收益、未完成订单和最近成交，并可手动提交真实订单。
+- 真实下单必须勾选确认；不自动下单。
+- 私钥和 Relayer API key 只保存在进程内存或环境变量，不写入数据库。
+- `/simulation`：原有纸面模拟系统，不接钱包、不真实下单。
+
+真实交易依赖官方 `polymarket-client` SDK，需要 Python 3.11+。
 
 ## 功能范围
 
@@ -48,8 +50,10 @@ bash deploy.sh
 部署脚本会：
 
 1. 创建 `.venv`
-2. 安装当前项目
+2. 安装当前项目和 `polymarket-client`
 3. 初始化本地 SQLite 数据库
+
+`deploy.sh` 会自动优先选择 `python3.13 / python3.12 / python3.11`，满足真实交易 SDK 的 Python 版本要求。
 
 ## 一键启动系统
 
@@ -77,6 +81,10 @@ sudo systemctl stop polyarb
 
 页面会显示：
 
+- 真实账户：钱包地址、签名地址、账户类型、pUSD 余额、总资产
+- 当前持仓与已结束持仓收益
+- 未完成订单和最近成交
+- 真实下单表单（市价/限价，买入/卖出，必须勾选确认）
 - 资金分配设置：BTC / ETH / XRP / SOL 使用资金的百分比，可手动修改；保存需密码确认，密码只保存哈希，不落明文
 - 当前扫描状态
 - 收益概览：默认初始本金、BTC/ETH/XRP/SOL 分配本金、已用本金、累计收益、收益率
@@ -137,7 +145,14 @@ REFRESH_SECONDS=30
 POLYARB_DB=data/paper.sqlite3
 HOST=0.0.0.0
 PORT=8787
+POLYMARKET_WALLET_ADDRESS=0x...
+POLYMARKET_PRIVATE_KEY=0x...
+POLYMARKET_RELAYER_API_KEY=
+POLYMARKET_RELAYER_API_KEY_ADDRESS=
+POLYMARKET_AUTO_LOGIN=false
 ```
+
+真实交易凭证也可在首页登录表单中填写；登录态只保留在当前进程内，不持久化私钥。默认不会在服务启动时自动登录，只有显式设置 `POLYMARKET_AUTO_LOGIN=true` 才会读取环境变量自动连接。
 
 如果系统已存在 `polyarb.service` 且旧数据库文件还在，`POLYARB_DB` 留空会自动复用旧路径。需要主动迁移数据库时，先复制旧 sqlite 文件，再用新路径启动：
 

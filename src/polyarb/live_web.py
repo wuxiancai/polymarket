@@ -1,0 +1,465 @@
+from __future__ import annotations
+
+from html import escape
+from typing import Dict, List
+
+
+def render_live_page(session: dict, markets: List[dict]) -> str:
+    logged_in = bool(session.get("logged_in"))
+    error_html = _error_html(session)
+    account_html = _account_html(session) if logged_in else _login_html()
+    positions_html = _positions_html(session.get("positions", [])) if logged_in else ""
+    closed_html = _closed_html(session.get("closed_positions", [])) if logged_in else ""
+    orders_html = _orders_html(session.get("open_orders", [])) if logged_in else ""
+    trades_html = _trades_html(session.get("trades", [])) if logged_in else ""
+    order_html = _order_html(markets) if logged_in else ""
+    return f"""<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Polymarket 真实交易系统</title>
+  <style>
+    :root {{
+      --bg: #f6f7f9;
+      --ink: #18212f;
+      --muted: #647084;
+      --line: #d9dee7;
+      --panel: #ffffff;
+      --accent: #1f7a5f;
+      --danger: #b42318;
+      --warn: #8a5a00;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{ margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--ink); background: var(--bg); }}
+    header {{ border-bottom: 1px solid var(--line); background: var(--panel); }}
+    .wrap {{ width: min(1180px, calc(100vw - 32px)); margin: 0 auto; }}
+    .top {{ min-height: 92px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }}
+    h1 {{ margin: 0; font-size: 28px; line-height: 1.15; }}
+    p {{ color: var(--muted); margin: 8px 0 0; }}
+    main {{ padding: 22px 0 36px; }}
+    .toolbar {{ display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }}
+    button, .nav-btn {{ border: 1px solid #17624c; background: var(--accent); color: white; min-height: 40px; padding: 0 14px; border-radius: 6px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }}
+    button.secondary, .nav-btn.secondary {{ background: white; color: var(--ink); border-color: var(--line); }}
+    .panel {{ background: var(--panel); border: 1px solid var(--line); border-radius: 8px; margin-top: 16px; padding: 14px; }}
+    h2 {{ margin: 0 0 12px; font-size: 18px; }}
+    .metrics {{ display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 12px; }}
+    .metric {{ background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }}
+    .label {{ color: var(--muted); font-size: 13px; }}
+    .value {{ margin-top: 6px; font-size: 22px; font-weight: 800; overflow-wrap: anywhere; }}
+    .form-grid {{ display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }}
+    .form-grid label {{ display: grid; gap: 6px; color: var(--muted); font-size: 13px; font-weight: 700; }}
+    .form-grid input, .form-grid select {{ min-width: 0; min-height: 40px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; font-size: 15px; color: var(--ink); background: #fff; }}
+    .form-actions {{ display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; }}
+    .message {{ min-height: 18px; font-size: 13px; }}
+    .message.ok {{ color: var(--accent); }}
+    .message.error {{ color: var(--danger); }}
+    .error {{ color: var(--danger); font-weight: 700; }}
+    .table-scroll {{ max-height: 360px; overflow: auto; }}
+    table {{ width: max-content; min-width: 100%; border-collapse: collapse; font-size: 14px; table-layout: auto; }}
+    th, td {{ padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }}
+    th {{ color: var(--muted); background: #fbfcfd; }}
+    tr:last-child td {{ border-bottom: 0; }}
+    .empty {{ padding: 16px 12px; color: var(--muted); }}
+    .profit-positive {{ color: var(--accent); }}
+    .profit-negative {{ color: var(--danger); }}
+    @media (max-width: 760px) {{
+      .wrap {{ width: 100%; padding: 0 12px; }}
+      .top {{ flex-direction: column; align-items: flex-start; gap: 12px; min-height: auto; padding: 16px 0; }}
+      h1 {{ font-size: 22px; }}
+      main {{ padding: 14px 0 24px; }}
+      .toolbar {{ width: 100%; }}
+      button, .nav-btn {{ width: 100%; }}
+      .metrics {{ grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }}
+      .form-grid {{ grid-template-columns: 1fr; }}
+      .panel {{ border-radius: 12px; }}
+    }}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap top">
+      <div>
+        <h1>Polymarket 真实交易系统</h1>
+        <p>使用 Polymarket 账户资金交易，读取账户持仓与收益。</p>
+      </div>
+      <div class="toolbar">
+        <a class="nav-btn secondary" href="/simulation">模拟交易</a>
+        {_logout_button() if logged_in else ""}
+      </div>
+    </div>
+  </header>
+  <main class="wrap">
+    <div id="liveError">{error_html}</div>
+    <div id="liveAccount">{account_html}</div>
+    {order_html}
+    <div id="livePositions">{positions_html}</div>
+    <div id="liveClosed">{closed_html}</div>
+    <div id="liveOrders">{orders_html}</div>
+    <div id="liveTrades">{trades_html}</div>
+  </main>
+  <script>
+    function setText(id, value) {{
+      const el = document.getElementById(id);
+      if (el) el.textContent = value;
+    }}
+    function setHtml(id, html) {{
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = html;
+    }}
+    async function liveRefresh() {{
+      const response = await fetch('/api/live/dashboard');
+      const payload = await response.json();
+      setHtml('liveError', payload.error_html || '');
+      setHtml('liveAccount', payload.account_html || '');
+      setHtml('livePositions', payload.positions_html || '');
+      setHtml('liveClosed', payload.closed_html || '');
+      setHtml('liveOrders', payload.orders_html || '');
+      setHtml('liveTrades', payload.trades_html || '');
+      bindLiveEvents();
+    }}
+    async function liveLogin() {{
+      const message = document.getElementById('liveLoginMessage');
+      const button = document.getElementById('liveLoginBtn');
+      if (!message || !button) return;
+      button.disabled = true;
+      button.textContent = '登录中';
+      try {{
+        const response = await fetch('/api/live/login', {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify({{
+            wallet: document.getElementById('liveWallet').value,
+            private_key: document.getElementById('livePrivateKey').value,
+            relayer_api_key: document.getElementById('liveRelayerKey').value,
+            relayer_api_key_address: document.getElementById('liveRelayerAddress').value,
+          }}),
+        }});
+        const payload = await response.json();
+        if (response.ok) {{
+          window.location.reload();
+        }} else {{
+          message.textContent = payload.message || '登录失败';
+          message.className = 'message error';
+        }}
+      }} finally {{
+        button.disabled = false;
+        button.textContent = '登录真实账户';
+      }}
+    }}
+    async function liveLogout() {{
+      await fetch('/api/live/logout', {{ method: 'POST' }});
+      window.location.reload();
+    }}
+    function updateOrderFields() {{
+      const side = document.getElementById('liveSide')?.value || 'BUY';
+      const type = document.getElementById('liveOrderType')?.value || 'market';
+      const amountRow = document.getElementById('liveAmountRow');
+      const sharesRow = document.getElementById('liveSharesRow');
+      const priceRow = document.getElementById('livePriceRow');
+      if (!amountRow || !sharesRow || !priceRow) return;
+      amountRow.style.display = type === 'limit' || side === 'SELL' ? 'none' : '';
+      sharesRow.style.display = type === 'limit' || side === 'SELL' ? '' : 'none';
+      priceRow.style.display = type === 'limit' ? '' : 'none';
+    }}
+    async function liveOrder() {{
+      const message = document.getElementById('liveOrderMessage');
+      const button = document.getElementById('liveOrderBtn');
+      if (!message || !button) return;
+      const confirm = document.getElementById('liveConfirm').checked;
+      if (!confirm) {{
+        message.textContent = '请先勾选真实订单确认';
+        message.className = 'message error';
+        return;
+      }}
+      button.disabled = true;
+      button.textContent = '提交中';
+      try {{
+        const response = await fetch('/api/live/order', {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify({{
+            token_id: document.getElementById('liveTokenId').value,
+            side: document.getElementById('liveSide').value,
+            order_type: document.getElementById('liveOrderType').value,
+            amount: document.getElementById('liveAmount').value,
+            shares: document.getElementById('liveShares').value,
+            price: document.getElementById('livePrice').value,
+            confirm: true,
+          }}),
+        }});
+        const payload = await response.json();
+        message.textContent = payload.message || (payload.ok ? '订单已提交' : '订单失败');
+        message.className = payload.ok ? 'message ok' : 'message error';
+        if (payload.ok) await liveRefresh();
+      }} finally {{
+        button.disabled = false;
+        button.textContent = '提交真实订单';
+      }}
+    }}
+    async function liveCancel(orderId) {{
+      if (!window.confirm('确认取消订单 ' + orderId + '?')) return;
+      const response = await fetch('/api/live/cancel', {{
+        method: 'POST',
+        headers: {{ 'Content-Type': 'application/json' }},
+        body: JSON.stringify({{ order_id: orderId }}),
+      }});
+      const payload = await response.json();
+      window.alert(payload.message || '取消请求已提交');
+      await liveRefresh();
+    }}
+    function bindLiveEvents() {{
+      document.getElementById('liveLoginBtn')?.addEventListener('click', liveLogin);
+      document.getElementById('liveLogoutBtn')?.addEventListener('click', liveLogout);
+      document.getElementById('liveOrderBtn')?.addEventListener('click', liveOrder);
+      document.getElementById('liveSide')?.addEventListener('change', updateOrderFields);
+      document.getElementById('liveOrderType')?.addEventListener('change', updateOrderFields);
+      document.getElementById('liveMarketSelect')?.addEventListener('change', (event) => {{
+        const input = document.getElementById('liveTokenId');
+        if (input) input.value = event.target.value;
+      }});
+    }}
+    bindLiveEvents();
+    updateOrderFields();
+    setInterval(liveRefresh, 5000);
+  </script>
+</body>
+</html>"""
+
+
+def live_dashboard_payload(session: dict, markets: List[dict]) -> dict:
+    logged_in = bool(session.get("logged_in"))
+    return {
+        "logged_in": logged_in,
+        "error_html": _error_html(session),
+        "account_html": _account_html(session) if logged_in else _login_html(),
+        "positions_html": _positions_html(session.get("positions", [])) if logged_in else "",
+        "closed_html": _closed_html(session.get("closed_positions", [])) if logged_in else "",
+        "orders_html": _orders_html(session.get("open_orders", [])) if logged_in else "",
+        "trades_html": _trades_html(session.get("trades", [])) if logged_in else "",
+        "markets": markets,
+    }
+
+
+def _login_html() -> str:
+    return (
+        "<div class='panel'>"
+        "<h2>连接 Polymarket 账户</h2>"
+        "<div class='form-grid'>"
+        "<label>钱包地址<input id='liveWallet' type='text' autocomplete='off'></label>"
+        "<label>签名私钥<input id='livePrivateKey' type='password' autocomplete='off'></label>"
+        "<label>Relayer API Key（可选）<input id='liveRelayerKey' type='password' autocomplete='off'></label>"
+        "<label>Relayer 地址（可选）<input id='liveRelayerAddress' type='text' autocomplete='off'></label>"
+        "</div>"
+        "<div class='form-actions'><button id='liveLoginBtn'>登录真实账户</button>"
+        "<span class='message' id='liveLoginMessage'></span></div>"
+        "</div>"
+    )
+
+
+def _logout_button() -> str:
+    return "<button class='secondary' id='liveLogoutBtn'>退出登录</button>"
+
+
+def _error_html(session: dict) -> str:
+    error = session.get("error")
+    if not error:
+        return ""
+    return f"<p class='error'>{escape(str(error))}</p>"
+
+
+def _account_html(session: dict) -> str:
+    account = session.get("account") or {}
+    metrics = (
+        "<div class='metrics'>"
+        f"{_metric('pUSD 余额', _money(session.get('balance_pusd')), 'balancePusdValue')}"
+        f"{_metric('总资产', _money(session.get('portfolio_value')), 'portfolioValueValue')}"
+        f"{_metric('未实现收益', _signed_money(session.get('unrealized_pnl')), 'unrealizedPnlValue', _profit_class(session.get('unrealized_pnl')))}"
+        f"{_metric('已实现收益', _signed_money(session.get('realized_pnl')), 'realizedPnlValue', _profit_class(session.get('realized_pnl')))}"
+        "</div>"
+    )
+    rows = [
+        ("钱包", account.get("wallet")),
+        ("签名地址", account.get("signer")),
+        ("账户类型", _wallet_type_label(account.get("wallet_type"))),
+        ("Relayer API Key", "已配置" if account.get("has_relayer") else "未配置"),
+    ]
+    body = "".join(f"<tr><td>{escape(k)}</td><td>{escape(str(v))}</td></tr>" for k, v in rows)
+    return (
+        "<div class='panel'>"
+        "<h2>真实账户</h2>"
+        f"{metrics}"
+        "<div class='table-scroll'><table><thead><tr><th>字段</th><th>值</th></tr></thead>"
+        f"<tbody>{body}</tbody></table></div>"
+        "</div>"
+    )
+
+
+def _order_html(markets: List[dict]) -> str:
+    options = ["<option value=''>手动输入 Token ID</option>"]
+    for market in markets:
+        label = f"{escape(str(market.get('asset') or ''))} {escape(str(market.get('outcome') or ''))} - {escape(str(market.get('question') or ''))}"
+        options.append(f"<option value='{escape(str(market.get('token_id') or ''))}'>{label}</option>")
+    return (
+        "<div class='panel'>"
+        "<h2>真实下单</h2>"
+        "<div class='form-grid'>"
+        f"<label>市场/Token ID<select id='liveMarketSelect'>{''.join(options)}</select></label>"
+        "<label>Token ID<input id='liveTokenId' type='text' autocomplete='off'></label>"
+        "<label>方向<select id='liveSide'><option value='BUY'>买入</option><option value='SELL'>卖出</option></select></label>"
+        "<label>订单类型<select id='liveOrderType'><option value='market'>市价</option><option value='limit'>限价</option></select></label>"
+        "<label id='liveAmountRow'>市价买入支出 pUSD<input id='liveAmount' type='number' min='0' step='0.01'></label>"
+        "<label id='liveSharesRow'>份额<input id='liveShares' type='number' min='0' step='1'></label>"
+        "<label id='livePriceRow'>限价<input id='livePrice' type='number' min='0' step='0.01'></label>"
+        "<label><input id='liveConfirm' type='checkbox'> 我已确认这是真实订单</label>"
+        "</div>"
+        "<div class='form-actions'><button id='liveOrderBtn'>提交真实订单</button>"
+        "<span class='message' id='liveOrderMessage'></span></div>"
+        "</div>"
+    )
+
+
+def _positions_html(rows: List[dict]) -> str:
+    return _table_panel("当前持仓", rows, (
+        ("title", "市场"),
+        ("outcome", "方向"),
+        ("size", "份额"),
+        ("avg_price", "均价"),
+        ("current_value", "当前价值"),
+        ("cash_pnl", "未实现收益"),
+        ("percent_pnl", "收益率"),
+        ("end_date", "结束日期"),
+    ), "livePositions")
+
+
+def _closed_html(rows: List[dict]) -> str:
+    return _table_panel("已结束持仓收益", rows, (
+        ("title", "市场"),
+        ("outcome", "方向"),
+        ("total_bought", "累计买入"),
+        ("realized_pnl", "已实现收益"),
+        ("timestamp", "结束时间"),
+    ), "liveClosed")
+
+
+def _orders_html(rows: List[dict]) -> str:
+    return _table_panel("未完成订单", rows, (
+        ("id", "订单 ID"),
+        ("side", "方向"),
+        ("outcome", "方向"),
+        ("price", "价格"),
+        ("original_size", "数量"),
+        ("size_matched", "已成交"),
+        ("status", "状态"),
+        ("created_at", "创建时间"),
+    ), "liveOrders", cancelable=True)
+
+
+def _trades_html(rows: List[dict]) -> str:
+    return _table_panel("最近成交", rows, (
+        ("id", "成交 ID"),
+        ("side", "方向"),
+        ("outcome", "方向"),
+        ("price", "价格"),
+        ("size", "数量"),
+        ("status", "状态"),
+        ("matched_at", "时间"),
+    ), "liveTrades")
+
+
+def _table_panel(title: str, rows: List[dict], columns, panel_id: str, cancelable: bool = False) -> str:
+    if not rows:
+        return f"<div class='panel'><h2>{escape(title)}</h2><div class='empty'>暂无记录。</div></div>"
+    headers = "".join(f"<th>{escape(label)}</th>" for _key, label in columns)
+    if cancelable:
+        headers += "<th></th>"
+    body = []
+    for row in rows:
+        cells = []
+        for key, _label in columns:
+            value = row.get(key)
+            if key in {"cash_pnl", "realized_pnl"}:
+                text = _signed_money(value)
+                cells.append(f"<td class='{_profit_class(value)}'>{escape(text)}</td>")
+            elif key in {"price", "avg_price"}:
+                cells.append(f"<td>{escape(_price(value))}</td>")
+            elif key in {"current_value", "total_bought", "size", "original_size", "size_matched"}:
+                cells.append(f"<td>{escape(_money(value))}</td>")
+            elif key == "percent_pnl":
+                cells.append(f"<td>{escape(_percent(value))}</td>")
+            else:
+                cells.append(f"<td>{escape(_text(value))}</td>")
+        if cancelable:
+            order_id = str(row.get("id") or "")
+            cells.append(f"<td><button onclick=\"liveCancel('{escape(order_id)}')\">取消</button></td>")
+        body.append("<tr>" + "".join(cells) + "</tr>")
+    return (
+        f"<div class='panel'><h2>{escape(title)}</h2>"
+        f"<div class='table-scroll'><table><thead><tr>{headers}</tr></thead>"
+        f"<tbody>{''.join(body)}</tbody></table></div></div>"
+    )
+
+
+def _metric(label: str, value: str, element_id: str, value_class: str = "") -> str:
+    classes = "value"
+    if value_class:
+        classes += f" {value_class}"
+    return (
+        f"<div class='metric'><div class='label'>{escape(label)}</div>"
+        f"<div class='{escape(classes)}' id='{escape(element_id)}'>{escape(value)}</div></div>"
+    )
+
+
+def _wallet_type_label(value: object) -> str:
+    return {
+        "EOA": "EOA 钱包",
+        "POLY_PROXY": "Polymarket 代理钱包",
+        "GNOSIS_SAFE": "多签钱包",
+        "DEPOSIT_WALLET": "存款钱包",
+    }.get(str(value or ""), str(value or "-"))
+
+
+def _money(value: object) -> str:
+    try:
+        return f"{float(value):,.2f}"
+    except (TypeError, ValueError):
+        return "0.00"
+
+
+def _signed_money(value: object) -> str:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        number = 0.0
+    sign = "+" if number >= 0 else "-"
+    return f"{sign}{abs(number):,.2f}"
+
+
+def _percent(value: object) -> str:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        number = 0.0
+    return f"{number:.2f}%"
+
+
+def _price(value: object) -> str:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        number = 0.0
+    return f"{number:.2f}"
+
+
+def _profit_class(value: object) -> str:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        number = 0.0
+    return "profit-positive" if number >= 0 else "profit-negative"
+
+
+def _text(value: object) -> str:
+    if value is None:
+        return "-"
+    return str(value)

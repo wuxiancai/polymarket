@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import re
 import threading
 from dataclasses import dataclass, field, replace
@@ -13,6 +14,8 @@ from typing import Optional, Union
 from zoneinfo import ZoneInfo
 
 from .config import Config
+from .live import LiveCredentials, LiveSession, live_credentials_from_env
+from .live_web import live_dashboard_payload, render_live_page
 from .models import DEFAULT_ASSETS, AssetSpec
 from .runner import MIN_SPREAD_TO_OPEN_CENTS, PaperRunner, RealtimePaperRunner, ScanResult
 from .store import PaperStore
@@ -142,6 +145,14 @@ def serve(config: Config, host: str = "127.0.0.1", port: int = 8787, auto_scan: 
     store = PaperStore(config.database_path)
     store.initialize()
     config = replace(config, allocation_ratios=store.allocation_ratios())
+    live_session = LiveSession()
+    env_credentials = live_credentials_from_env()
+    auto_login = os.getenv("POLYMARKET_AUTO_LOGIN", "").lower() in {"1", "true", "yes", "on"}
+    if auto_login and env_credentials is not None:
+        try:
+            live_session.connect(env_credentials)
+        except Exception as exc:
+            print(f"真实账户环境登录失败：{exc}")
     states = [
         WebState(config=config, store=store, asset=asset, runner=PaperRunner(config, asset))
         for asset in DEFAULT_ASSETS
@@ -152,6 +163,8 @@ def serve(config: Config, host: str = "127.0.0.1", port: int = 8787, auto_scan: 
 
     class Handler(PolyarbHandler):
         web_states = states
+
+    Handler.live_session = live_session
 
     server = ThreadingHTTPServer((host, port), Handler)
     print(f"Polyarb Web 已启动: http://{host}:{port}")
@@ -165,10 +178,27 @@ def _start_realtime_loop(state: WebState) -> None:
 
 class PolyarbHandler(BaseHTTPRequestHandler):
     web_states: list[WebState]
+    live_session: LiveSession
 
     def do_GET(self) -> None:
         if self.path == "/" or self.path.startswith("/?"):
+            self._html(
+                render_live_page(
+                    self.live_session.dashboard(),
+                    _live_markets(self.web_states),
+                )
+            )
+            return
+        if self.path == "/simulation" or self.path.startswith("/simulation?"):
             self._html(render_dashboard(self.web_states))
+            return
+        if self.path == "/api/live/dashboard":
+            self._json(
+                live_dashboard_payload(
+                    self.live_session.dashboard(),
+                    _live_markets(self.web_states),
+                )
+            )
             return
         if self.path == "/api/status":
             self._json({"assets": [state.snapshot() for state in self.web_states]})
@@ -188,6 +218,19 @@ class PolyarbHandler(BaseHTTPRequestHandler):
         self.send_error(HTTPStatus.NOT_FOUND)
 
     def do_POST(self) -> None:
+        if self.path == "/api/live/login":
+            self._live_login()
+            return
+        if self.path == "/api/live/logout":
+            self.live_session.logout()
+            self._json({"ok": True, "message": "已退出登录。"})
+            return
+        if self.path == "/api/live/order":
+            self._live_order()
+            return
+        if self.path == "/api/live/cancel":
+            self._live_cancel()
+            return
         if self.path == "/api/scan":
             for state in self.web_states:
                 thread = threading.Thread(
@@ -203,15 +246,77 @@ class PolyarbHandler(BaseHTTPRequestHandler):
             return
         self.send_error(HTTPStatus.NOT_FOUND)
 
-    def _save_settings(self) -> None:
+    def _read_json_body(self) -> Optional[dict]:
         try:
             length = int(self.headers.get("Content-Length") or "0")
             raw = self.rfile.read(length).decode("utf-8") if length else "{}"
             payload = json.loads(raw)
         except (TypeError, ValueError):
-            self._json({"ok": False, "message": "请求格式错误，设置未保存。"}, HTTPStatus.BAD_REQUEST)
+            return None
+        return payload if isinstance(payload, dict) else None
+
+    def _live_login(self) -> None:
+        payload = self._read_json_body()
+        if payload is None:
+            self._json({"ok": False, "message": "请求格式错误。"}, HTTPStatus.BAD_REQUEST)
             return
-        if not isinstance(payload, dict):
+        wallet = str(payload.get("wallet") or "").strip()
+        private_key = str(payload.get("private_key") or "").strip()
+        if not wallet or not private_key:
+            self._json({"ok": False, "message": "请输入钱包地址和签名私钥。"}, HTTPStatus.BAD_REQUEST)
+            return
+        credentials = LiveCredentials(
+            wallet=wallet,
+            private_key=private_key,
+            relayer_api_key=str(payload.get("relayer_api_key") or "").strip(),
+            relayer_api_key_address=str(payload.get("relayer_api_key_address") or "").strip(),
+        )
+        try:
+            data = self.live_session.connect(credentials)
+            self._json(live_dashboard_payload(data, _live_markets(self.web_states)))
+        except Exception as exc:
+            self._json({"ok": False, "message": f"登录失败：{exc}"}, HTTPStatus.UNAUTHORIZED)
+
+    def _live_order(self) -> None:
+        payload = self._read_json_body()
+        if payload is None:
+            self._json({"ok": False, "message": "请求格式错误。"}, HTTPStatus.BAD_REQUEST)
+            return
+        if not self.live_session.is_logged_in():
+            self._json({"ok": False, "message": "请先登录真实账户。"}, HTTPStatus.UNAUTHORIZED)
+            return
+        try:
+            result = self.live_session.place_order(
+                token_id=str(payload.get("token_id") or ""),
+                side=str(payload.get("side") or "BUY"),
+                order_type=str(payload.get("order_type") or "market"),
+                amount=str(payload.get("amount") or ""),
+                shares=str(payload.get("shares") or ""),
+                price=str(payload.get("price") or ""),
+                confirm=bool(payload.get("confirm")),
+            )
+            status = HTTPStatus.OK if result.get("ok") else HTTPStatus.BAD_REQUEST
+            self._json(result, status)
+        except Exception as exc:
+            self._json({"ok": False, "message": str(exc)}, HTTPStatus.BAD_REQUEST)
+
+    def _live_cancel(self) -> None:
+        payload = self._read_json_body()
+        if payload is None:
+            self._json({"ok": False, "message": "请求格式错误。"}, HTTPStatus.BAD_REQUEST)
+            return
+        if not self.live_session.is_logged_in():
+            self._json({"ok": False, "message": "请先登录真实账户。"}, HTTPStatus.UNAUTHORIZED)
+            return
+        try:
+            result = self.live_session.cancel_order(str(payload.get("order_id") or ""))
+            self._json(result)
+        except Exception as exc:
+            self._json({"ok": False, "message": str(exc)}, HTTPStatus.BAD_REQUEST)
+
+    def _save_settings(self) -> None:
+        payload = self._read_json_body()
+        if payload is None:
             self._json({"ok": False, "message": "请求格式错误，设置未保存。"}, HTTPStatus.BAD_REQUEST)
             return
         ok, message, allocations, status = save_allocation_settings(self.web_states, payload)
@@ -934,6 +1039,30 @@ def _latest_markets_and_books(state: WebState) -> tuple[list, dict]:
         markets = list(state.runner.markets)
         books = dict(state.runner.books)
     return markets, books
+
+
+def _live_markets(states: list[WebState]) -> list[dict]:
+    rows = []
+    seen = set()
+    for state in states:
+        markets, _books = _latest_markets_and_books(state)
+        for market in markets:
+            for token_id, outcome in ((market.yes_token_id, "YES"), (market.no_token_id, "NO")):
+                if not token_id or token_id in seen:
+                    continue
+                seen.add(token_id)
+                rows.append(
+                    {
+                        "token_id": token_id,
+                        "asset": state.asset.symbol,
+                        "question": market.question,
+                        "outcome": outcome,
+                        "slug": market.slug,
+                        "event_slug": market.event_slug,
+                    }
+                )
+    rows.sort(key=lambda row: (str(row["question"]), str(row["outcome"])))
+    return rows[:500]
 
 
 def _market_condition_text(market) -> str:

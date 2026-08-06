@@ -1,5 +1,18 @@
 # Handoff
 
+## 2026-08-06 v2.0.0 首页真实交易系统与模拟页拆分
+
+- 首页 `/` 改为 Polymarket 真实交易系统；`/simulation` 保留原模拟系统，模拟逻辑、页面和 API 不改变。
+- 首页新增“模拟交易”按钮跳转 `/simulation`。
+- 真实交易使用官方 `polymarket-client` SDK：支持首页登录（钱包地址 + 签名私钥 + 可选 Relayer API key）、读取 pUSD 余额/总资产/当前持仓/已结束持仓收益/未完成订单/最近成交，并手动提交市价或限价订单、取消订单。
+- 真实下单必须勾选“我已确认这是真实订单”，后端也会校验 `confirm=true`，系统不会自动下单。
+- 私钥和 Relayer API key 不写数据库，只保存在当前进程内存；支持 `POLYMARKET_PRIVATE_KEY`、`POLYMARKET_WALLET_ADDRESS`、`POLYMARKET_RELAYER_API_KEY`、`POLYMARKET_RELAYER_API_KEY_ADDRESS` 环境变量，但只有显式设置 `POLYMARKET_AUTO_LOGIN=true` 才会在服务启动时自动登录。
+- 项目 Python 版本要求提升到 3.11+，`deploy.sh` 自动优先选择 `python3.13 / python3.12 / python3.11`；`start.sh` 会校验 `.venv` 版本。
+- 版本号提升为 `2.0.0`，完成后打 tag `v2.0.0`；`v1.0.0` 仍可回退。
+- 验证：`python3 -m pytest -p no:cacheprovider tests -q`：67 passed；`bash -n deploy.sh start.sh` 与 `git diff --check` 通过。
+- 运行态验证：Python 3.11 临时 venv 安装 `polymarket-client 0.3.0` 后，`/` 显示真实交易页与“模拟交易”按钮，`/simulation` 仍显示原模拟页，`/api/live/dashboard` 未登录返回登录表单，错误私钥登录返回 401 且不崩溃。
+- 真实账户余额、持仓、下单尚未验证：需要用户提供有效 Polymarket 钱包/签名私钥/Relayer API key 后实测。
+
 ## 2026-08-06 v1.0.9 资金分配设置与密码确认
 
 - 页面新增资金分配设置行，位于“收益概览”上方，一行显示 BTC / ETH / XRP / SOL 四个百分比、确认密码和保存按钮。
