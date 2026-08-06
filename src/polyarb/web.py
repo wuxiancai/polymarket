@@ -201,6 +201,7 @@ class PolyarbHandler(BaseHTTPRequestHandler):
                 render_live_page(
                     self.live_session.dashboard(),
                     _live_markets(self.web_states),
+                    _allocation_ratios(self.web_states),
                 )
             )
             return
@@ -212,6 +213,7 @@ class PolyarbHandler(BaseHTTPRequestHandler):
                 live_dashboard_payload(
                     self.live_session.dashboard(),
                     _live_markets(self.web_states),
+                    _allocation_ratios(self.web_states),
                 )
             )
             return
@@ -298,7 +300,13 @@ class PolyarbHandler(BaseHTTPRequestHandler):
                 )
             except Exception:
                 data["live_events"] = []
-            self._json(live_dashboard_payload(data, _live_markets(self.web_states)))
+            self._json(
+                live_dashboard_payload(
+                    data,
+                    _live_markets(self.web_states),
+                    _allocation_ratios(self.web_states),
+                )
+            )
         except Exception as exc:
             self._json({"ok": False, "message": f"登录失败：{exc}"}, HTTPStatus.UNAUTHORIZED)
 
@@ -939,6 +947,8 @@ def _apply_allocation_ratios(states: list[WebState], ratios: dict) -> None:
         state.config = new_config
         if state.runner is not None:
             state.runner.config = new_config
+        if state.live_trader is not None:
+            state.live_trader.config = new_config
 
 
 def _allocation_ratio(state: WebState) -> float:

@@ -101,3 +101,36 @@ def test_live_dashboard_payload_keeps_login_form_when_logged_out():
     assert payload["auto_trade_html"] == ""
     assert payload["events_html"] == ""
     assert payload["opportunities_html"] == ""
+
+
+def test_live_page_renders_allocation_settings_with_persisted_values():
+    html = render_live_page(
+        {"logged_in": False},
+        [],
+        {"BTC": 1.0, "ETH": 0.0, "XRP": 0.0, "SOL": 0.0},
+    )
+
+    assert "资金分配" in html
+    for symbol in ("BTC", "ETH", "XRP", "SOL"):
+        assert f'id="liveAlloc{symbol}"' in html
+    assert 'id="liveSettingsPassword"' in html
+    assert 'id="liveSaveSettingsBtn"' in html
+    assert "noneboy780308" not in html
+    assert "value='100'" in html
+    assert "saveLiveSettings" in html
+    assert html.index('id="allocationSettings"') < html.index('id="liveAccount"')
+
+
+def test_live_dashboard_payload_includes_allocation_settings():
+    payload = live_dashboard_payload(
+        {"logged_in": False},
+        [],
+        {"BTC": 1.0, "ETH": 0.0, "XRP": 0.0, "SOL": 0.0},
+    )
+
+    assert payload["settings"]["allocation_ratios"] == {
+        "BTC": 1.0,
+        "ETH": 0.0,
+        "XRP": 0.0,
+        "SOL": 0.0,
+    }

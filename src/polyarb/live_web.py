@@ -1,10 +1,16 @@
 from __future__ import annotations
 
 from html import escape
-from typing import Dict, List
+from typing import Dict, List, Optional
+
+from .models import DEFAULT_ALLOCATION_RATIOS, DEFAULT_ASSETS
 
 
-def render_live_page(session: dict, markets: List[dict]) -> str:
+def render_live_page(
+    session: dict,
+    markets: List[dict],
+    allocation_ratios: Optional[Dict[str, float]] = None,
+) -> str:
     logged_in = bool(session.get("logged_in"))
     error_html = _error_html(session)
     account_html = _account_html(session) if logged_in else _login_html()
@@ -18,6 +24,7 @@ def render_live_page(session: dict, markets: List[dict]) -> str:
     opportunities_html = (
         _live_opportunities_html(session.get("live_opportunities", [])) if logged_in else ""
     )
+    settings_html = _settings_html(allocation_ratios)
     return f"""<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -59,6 +66,25 @@ def render_live_page(session: dict, markets: List[dict]) -> str:
     .message {{ min-height: 18px; font-size: 13px; }}
     .message.ok {{ color: var(--accent); }}
     .message.error {{ color: var(--danger); }}
+    .settings-row {{
+      display: grid;
+      grid-template-columns: repeat(4, minmax(100px, 1fr)) minmax(170px, auto) auto auto;
+      gap: 10px;
+      align-items: end;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      margin-top: 16px;
+      padding: 14px;
+    }}
+    .settings-title {{ align-self: center; font-weight: 800; white-space: nowrap; }}
+    .settings-field {{ display: grid; gap: 4px; min-width: 0; }}
+    .settings-field label {{ color: var(--muted); font-size: 13px; font-weight: 700; }}
+    .settings-input {{ min-width: 0; min-height: 40px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; font-size: 15px; color: var(--ink); background: #fff; }}
+    .settings-field.settings-password-field {{ min-width: 170px; }}
+    .settings-message {{ align-self: center; min-width: 120px; min-height: 18px; font-size: 13px; }}
+    .settings-message.ok {{ color: var(--accent); }}
+    .settings-message.error {{ color: var(--danger); }}
     .error {{ color: var(--danger); font-weight: 700; }}
     .table-scroll {{ max-height: 360px; overflow: auto; }}
     table {{ width: max-content; min-width: 100%; border-collapse: collapse; font-size: 14px; table-layout: auto; }}
@@ -77,6 +103,11 @@ def render_live_page(session: dict, markets: List[dict]) -> str:
       button, .nav-btn {{ width: 100%; }}
       .metrics {{ grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }}
       .form-grid {{ grid-template-columns: 1fr; }}
+      .settings-row {{ grid-template-columns: 1fr; }}
+      .settings-title {{ grid-column: 1 / -1; }}
+      .settings-field.settings-password-field {{ min-width: 0; }}
+      #liveSaveSettingsBtn {{ grid-column: 1 / -1; }}
+      .settings-message {{ grid-column: 1 / -1; min-width: 0; }}
       .panel {{ border-radius: 12px; }}
     }}
   </style>
@@ -96,6 +127,7 @@ def render_live_page(session: dict, markets: List[dict]) -> str:
   </header>
   <main class="wrap">
     <div id="liveError">{error_html}</div>
+    {settings_html}
     <div id="liveAccount">{account_html}</div>
     {auto_trade_html}
     {execution_log_html}
@@ -189,19 +221,68 @@ def render_live_page(session: dict, markets: List[dict]) -> str:
       window.alert(payload.message || '取消请求已提交');
       await liveRefresh();
     }}
+    function applyLiveAllocations(allocations) {{
+      for (const symbol of ['BTC', 'ETH', 'XRP', 'SOL']) {{
+        const input = document.getElementById('liveAlloc' + symbol);
+        if (input) input.value = allocations[symbol] ?? 0;
+      }}
+    }}
+    async function saveLiveSettings() {{
+      const allocations = {{}};
+      for (const symbol of ['BTC', 'ETH', 'XRP', 'SOL']) {{
+        allocations[symbol] = Number(document.getElementById('liveAlloc' + symbol).value || 0);
+      }}
+      const password = document.getElementById('liveSettingsPassword').value;
+      const button = document.getElementById('liveSaveSettingsBtn');
+      const message = document.getElementById('liveSettingsMessage');
+      button.disabled = true;
+      button.textContent = '保存中';
+      try {{
+        const response = await fetch('/api/settings', {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify({{ allocations, password }}),
+        }});
+        const payload = await response.json();
+        message.textContent = payload.message || (response.ok ? '已保存' : '保存失败');
+        message.className = 'settings-message ' + (response.ok ? 'ok' : 'error');
+        if (response.ok) {{
+          document.getElementById('liveSettingsPassword').value = '';
+          applyLiveAllocations(payload.allocations || {{}});
+          await liveRefresh();
+        }}
+      }} finally {{
+        button.disabled = false;
+        button.textContent = '保存设置';
+      }}
+    }}
     function bindLiveEvents() {{
       document.getElementById('liveLoginBtn')?.addEventListener('click', liveLogin);
       document.getElementById('liveLogoutBtn')?.addEventListener('click', liveLogout);
       document.getElementById('liveAutoTradeBtn')?.addEventListener('click', liveAutoToggle);
     }}
+    function bindLiveSettings() {{
+      document.getElementById('liveSaveSettingsBtn')?.addEventListener('click', saveLiveSettings);
+      document.getElementById('liveSettingsPassword')?.addEventListener('keydown', (event) => {{
+        if (event.key === 'Enter') {{
+          event.preventDefault();
+          saveLiveSettings();
+        }}
+      }});
+    }}
     bindLiveEvents();
+    bindLiveSettings();
     setInterval(liveRefresh, 5000);
   </script>
 </body>
 </html>"""
 
 
-def live_dashboard_payload(session: dict, markets: List[dict]) -> dict:
+def live_dashboard_payload(
+    session: dict,
+    markets: List[dict],
+    allocation_ratios: Optional[Dict[str, float]] = None,
+) -> dict:
     logged_in = bool(session.get("logged_in"))
     return {
         "logged_in": logged_in,
@@ -218,7 +299,47 @@ def live_dashboard_payload(session: dict, markets: List[dict]) -> dict:
         "orders_html": _orders_html(session.get("open_orders", [])) if logged_in else "",
         "trades_html": _trades_html(session.get("trades", [])) if logged_in else "",
         "markets": markets,
+        "settings": {"allocation_ratios": _allocation_ratios(allocation_ratios)},
     }
+
+
+def _settings_html(allocation_ratios: Optional[Dict[str, float]] = None) -> str:
+    ratios = _allocation_ratios(allocation_ratios)
+    fields = []
+    for asset in DEFAULT_ASSETS:
+        percent = ratios.get(asset.symbol, asset.allocation_ratio) * 100
+        fields.append(
+            "<div class='settings-field'>"
+            f"<label for=\"liveAlloc{escape(asset.symbol)}\">{escape(asset.symbol)}</label>"
+            f"<input class='settings-input' id=\"liveAlloc{escape(asset.symbol)}\" type='number' min='0' max='100' step='0.1' value='{escape(f'{percent:g}')}'>"
+            "</div>"
+        )
+    password_field = (
+        "<div class='settings-field settings-password-field'>"
+        "<label for=\"liveSettingsPassword\">确认密码</label>"
+        "<input class='settings-input' id=\"liveSettingsPassword\" type='password' autocomplete='off' placeholder='请输入密码'>"
+        "</div>"
+    )
+    return (
+        "<div class='settings-row' id=\"allocationSettings\">"
+        "<span class='settings-title'>资金分配</span>"
+        + "".join(fields)
+        + password_field
+        + "<button class='secondary' id=\"liveSaveSettingsBtn\" type='button'>保存设置</button>"
+        + "<span class='settings-message' id=\"liveSettingsMessage\"></span>"
+        + "</div>"
+    )
+
+
+def _allocation_ratios(allocation_ratios: Optional[Dict[str, float]] = None) -> Dict[str, float]:
+    ratios = dict(DEFAULT_ALLOCATION_RATIOS)
+    if allocation_ratios:
+        for symbol in DEFAULT_ALLOCATION_RATIOS:
+            try:
+                ratios[symbol] = float(allocation_ratios.get(symbol, ratios[symbol]))
+            except (TypeError, ValueError):
+                continue
+    return ratios
 
 
 def _login_html() -> str:

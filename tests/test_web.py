@@ -3,6 +3,7 @@ from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
 from polyarb.config import Config
+from polyarb.live_trader import LiveAutoTrader
 from polyarb.models import DEFAULT_ASSETS, BTC_ASSET, ETH_ASSET, ArbOpportunity, Market, Predicate
 from polyarb.runner import PaperRunner, RealtimePaperRunner, ScanResult
 from polyarb.store import PaperStore
@@ -79,6 +80,8 @@ def test_save_allocation_settings_updates_running_state_and_dashboard(tmp_path):
         WebState(config=config, store=store, asset=asset, runner=PaperRunner(config, asset))
         for asset in DEFAULT_ASSETS
     ]
+    for state in states:
+        state.live_trader = LiveAutoTrader(None, config, state.asset)
 
     ok, message, allocations, status = save_allocation_settings(
         states,
@@ -95,6 +98,8 @@ def test_save_allocation_settings_updates_running_state_and_dashboard(tmp_path):
     assert store.allocation_ratios() == {"BTC": 1.0, "ETH": 0.0, "XRP": 0.0, "SOL": 0.0}
     assert states[0].config.allocation_ratios["BTC"] == 1.0
     assert states[0].runner.config.allocation_ratios["ETH"] == 0.0
+    assert states[0].live_trader.config.allocation_ratios["BTC"] == 1.0
+    assert states[0].live_trader.config.allocation_ratios["ETH"] == 0.0
     payload = dashboard_payload(states)
     assert payload["settings"]["allocation_ratios"] == {"BTC": 1.0, "ETH": 0.0, "XRP": 0.0, "SOL": 0.0}
     assert "1,000.00" in payload["portfolio"]["summary_html"]

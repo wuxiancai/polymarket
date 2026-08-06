@@ -1,5 +1,12 @@
 # Handoff
 
+## 2026-08-07 v2.3.0 真实交易首页资金分配
+
+- 真实交易首页新增“资金分配”设置区块，和模拟交易页共用 SQLite `settings` 表与 `/api/settings`；BTC / ETH / XRP / SOL 百分比合计必须为 100%，保存需密码确认，密码只保存哈希。
+- 保存成功后立即更新模拟 runner 和真实自动交易 `LiveAutoTrader.config.allocation_ratios`，真实自动交易按新分配比例计算预算。
+- 版本号提升为 `2.3.0`，完成后打 tag `v2.3.0`；`v1.0.0` 仍可回退。
+- 验证：`python3 -m pytest -p no:cacheprovider tests -q`：74 passed；`bash -n deploy.sh start.sh` 与 `git diff --check` 通过。
+
 ## 2026-08-07 v2.2.0 首页事件监控与实时套利机会状态
 
 - 真实交易首页新增“监控事件”区块，优先按 `POLYMARKET_EVENT_IDS` 或 `BTC_EVENT_ID` / `ETH_EVENT_ID` / `XRP_EVENT_ID` / `SOL_EVENT_ID` 通过官方 SDK `get_event(id=...)` 获取事件；未配置 ID 时自动按 tag slug 拉取 BTC / ETH / XRP / SOL 活跃事件。
