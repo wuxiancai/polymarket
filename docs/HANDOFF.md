@@ -1,5 +1,13 @@
 # Handoff
 
+## 2026-08-07 v2.5.0 已结算持仓自动兑换
+
+- 根据 Polymarket 官方文档，结算后不会自动把胜方 outcome token 转回 pUSD；需要调用 `SecureClient.redeem_positions(condition_id=...)` 完成兑换。
+- 真实交易新增后台自动兑换：每 60 秒检查账户 redeemable positions，按 condition_id 去重调用 `redeem_positions()`，等待交易确认，并把结果展示到首页“自动兑换记录”。
+- 持仓读取改用 `page_size=500` 与 `size_threshold=0`，避免小额已结算持仓被 Data API 默认阈值过滤。
+- 版本号提升为 `2.5.0`，完成后打 tag `v2.5.0`；`v1.0.0` 仍可回退。
+- 验证：`python3 -m pytest -p no:cacheprovider tests -q`：76 passed；`bash -n deploy.sh start.sh` 与 `git diff --check` 通过。
+
 ## 2026-08-07 v2.4.0 真实交易首页实时交易对与模拟盘对齐
 
 - 真实交易首页移除原“监控事件”区块，改为直接复用模拟交易页的“实时交易对”：同一 scanner 市场、同一 event 折叠、同一接近实时币价条件和到期日期渲染。

@@ -27,6 +27,16 @@ def logged_session():
                 "detail": "YES=订单已提交。; NO=订单已提交。",
             }
         ],
+        "redemption_log": [
+            {
+                "time": "2026-08-07T01:00:00+00:00",
+                "title": "Will Bitcoin be above $60,000 on August 4?",
+                "condition_id": "0xcondition",
+                "transaction_hash": "0xredeemed",
+                "ok": True,
+                "detail": "已自动兑换。",
+            }
+        ],
         "live_opportunities": [
             {
                 "time": "2026-08-07T00:00:00+00:00",
@@ -76,6 +86,7 @@ def test_live_page_renders_account_positions_and_auto_trading_when_logged_in():
     assert "自动真实交易" in html
     assert "自动交易已启用" in html
     assert "自动成交记录" in html
+    assert "自动兑换记录" in html
     assert "实时交易对" in html
     assert "监控事件" not in html
     assert "实时套利机会" in html
@@ -94,6 +105,7 @@ def test_live_dashboard_payload_keeps_login_form_when_logged_out():
     assert payload["auto_trade_html"] == ""
     assert payload["opportunities_html"] == ""
     assert "monitored_pairs_html" in payload
+    assert "redemption_html" in payload
 
 
 def test_live_page_renders_allocation_settings_with_persisted_values():

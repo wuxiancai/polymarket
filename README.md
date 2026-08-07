@@ -2,7 +2,7 @@
 
 Polyarb 是一个 Polymarket BTC / ETH / XRP / SOL 日线及以上周期套利扫描与纸面模拟交易系统。
 
-> 当前版本：`v2.4.0`；稳定回退点：`v1.0.0`。
+> 当前版本：`v2.5.0`；稳定回退点：`v1.0.0`。
 
 系统默认首页为真实交易系统，模拟系统独立保留在 `/simulation`。
 
@@ -85,6 +85,7 @@ sudo systemctl stop polyarb
 - 当前持仓与已结束持仓收益
 - 未完成订单和最近成交
 - 自动真实交易状态、启用/停止按钮和自动成交记录
+- 自动兑换记录：市场结算后自动调用 Polymarket redeem，胜方 pUSD 回到余额并释放占用资金
 - 实时交易对：首页与 `/simulation` 共用 scanner 实时交易对，按 event 折叠，默认显示接近实时币价的条件
 - 实时套利机会：和模拟盘共用扫描结果，状态显示“已成交”“资金不足”“可成交”等
 - 资金分配设置：首页与 `/simulation` 共用同一份 SQLite settings，BTC / ETH / XRP / SOL 使用资金的百分比，可手动修改；保存需密码确认，密码只保存哈希，不落明文，保存后立即影响模拟和真实自动交易预算
@@ -195,6 +196,7 @@ PORT=8888 SERVICE_NAME=polyarb bash start.sh
 - Web 页面使用 Python 标准库 HTTP 服务，不依赖前端框架。
 - Web 页面通过 `/api/dashboard` 局部更新数据，避免整页刷新抖动。
 - 纸面交易默认保存到 `data/paper.sqlite3`。
+- 已结算真实持仓通过 `SecureClient.redeem_positions()` 自动兑换，后台每 60 秒检查 redeemable positions，不需要依赖官网“自动兑换奖金”设置。
 - 收益统计默认初始本金为 `10000`，BTC 分配 `40%`，ETH 分配 `30%`，XRP 分配 `15%`，SOL 分配 `15%`；可在首页或 `/simulation` 页面按需修改并立即生效。
 - 同一资产同时有多个可执行机会时，按结束日期最近优先执行，再进入下一次扫描。
 - 页面收益按已执行纸面成交的累计保证利润计算，不做未结算市值浮盈浮亏。

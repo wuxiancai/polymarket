@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import os
 import threading
+import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 PUSD_DECIMALS = 1_000_000
+REDEEM_RETRY_SECONDS = 300
+MAX_REDEMPTION_LOG = 100
 
 
 class LiveTradingError(RuntimeError):
@@ -67,7 +71,7 @@ class LiveTradingClient:
         balance = _safe_float(getattr(balance_allowance, "balance", 0)) / PUSD_DECIMALS
         values = list(client.get_portfolio_values())
         portfolio_value = _sum_floats([_safe_float(getattr(item, "value", 0)) for item in values])
-        positions = _items(client.list_positions(page_size=100))
+        positions = _items(client.list_positions(page_size=500, size_threshold=0))
         closed_positions = _items(client.list_closed_positions(page_size=50))
         open_orders = _items(client.list_open_orders())
         trades = _items(client.list_account_trades())
@@ -169,6 +173,18 @@ class LiveTradingClient:
             "message": str(reason or "订单未能取消。"),
         }
 
+    def redeem_positions(self, condition_id: str) -> dict:
+        if not condition_id:
+            raise LiveTradingError("condition_id 不能为空。")
+        client = self._ensure_sdk_client()
+        handle = client.redeem_positions(condition_id=condition_id)
+        outcome = handle.wait()
+        return {
+            "ok": True,
+            "condition_id": condition_id,
+            "transaction_hash": _safe_text(getattr(outcome, "transaction_hash", "")),
+        }
+
 
 class LiveSession:
     def __init__(self) -> None:
@@ -179,6 +195,8 @@ class LiveSession:
         self.auto_trader_error: Optional[str] = None
         self.execution_log: List[dict] = []
         self._live_opportunities: Dict[str, dict] = {}
+        self.redemption_log: List[dict] = []
+        self._redeem_attempted: Dict[str, float] = {}
 
     def is_logged_in(self) -> bool:
         with self._lock:
@@ -198,6 +216,8 @@ class LiveSession:
             self.auto_trading_enabled = True
             self.auto_trader_error = None
             self._live_opportunities = {}
+            self.redemption_log = []
+            self._redeem_attempted = {}
         if old_client is not None:
             old_client.close()
         return snapshot
@@ -210,6 +230,7 @@ class LiveSession:
                     "logged_in": False,
                     "error": None,
                     "live_opportunities": [],
+                    "redemption_log": [],
                 }
             try:
                 data = client.snapshot()
@@ -223,11 +244,14 @@ class LiveSession:
                     "auto_trader_error": self.last_error,
                     "execution_log": list(self.execution_log[-200:]),
                     "live_opportunities": self._opportunity_snapshot(),
+                    "redemption_log": list(self.redemption_log[-MAX_REDEMPTION_LOG:]),
                 }
             data["auto_trading_enabled"] = self.auto_trading_enabled
             data["auto_trader_error"] = self.auto_trader_error
             data["execution_log"] = list(self.execution_log[-200:])
             data["live_opportunities"] = self._opportunity_snapshot()
+            self._auto_redeem(data.get("positions", []), client)
+            data["redemption_log"] = list(self.redemption_log[-MAX_REDEMPTION_LOG:])
             return data
 
     def is_auto_trading_enabled(self) -> bool:
@@ -249,6 +273,62 @@ class LiveSession:
     def set_auto_trader_error(self, message: Optional[str]) -> None:
         with self._lock:
             self.auto_trader_error = message
+
+    def _auto_redeem(self, positions: List[dict], client: LiveTradingClient) -> None:
+        now = time.time()
+        seen_conditions = set()
+        for position in positions:
+            if not bool(position.get("redeemable")):
+                continue
+            condition_id = str(position.get("condition_id") or "")
+            if not condition_id or condition_id in seen_conditions:
+                continue
+            seen_conditions.add(condition_id)
+            last_attempt = self._redeem_attempted.get(condition_id)
+            if last_attempt is not None and now - last_attempt < REDEEM_RETRY_SECONDS:
+                continue
+            self._redeem_attempted[condition_id] = now
+            title = str(position.get("title") or "")
+            try:
+                result = client.redeem_positions(condition_id)
+            except Exception as exc:
+                self._append_redemption_log(
+                    {
+                        "time": datetime.now(timezone.utc).isoformat(),
+                        "condition_id": condition_id,
+                        "title": title,
+                        "transaction_hash": "",
+                        "ok": False,
+                        "detail": str(exc),
+                    }
+                )
+                continue
+            self._append_redemption_log(
+                {
+                    "time": datetime.now(timezone.utc).isoformat(),
+                    "condition_id": condition_id,
+                    "title": title,
+                    "transaction_hash": str(result.get("transaction_hash") or ""),
+                    "ok": bool(result.get("ok")),
+                    "detail": "已自动兑换。" if result.get("ok") else "自动兑换失败。",
+                }
+            )
+
+    def _append_redemption_log(self, entry: dict) -> None:
+        self.redemption_log.append(entry)
+        self.redemption_log = self.redemption_log[-MAX_REDEMPTION_LOG:]
+
+    def auto_redeem_once(self) -> None:
+        with self._lock:
+            client = self._client
+            if client is None:
+                return
+            try:
+                data = client.snapshot()
+            except Exception as exc:
+                self.last_error = str(exc)
+                return
+            self._auto_redeem(data.get("positions", []), client)
 
     def upsert_live_opportunity(self, entry: dict) -> None:
         with self._lock:
@@ -305,6 +385,8 @@ class LiveSession:
             self.auto_trader_error = None
             self.execution_log = []
             self._live_opportunities = {}
+            self.redemption_log = []
+            self._redeem_attempted = {}
         if client is not None:
             client.close()
 
@@ -348,6 +430,7 @@ def _position_dict(item: Any) -> dict:
         "slug": _safe_text(getattr(item, "slug", "")),
         "event_slug": _safe_text(getattr(item, "event_slug", "")),
         "outcome": _safe_text(getattr(item, "outcome", "")),
+        "redeemable": bool(getattr(item, "redeemable", False)),
         "end_date": _safe_text(getattr(item, "end_date", "")),
     }
 

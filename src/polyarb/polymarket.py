@@ -101,7 +101,7 @@ def _get_json(url: str):
     request = Request(
         url,
         headers={
-            "User-Agent": "polyarb/2.4.0 (+https://polymarket.com)",
+            "User-Agent": "polyarb/2.5.0 (+https://polymarket.com)",
             "Accept": "application/json",
         },
     )

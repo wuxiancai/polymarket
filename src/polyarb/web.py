@@ -5,6 +5,7 @@ import json
 import os
 import re
 import threading
+import time
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from html import escape
@@ -156,6 +157,7 @@ def serve(config: Config, host: str = "127.0.0.1", port: int = 8787, auto_scan: 
     store.initialize()
     config = replace(config, allocation_ratios=store.allocation_ratios())
     live_session = LiveSession()
+    _start_redemption_loop(live_session)
     env_credentials = live_credentials_from_env()
     auto_login = os.getenv("POLYMARKET_AUTO_LOGIN", "").lower() in {"1", "true", "yes", "on"}
     if auto_login and env_credentials is not None:
@@ -185,6 +187,19 @@ def serve(config: Config, host: str = "127.0.0.1", port: int = 8787, auto_scan: 
 
 def _start_realtime_loop(state: WebState) -> None:
     thread = threading.Thread(target=state.run_realtime, name="polyarb-realtime-scanner", daemon=True)
+    thread.start()
+
+
+def _start_redemption_loop(live_session: LiveSession) -> None:
+    def loop() -> None:
+        while True:
+            try:
+                live_session.auto_redeem_once()
+            except Exception as exc:
+                print(f"自动兑换检查失败：{exc}")
+            time.sleep(60)
+
+    thread = threading.Thread(target=loop, name="polyarb-auto-redeem", daemon=True)
     thread.start()
 
 

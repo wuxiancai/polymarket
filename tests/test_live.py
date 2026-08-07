@@ -4,6 +4,7 @@ import pytest
 
 from polyarb.live import (
     LiveCredentials,
+    LiveSession,
     LiveTradingClient,
     LiveTradingError,
     live_credentials_from_env,
@@ -23,6 +24,11 @@ class FakePaginator:
         return FakePage(self.items)
 
 
+class FakeTransactionHandle:
+    def wait(self):
+        return SimpleNamespace(transaction_hash="0xredeemed")
+
+
 class FakeSdkClient:
     wallet = "0xwallet"
     signer = "0xsigner"
@@ -31,6 +37,7 @@ class FakeSdkClient:
     def __init__(self):
         self.market_order_calls = []
         self.limit_order_calls = []
+        self.redeem_calls = []
 
     def get_balance_allowance(self, **kwargs):
         return SimpleNamespace(balance=1_000_000, allowances={})
@@ -53,6 +60,7 @@ class FakeSdkClient:
                     slug="bitcoin",
                     event_slug="bitcoin-event",
                     outcome="YES",
+                    redeemable=False,
                     end_date="2026-08-10",
                 )
             ]
@@ -125,6 +133,11 @@ class FakeSdkClient:
     def cancel_order(self, **kwargs):
         self.cancel_call = kwargs
 
+    def redeem_positions(self, **kwargs):
+        self.redeem_calls.append(kwargs)
+        return FakeTransactionHandle()
+
+
 def credentials():
     return LiveCredentials(
         private_key="0xsecret",
@@ -150,6 +163,7 @@ def test_live_snapshot_returns_account_balance_positions_and_orders():
     assert data["account"]["wallet"] == "0xwallet"
     assert data["account"]["has_relayer"] is True
     assert data["positions"][0]["outcome"] == "YES"
+    assert data["positions"][0]["redeemable"] is False
     assert data["closed_positions"][0]["realized_pnl"] == 3.25
     assert data["open_orders"][0]["id"] == "order-1"
     assert data["trades"][0]["id"] == "trade-1"
@@ -202,6 +216,34 @@ def test_live_order_places_market_buy_sell_and_limit():
     )
     assert fake.limit_order_calls[0]["side"] == "BUY"
     assert fake.limit_order_calls[0]["size"] == "7"
+
+
+def test_live_client_redeems_position():
+    item, fake = client()
+
+    result = item.redeem_positions("0xcondition")
+
+    assert result["ok"] is True
+    assert result["transaction_hash"] == "0xredeemed"
+    assert fake.redeem_calls == [{"condition_id": "0xcondition"}]
+
+
+def test_live_session_auto_redeems_redeemable_positions_once_per_condition():
+    session = LiveSession()
+    fake = FakeSdkClient()
+    item = LiveTradingClient(credentials(), sdk_client=fake)
+    positions = [
+        {"condition_id": "0xa", "title": "Market A", "redeemable": True},
+        {"condition_id": "0xa", "title": "Market A", "redeemable": True},
+        {"condition_id": "0xb", "title": "Market B", "redeemable": True},
+        {"condition_id": "0xc", "title": "Market C", "redeemable": False},
+    ]
+
+    session._auto_redeem(positions, item)
+
+    assert [call["condition_id"] for call in fake.redeem_calls] == ["0xa", "0xb"]
+    assert len(session.redemption_log) == 2
+    assert all(row["ok"] for row in session.redemption_log)
 
 
 def test_live_credentials_from_env(monkeypatch):

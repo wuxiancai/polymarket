@@ -21,6 +21,7 @@ def render_live_page(
     trades_html = _trades_html(session.get("trades", [])) if logged_in else ""
     auto_trade_html = _auto_trade_html(session) if logged_in else ""
     execution_log_html = _execution_log_html(session.get("execution_log", [])) if logged_in else ""
+    redemption_html = _redemption_html(session.get("redemption_log", [])) if logged_in else ""
     opportunities_html = (
         _live_opportunities_html(session.get("live_opportunities", [])) if logged_in else ""
     )
@@ -188,6 +189,7 @@ def render_live_page(
     <div id="liveAccount">{account_html}</div>
     {auto_trade_html}
     {execution_log_html}
+    {redemption_html}
     {monitored_pairs_panel}
     {opportunities_html}
     <div id="livePositions">{positions_html}</div>
@@ -215,6 +217,7 @@ def render_live_page(
       setHtml('liveAccount', payload.account_html || '');
       setHtml('liveAutoTrade', payload.auto_trade_html || '');
       setHtml('liveExecutionLog', payload.execution_log_html || '');
+      setHtml('liveRedemptions', payload.redemption_html || '');
       setHtml('liveMonitoredPairs', payload.monitored_pairs_html || '');
       setHtml('liveOpportunities', payload.opportunities_html || '');
       setHtml('livePositions', payload.positions_html || '');
@@ -348,6 +351,7 @@ def live_dashboard_payload(
         "account_html": _account_html(session) if logged_in else _login_html(),
         "auto_trade_html": _auto_trade_html(session) if logged_in else "",
         "execution_log_html": _execution_log_html(session.get("execution_log", [])) if logged_in else "",
+        "redemption_html": _redemption_html(session.get("redemption_log", [])) if logged_in else "",
         "monitored_pairs_html": monitored_pairs_html,
         "opportunities_html": (
             _live_opportunities_html(session.get("live_opportunities", [])) if logged_in else ""
@@ -499,6 +503,32 @@ def _execution_log_html(rows: List[dict]) -> str:
         "<div class='panel'><h2>自动成交记录</h2>"
         "<div class='table-scroll'><table><thead><tr>"
         "<th>时间</th><th>币种</th><th>交易对</th><th>YES 订单</th><th>NO 订单</th><th>状态</th><th>说明</th>"
+        "</tr></thead><tbody>"
+        + "".join(body)
+        + "</tbody></table></div></div>"
+    )
+
+
+def _redemption_html(rows: List[dict]) -> str:
+    if not rows:
+        return "<div class='panel'><h2>自动兑换记录</h2><div class='empty'>暂无已结算持仓需要兑换。</div></div>"
+    body = []
+    for row in rows:
+        ok = "成功" if row.get("ok") else "失败"
+        body.append(
+            "<tr>"
+            f"<td>{escape(_text(row.get('time')))}</td>"
+            f"<td>{escape(_text(row.get('title')))}</td>"
+            f"<td>{escape(_text(row.get('condition_id')))}</td>"
+            f"<td>{escape(_text(row.get('transaction_hash')))}</td>"
+            f"<td>{escape(ok)}</td>"
+            f"<td>{escape(_text(row.get('detail')))}</td>"
+            "</tr>"
+        )
+    return (
+        "<div class='panel'><h2>自动兑换记录</h2>"
+        "<div class='table-scroll'><table><thead><tr>"
+        "<th>时间</th><th>市场</th><th>Condition ID</th><th>交易哈希</th><th>状态</th><th>说明</th>"
         "</tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table></div></div>"
