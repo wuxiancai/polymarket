@@ -18,7 +18,6 @@ from .live import (
     LiveCredentials,
     LiveSession,
     live_credentials_from_env,
-    live_event_ids_from_env,
 )
 from .live_trader import LiveAutoTrader
 from .live_web import live_dashboard_payload, render_live_page
@@ -158,12 +157,10 @@ def serve(config: Config, host: str = "127.0.0.1", port: int = 8787, auto_scan: 
     config = replace(config, allocation_ratios=store.allocation_ratios())
     live_session = LiveSession()
     env_credentials = live_credentials_from_env()
-    live_event_ids = live_event_ids_from_env()
     auto_login = os.getenv("POLYMARKET_AUTO_LOGIN", "").lower() in {"1", "true", "yes", "on"}
     if auto_login and env_credentials is not None:
         try:
             live_session.connect(env_credentials)
-            live_session.load_events(live_event_ids, DEFAULT_ASSETS)
         except Exception as exc:
             print(f"真实账户环境登录失败：{exc}")
     states = [
@@ -202,6 +199,7 @@ class PolyarbHandler(BaseHTTPRequestHandler):
                     self.live_session.dashboard(),
                     _live_markets(self.web_states),
                     _allocation_ratios(self.web_states),
+                    _live_monitored_pairs_html(self.web_states),
                 )
             )
             return
@@ -214,6 +212,7 @@ class PolyarbHandler(BaseHTTPRequestHandler):
                     self.live_session.dashboard(),
                     _live_markets(self.web_states),
                     _allocation_ratios(self.web_states),
+                    _live_monitored_pairs_html(self.web_states),
                 )
             )
             return
@@ -293,18 +292,12 @@ class PolyarbHandler(BaseHTTPRequestHandler):
         )
         try:
             data = self.live_session.connect(credentials)
-            try:
-                data["live_events"] = self.live_session.load_events(
-                    live_event_ids_from_env(),
-                    DEFAULT_ASSETS,
-                )
-            except Exception:
-                data["live_events"] = []
             self._json(
                 live_dashboard_payload(
                     data,
                     _live_markets(self.web_states),
                     _allocation_ratios(self.web_states),
+                    _live_monitored_pairs_html(self.web_states),
                 )
             )
         except Exception as exc:
@@ -1113,6 +1106,10 @@ def _live_markets(states: list[WebState]) -> list[dict]:
                 )
     rows.sort(key=lambda row: (str(row["question"]), str(row["outcome"])))
     return rows[:500]
+
+
+def _live_monitored_pairs_html(states: list[WebState]) -> str:
+    return _monitored_event_groups_html(_monitored_event_groups(states))
 
 
 def _market_condition_text(market) -> str:

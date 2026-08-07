@@ -7,7 +7,6 @@ from polyarb.live import (
     LiveTradingClient,
     LiveTradingError,
     live_credentials_from_env,
-    live_event_ids_from_env,
 )
 
 
@@ -126,29 +125,6 @@ class FakeSdkClient:
     def cancel_order(self, **kwargs):
         self.cancel_call = kwargs
 
-    def get_event(self, id=None):
-        return SimpleNamespace(
-            id=str(id),
-            slug="event-slug",
-            title="Event Title",
-            markets=(
-                SimpleNamespace(
-                    id="market-1",
-                    slug="market-slug",
-                    question="Will Bitcoin be above $60,000?",
-                    condition_id="0xcondition",
-                    outcomes=SimpleNamespace(
-                        yes=SimpleNamespace(token_id="yes-token"),
-                        no=SimpleNamespace(token_id="no-token"),
-                    ),
-                ),
-            ),
-        )
-
-    def list_events(self, **kwargs):
-        return FakePaginator([self.get_event(id="90177")])
-
-
 def credentials():
     return LiveCredentials(
         private_key="0xsecret",
@@ -240,20 +216,3 @@ def test_live_credentials_from_env(monkeypatch):
     assert value.private_key == "0xsecret"
     assert value.relayer_api_key == "relayer"
     assert "0xsecret" not in repr(value)
-
-
-def test_live_event_ids_from_env(monkeypatch):
-    monkeypatch.setenv("POLYMARKET_EVENT_IDS", "90177, 90222")
-    monkeypatch.setenv("BTC_EVENT_ID", "90333")
-
-    assert live_event_ids_from_env() == ["90177", "90222", "90333"]
-
-
-def test_live_client_fetches_events_by_id():
-    item, _fake = client()
-
-    events = item.fetch_events(["90177"], [])
-
-    assert len(events) == 1
-    assert events[0]["id"] == "90177"
-    assert events[0]["markets"][0]["yes_token_id"] == "yes-token"

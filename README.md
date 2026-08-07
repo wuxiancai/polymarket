@@ -2,7 +2,7 @@
 
 Polyarb 是一个 Polymarket BTC / ETH / XRP / SOL 日线及以上周期套利扫描与纸面模拟交易系统。
 
-> 当前版本：`v2.3.0`；稳定回退点：`v1.0.0`。
+> 当前版本：`v2.4.0`；稳定回退点：`v1.0.0`。
 
 系统默认首页为真实交易系统，模拟系统独立保留在 `/simulation`。
 
@@ -85,12 +85,11 @@ sudo systemctl stop polyarb
 - 当前持仓与已结束持仓收益
 - 未完成订单和最近成交
 - 自动真实交易状态、启用/停止按钮和自动成交记录
-- 监控事件：按 ID 或 tag 拉取的 BTC / ETH / XRP / SOL 事件
+- 实时交易对：首页与 `/simulation` 共用 scanner 实时交易对，按 event 折叠，默认显示接近实时币价的条件
 - 实时套利机会：和模拟盘共用扫描结果，状态显示“已成交”“资金不足”“可成交”等
 - 资金分配设置：首页与 `/simulation` 共用同一份 SQLite settings，BTC / ETH / XRP / SOL 使用资金的百分比，可手动修改；保存需密码确认，密码只保存哈希，不落明文，保存后立即影响模拟和真实自动交易预算
 - 当前扫描状态
 - 收益概览：默认初始本金、BTC/ETH/XRP/SOL 分配本金、已用本金、累计收益、收益率
-- 实时交易对：按到期时间最近排序，一个 event 一个序号，默认只显示接近实时币价的条件，其他条件折叠，默认 5 行滚动
 - 模拟持仓：每笔未结算模拟成交形成的 YES/NO 两腿持仓、成本、最低赔付和预估收益
 - 页面金额统一保留 2 位小数，不显示 `USDT` 单位
 - 已过滤后的 BTC / ETH / XRP / SOL 市场数量
@@ -152,16 +151,9 @@ POLYMARKET_PRIVATE_KEY=0x...
 POLYMARKET_RELAYER_API_KEY=
 POLYMARKET_RELAYER_API_KEY_ADDRESS=
 POLYMARKET_AUTO_LOGIN=false
-POLYMARKET_EVENT_IDS=90177,...
-BTC_EVENT_ID=
-ETH_EVENT_ID=
-XRP_EVENT_ID=
-SOL_EVENT_ID=
 ```
 
 真实交易凭证也可在首页登录表单中填写；登录态只保留在当前进程内，不持久化私钥。默认不会在服务启动时自动登录，只有显式设置 `POLYMARKET_AUTO_LOGIN=true` 才会读取环境变量自动连接。
-
-首页“监控事件”优先按 `POLYMARKET_EVENT_IDS` / `BTC_EVENT_ID` / `ETH_EVENT_ID` / `XRP_EVENT_ID` / `SOL_EVENT_ID` 获取事件；未配置 ID 时自动按 BTC / ETH / XRP / SOL 的 tag slug 拉取活跃事件。
 
 如果系统已存在 `polyarb.service` 且旧数据库文件还在，`POLYARB_DB` 留空会自动复用旧路径。需要主动迁移数据库时，先复制旧 sqlite 文件，再用新路径启动：
 

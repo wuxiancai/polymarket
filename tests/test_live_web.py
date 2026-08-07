@@ -27,14 +27,6 @@ def logged_session():
                 "detail": "YES=订单已提交。; NO=订单已提交。",
             }
         ],
-        "live_events": [
-            {
-                "id": "90177",
-                "slug": "bitcoin-event",
-                "title": "Bitcoin event",
-                "markets": [{"question": "Will Bitcoin be above $60,000?"}],
-            }
-        ],
         "live_opportunities": [
             {
                 "time": "2026-08-07T00:00:00+00:00",
@@ -84,7 +76,8 @@ def test_live_page_renders_account_positions_and_auto_trading_when_logged_in():
     assert "自动真实交易" in html
     assert "自动交易已启用" in html
     assert "自动成交记录" in html
-    assert "监控事件" in html
+    assert "实时交易对" in html
+    assert "监控事件" not in html
     assert "实时套利机会" in html
     assert "资金不足" in html
     assert "真实下单" not in html
@@ -99,8 +92,8 @@ def test_live_dashboard_payload_keeps_login_form_when_logged_out():
     assert "连接 Polymarket 账户" in payload["account_html"]
     assert payload["positions_html"] == ""
     assert payload["auto_trade_html"] == ""
-    assert payload["events_html"] == ""
     assert payload["opportunities_html"] == ""
+    assert "monitored_pairs_html" in payload
 
 
 def test_live_page_renders_allocation_settings_with_persisted_values():
@@ -134,3 +127,22 @@ def test_live_dashboard_payload_includes_allocation_settings():
         "XRP": 0.0,
         "SOL": 0.0,
     }
+
+
+def test_live_page_renders_simulation_monitored_pairs():
+    monitored = (
+        "<div class='table-scroll monitored-pairs-scroll'>"
+        "<table class='monitored-pair-table'><thead><tr><th>序号</th><th>事件 / 实时条件</th><th>到期日期</th></tr></thead>"
+        "<tbody><tr><td>1</td><td>Bitcoin price event</td><td>2026-08-04</td></tr></tbody></table></div>"
+    )
+
+    html = render_live_page(
+        {"logged_in": False},
+        [],
+        monitored_pairs_html=monitored,
+    )
+
+    assert "实时交易对" in html
+    assert "monitored-pair-table" in html
+    assert "Bitcoin price event" in html
+    assert "监控事件" not in html

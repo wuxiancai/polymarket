@@ -9,6 +9,7 @@ from polyarb.runner import PaperRunner, RealtimePaperRunner, ScanResult
 from polyarb.store import PaperStore
 from polyarb.web import (
     WebState,
+    _live_monitored_pairs_html,
     _profit_class,
     dashboard_payload,
     format_standard_time,
@@ -273,6 +274,28 @@ def test_dashboard_monitored_pairs_falls_back_to_realtime_runner_markets(tmp_pat
 
     assert "What price will Bitcoin be on August 4?" in html
     assert "等待首次扫描" not in html
+
+
+def test_live_monitored_pairs_uses_same_renderer_as_simulation(tmp_path):
+    config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
+    store = PaperStore(config.database_path)
+    store.initialize()
+    state = WebState(config=config, store=store, asset=BTC_ASSET, runner=PaperRunner(config, BTC_ASSET))
+    state.latest_result = ScanResult(
+        markets=[
+            monitored_market(
+                "near",
+                "Will the price of Bitcoin be above $60,000 on August 4?",
+                "2026-08-04T16:00:00Z",
+                event_slug="price-event",
+            )
+        ],
+        pairs=1,
+        opportunities=[],
+        scanned_at=datetime(2026, 8, 2, 12, 0, tzinfo=timezone.utc),
+    )
+
+    assert _live_monitored_pairs_html([state]) == dashboard_payload([state])["monitored_pairs_html"]
 
 
 def test_dashboard_renders_xrp_and_solana_asset_panels(tmp_path):

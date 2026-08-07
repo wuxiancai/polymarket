@@ -1,5 +1,12 @@
 # Handoff
 
+## 2026-08-07 v2.4.0 真实交易首页实时交易对与模拟盘对齐
+
+- 真实交易首页移除原“监控事件”区块，改为直接复用模拟交易页的“实时交易对”：同一 scanner 市场、同一 event 折叠、同一接近实时币价条件和到期日期渲染。
+- 移除只服务旧“监控事件”的 `POLYMARKET_EVENT_IDS` / `*_EVENT_ID` SDK 事件拉取链路及 `start.sh` 环境透传。
+- 版本号提升为 `2.4.0`，完成后打 tag `v2.4.0`；`v1.0.0` 仍可回退。
+- 验证：`python3 -m pytest -p no:cacheprovider tests -q`：74 passed；`bash -n deploy.sh start.sh` 与 `git diff --check` 通过。
+
 ## 2026-08-07 v2.3.0 真实交易首页资金分配
 
 - 真实交易首页新增“资金分配”设置区块，和模拟交易页共用 SQLite `settings` 表与 `/api/settings`；BTC / ETH / XRP / SOL 百分比合计必须为 100%，保存需密码确认，密码只保存哈希。

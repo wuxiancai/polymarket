@@ -10,6 +10,7 @@ def render_live_page(
     session: dict,
     markets: List[dict],
     allocation_ratios: Optional[Dict[str, float]] = None,
+    monitored_pairs_html: str = "",
 ) -> str:
     logged_in = bool(session.get("logged_in"))
     error_html = _error_html(session)
@@ -20,11 +21,11 @@ def render_live_page(
     trades_html = _trades_html(session.get("trades", [])) if logged_in else ""
     auto_trade_html = _auto_trade_html(session) if logged_in else ""
     execution_log_html = _execution_log_html(session.get("execution_log", [])) if logged_in else ""
-    events_html = _live_events_html(session.get("live_events", [])) if logged_in else ""
     opportunities_html = (
         _live_opportunities_html(session.get("live_opportunities", [])) if logged_in else ""
     )
     settings_html = _settings_html(allocation_ratios)
+    monitored_pairs_panel = _monitored_pairs_panel_html(monitored_pairs_html)
     return f"""<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -85,6 +86,28 @@ def render_live_page(
     .settings-message {{ align-self: center; min-width: 120px; min-height: 18px; font-size: 13px; }}
     .settings-message.ok {{ color: var(--accent); }}
     .settings-message.error {{ color: var(--danger); }}
+    .market-text {{ white-space: normal; overflow-wrap: break-word; word-break: normal; line-height: 1.35; }}
+    .market-card {{ display: block; color: var(--ink); text-decoration: none; white-space: normal; overflow-wrap: break-word; }}
+    a.market-card:hover .market-event {{ text-decoration: underline; }}
+    .market-event {{ display: block; font-weight: 700; white-space: normal; overflow-wrap: break-word; }}
+    .market-condition {{
+      display: inline-block;
+      margin-top: 6px;
+      padding: 2px 8px;
+      border: 1px solid #b9d9cf;
+      border-radius: 999px;
+      background: #f2fbf7;
+      color: var(--accent);
+      font-weight: 700;
+    }}
+    .time-cell {{ white-space: normal; line-height: 1.35; }}
+    .time-date, .time-clock {{ display: block; white-space: nowrap; }}
+    .monitored-pairs-scroll {{ max-height: 250px; overflow-y: auto; overflow-x: auto; }}
+    .monitored-pair-table .condition-details {{ margin-top: 6px; }}
+    .monitored-pair-table .condition-details summary {{ cursor: pointer; color: var(--accent); font-weight: 700; }}
+    .monitored-pair-table .condition-tags {{ display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }}
+    .monitored-pair-table .condition-tag {{ display: inline-block; padding: 2px 8px; border: 1px solid var(--line); border-radius: 999px; background: #fbfcfd; color: var(--ink); font-weight: 700; }}
+    .near-condition {{ margin-top: 6px; font-weight: 800; color: var(--accent); }}
     .error {{ color: var(--danger); font-weight: 700; }}
     .table-scroll {{ max-height: 360px; overflow: auto; }}
     table {{ width: max-content; min-width: 100%; border-collapse: collapse; font-size: 14px; table-layout: auto; }}
@@ -108,7 +131,41 @@ def render_live_page(
       .settings-field.settings-password-field {{ min-width: 0; }}
       #liveSaveSettingsBtn {{ grid-column: 1 / -1; }}
       .settings-message {{ grid-column: 1 / -1; min-width: 0; }}
+      .market-text {{ min-width: 0; max-width: none; }}
       .panel {{ border-radius: 12px; }}
+    }}
+    @media (max-width: 640px) {{
+      .monitored-pair-table thead {{ display: none; }}
+      .monitored-pair-table tr {{
+        display: block;
+        margin: 10px;
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fff;
+      }}
+      .monitored-pair-table td {{
+        display: grid;
+        grid-template-columns: 96px minmax(0, 1fr);
+        gap: 10px;
+        align-items: start;
+        padding: 7px 0;
+        border-bottom: 1px dashed var(--line);
+        text-align: right;
+        overflow-wrap: anywhere;
+      }}
+      .monitored-pair-table td:last-child {{ border-bottom: 0; }}
+      .monitored-pair-table td::before {{
+        color: var(--muted);
+        content: "";
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.35;
+        text-align: left;
+      }}
+      .monitored-pair-table td:nth-child(1)::before {{ content: "序号"; }}
+      .monitored-pair-table td:nth-child(2)::before {{ content: "事件 / 实时条件"; }}
+      .monitored-pair-table td:nth-child(3)::before {{ content: "到期日期"; }}
     }}
   </style>
 </head>
@@ -131,7 +188,7 @@ def render_live_page(
     <div id="liveAccount">{account_html}</div>
     {auto_trade_html}
     {execution_log_html}
-    {events_html}
+    {monitored_pairs_panel}
     {opportunities_html}
     <div id="livePositions">{positions_html}</div>
     <div id="liveClosed">{closed_html}</div>
@@ -158,7 +215,7 @@ def render_live_page(
       setHtml('liveAccount', payload.account_html || '');
       setHtml('liveAutoTrade', payload.auto_trade_html || '');
       setHtml('liveExecutionLog', payload.execution_log_html || '');
-      setHtml('liveEvents', payload.events_html || '');
+      setHtml('liveMonitoredPairs', payload.monitored_pairs_html || '');
       setHtml('liveOpportunities', payload.opportunities_html || '');
       setHtml('livePositions', payload.positions_html || '');
       setHtml('liveClosed', payload.closed_html || '');
@@ -282,6 +339,7 @@ def live_dashboard_payload(
     session: dict,
     markets: List[dict],
     allocation_ratios: Optional[Dict[str, float]] = None,
+    monitored_pairs_html: str = "",
 ) -> dict:
     logged_in = bool(session.get("logged_in"))
     return {
@@ -290,7 +348,7 @@ def live_dashboard_payload(
         "account_html": _account_html(session) if logged_in else _login_html(),
         "auto_trade_html": _auto_trade_html(session) if logged_in else "",
         "execution_log_html": _execution_log_html(session.get("execution_log", [])) if logged_in else "",
-        "events_html": _live_events_html(session.get("live_events", [])) if logged_in else "",
+        "monitored_pairs_html": monitored_pairs_html,
         "opportunities_html": (
             _live_opportunities_html(session.get("live_opportunities", [])) if logged_in else ""
         ),
@@ -301,6 +359,14 @@ def live_dashboard_payload(
         "markets": markets,
         "settings": {"allocation_ratios": _allocation_ratios(allocation_ratios)},
     }
+
+
+def _monitored_pairs_panel_html(content: str = "") -> str:
+    body = content or "<div class='empty'>暂无交易对，等待首次扫描或行情源恢复。</div>"
+    return (
+        "<div class='panel'><h2>实时交易对</h2>"
+        f"<div id='liveMonitoredPairs'>{body}</div></div>"
+    )
 
 
 def _settings_html(allocation_ratios: Optional[Dict[str, float]] = None) -> str:
@@ -433,36 +499,6 @@ def _execution_log_html(rows: List[dict]) -> str:
         "<div class='panel'><h2>自动成交记录</h2>"
         "<div class='table-scroll'><table><thead><tr>"
         "<th>时间</th><th>币种</th><th>交易对</th><th>YES 订单</th><th>NO 订单</th><th>状态</th><th>说明</th>"
-        "</tr></thead><tbody>"
-        + "".join(body)
-        + "</tbody></table></div></div>"
-    )
-
-
-def _live_events_html(rows: List[dict]) -> str:
-    if not rows:
-        return "<div class='panel'><h2>监控事件</h2><div class='empty'>暂无事件。</div></div>"
-    body = []
-    for row in rows:
-        markets = row.get("markets") or []
-        market_text = "；".join(
-            str(market.get("question") or "")
-            for market in markets[:3]
-            if market.get("question")
-        )
-        body.append(
-            "<tr>"
-            f"<td>{escape(_text(row.get('id')))}</td>"
-            f"<td>{escape(_text(row.get('title')))}</td>"
-            f"<td>{escape(_text(row.get('slug')))}</td>"
-            f"<td>{escape(str(len(markets)))}</td>"
-            f"<td>{escape(market_text)}</td>"
-            "</tr>"
-        )
-    return (
-        "<div class='panel'><h2>监控事件</h2>"
-        "<div class='table-scroll'><table><thead><tr>"
-        "<th>事件 ID</th><th>标题</th><th>Slug</th><th>市场数</th><th>市场</th>"
         "</tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table></div></div>"

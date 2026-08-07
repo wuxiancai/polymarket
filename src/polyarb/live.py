@@ -5,8 +5,6 @@ import threading
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
-from .models import AssetSpec
-
 PUSD_DECIMALS = 1_000_000
 
 
@@ -99,29 +97,6 @@ class LiveTradingClient:
             "trades": [_trade_dict(item) for item in trades],
         }
 
-    def fetch_events(self, ids: List[str], assets: List[AssetSpec]) -> List[dict]:
-        client = self._ensure_sdk_client()
-        events = []
-        if ids:
-            for event_id in ids:
-                try:
-                    event = client.get_event(id=str(event_id))
-                    events.append(_event_dict(event))
-                except Exception:
-                    continue
-        else:
-            for asset in assets:
-                try:
-                    page = client.list_events(
-                        tag_slug=asset.tag_slug,
-                        closed=False,
-                        page_size=20,
-                    ).first_page()
-                    events.extend(_event_dict(item) for item in page.items)
-                except Exception:
-                    continue
-        return events
-
     def place_order(
         self,
         *,
@@ -203,7 +178,6 @@ class LiveSession:
         self.auto_trading_enabled = False
         self.auto_trader_error: Optional[str] = None
         self.execution_log: List[dict] = []
-        self.live_events: List[dict] = []
         self._live_opportunities: Dict[str, dict] = {}
 
     def is_logged_in(self) -> bool:
@@ -216,7 +190,6 @@ class LiveSession:
         snapshot["auto_trading_enabled"] = True
         snapshot["auto_trader_error"] = None
         snapshot["execution_log"] = []
-        snapshot["live_events"] = []
         snapshot["live_opportunities"] = []
         with self._lock:
             old_client = self._client
@@ -224,7 +197,6 @@ class LiveSession:
             self.last_error = None
             self.auto_trading_enabled = True
             self.auto_trader_error = None
-            self.live_events = []
             self._live_opportunities = {}
         if old_client is not None:
             old_client.close()
@@ -237,7 +209,6 @@ class LiveSession:
                 return {
                     "logged_in": False,
                     "error": None,
-                    "live_events": [],
                     "live_opportunities": [],
                 }
             try:
@@ -251,13 +222,11 @@ class LiveSession:
                     "auto_trading_enabled": self.auto_trading_enabled,
                     "auto_trader_error": self.last_error,
                     "execution_log": list(self.execution_log[-200:]),
-                    "live_events": list(self.live_events),
                     "live_opportunities": self._opportunity_snapshot(),
                 }
             data["auto_trading_enabled"] = self.auto_trading_enabled
             data["auto_trader_error"] = self.auto_trader_error
             data["execution_log"] = list(self.execution_log[-200:])
-            data["live_events"] = list(self.live_events)
             data["live_opportunities"] = self._opportunity_snapshot()
             return data
 
@@ -280,13 +249,6 @@ class LiveSession:
     def set_auto_trader_error(self, message: Optional[str]) -> None:
         with self._lock:
             self.auto_trader_error = message
-
-    def load_events(self, ids: List[str], assets: List[AssetSpec]) -> List[dict]:
-        with self._lock:
-            client = self._require_client()
-            events = client.fetch_events(ids, assets)
-            self.live_events = events
-            return events
 
     def upsert_live_opportunity(self, entry: dict) -> None:
         with self._lock:
@@ -342,7 +304,6 @@ class LiveSession:
             self.auto_trading_enabled = False
             self.auto_trader_error = None
             self.execution_log = []
-            self.live_events = []
             self._live_opportunities = {}
         if client is not None:
             client.close()
@@ -364,16 +325,6 @@ def live_credentials_from_env() -> Optional[LiveCredentials]:
         relayer_api_key=os.getenv("POLYMARKET_RELAYER_API_KEY") or "",
         relayer_api_key_address=os.getenv("POLYMARKET_RELAYER_API_KEY_ADDRESS") or "",
     )
-
-
-def live_event_ids_from_env() -> List[str]:
-    raw = os.getenv("POLYMARKET_EVENT_IDS", "")
-    ids = [part.strip() for part in raw.split(",") if part.strip()]
-    for symbol in ("BTC", "ETH", "XRP", "SOL"):
-        value = os.getenv(f"{symbol}_EVENT_ID", "")
-        if value.strip():
-            ids.append(value.strip())
-    return list(dict.fromkeys(ids))
 
 
 def _items(paginator: Any) -> List[Any]:
@@ -398,30 +349,6 @@ def _position_dict(item: Any) -> dict:
         "event_slug": _safe_text(getattr(item, "event_slug", "")),
         "outcome": _safe_text(getattr(item, "outcome", "")),
         "end_date": _safe_text(getattr(item, "end_date", "")),
-    }
-
-
-def _event_dict(event: Any) -> dict:
-    markets = []
-    for market in getattr(event, "markets", ()) or []:
-        outcomes = getattr(market, "outcomes", None)
-        yes = getattr(outcomes, "yes", None) if outcomes is not None else None
-        no = getattr(outcomes, "no", None) if outcomes is not None else None
-        markets.append(
-            {
-                "id": _safe_text(getattr(market, "id", "")),
-                "slug": _safe_text(getattr(market, "slug", "")),
-                "question": _safe_text(getattr(market, "question", "")),
-                "condition_id": _safe_text(getattr(market, "condition_id", "")),
-                "yes_token_id": _safe_text(getattr(yes, "token_id", "") if yes is not None else ""),
-                "no_token_id": _safe_text(getattr(no, "token_id", "") if no is not None else ""),
-            }
-        )
-    return {
-        "id": _safe_text(getattr(event, "id", "")),
-        "slug": _safe_text(getattr(event, "slug", "")),
-        "title": _safe_text(getattr(event, "title", "")),
-        "markets": markets,
     }
 
 
