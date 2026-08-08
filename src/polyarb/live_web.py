@@ -544,7 +544,9 @@ def _live_opportunities_html(rows: List[dict]) -> str:
         status_class = {
             "已成交": "profit-positive",
             "可成交": "profit-positive",
+            "已触发，未成功": "profit-negative",
             "资金不足": "profit-negative",
+            "交易失败": "profit-negative",
         }.get(status, "")
         try:
             spread_text = f"{float(row.get('spread_cents') or 0):.2f}¢"

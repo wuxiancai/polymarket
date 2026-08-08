@@ -45,8 +45,8 @@ def logged_session():
                 "no_question": "Will Bitcoin be above $60,000?",
                 "guaranteed_profit": 1.2,
                 "spread_cents": 3.5,
-                "status": "资金不足",
-                "detail": "available < target_budget",
+                "status": "已触发，未成功",
+                "detail": "资金不足",
             }
         ],
         "positions": [
@@ -90,7 +90,9 @@ def test_live_page_renders_account_positions_and_auto_trading_when_logged_in():
     assert "实时交易对" in html
     assert "监控事件" not in html
     assert "实时套利机会" in html
+    assert "已触发，未成功" in html
     assert "资金不足" in html
+    assert "<td class='profit-negative'>已触发，未成功</td>" in html
     assert "真实下单" not in html
     assert "提交真实订单" not in html
     assert "模拟交易" in html

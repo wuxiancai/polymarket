@@ -64,15 +64,23 @@ class LiveAutoTrader:
             return last_status or "可成交", ""
         sized, sizing_status = self._size_opportunity(opportunity)
         if sized is None:
+            if sizing_status == "资金不足":
+                return "已触发，未成功", "资金不足"
             return sizing_status or "仅观察", ""
         if not self._should_execute(opportunity):
             return last_status or "可成交", ""
         status = self._execute_pair(sized)
-        self.last_execution_status[opportunity.pair_key] = status
+        if status == "资金不足":
+            display_status = "已触发，未成功"
+            detail = "资金不足"
+        else:
+            display_status = status
+            detail = ""
+        self.last_execution_status[opportunity.pair_key] = display_status
         if status in {"已成交", "部分成交"}:
             with self.lock:
                 self.last_execution[opportunity.pair_key] = time.time()
-        return status, ""
+        return display_status, detail
 
     def _opportunity_entry(self, opportunity: ArbOpportunity, status: str, detail: str) -> dict:
         return {
@@ -124,7 +132,8 @@ class LiveAutoTrader:
         min_payout = opportunity.min_payout * scale
         guaranteed_profit = opportunity.guaranteed_profit * scale
         if shares < MIN_DISPLAYED_POSITION_VALUE or guaranteed_profit < MIN_DISPLAYED_POSITION_VALUE:
-            return None, "仅观察"
+            # Low wallet budget can scale below the displayable minimum; treat it as insufficient funds.
+            return None, "资金不足"
         return (
             replace(
                 opportunity,
