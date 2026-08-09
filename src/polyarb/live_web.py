@@ -69,6 +69,7 @@ def render_live_page(
     .form-grid label {{ display: grid; gap: 6px; color: var(--muted); font-size: 13px; font-weight: 700; }}
     .form-grid input, .form-grid select {{ min-width: 0; min-height: 40px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; font-size: 15px; color: var(--ink); background: #fff; }}
     .form-actions {{ display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; }}
+    .login-tip {{ margin: 0 0 12px; color: var(--muted); font-size: 13px; line-height: 1.5; }}
     .message {{ min-height: 18px; font-size: 13px; }}
     .message.ok {{ color: var(--accent); }}
     .message.error {{ color: var(--danger); }}
@@ -420,11 +421,12 @@ def _login_html() -> str:
     return (
         "<div class='panel'>"
         "<h2>连接 Polymarket 账户</h2>"
+        "<p class='login-tip'>钱包地址必须填签名者地址，或由该签名者派生出的 Polymarket 钱包地址；不要填任意无关地址。钱包私钥必须与签名者地址匹配。Relayer API 密钥选填，填写时必须同时填写 Relayer API 地址，该地址应填签名者地址。</p>"
         "<div class='form-grid'>"
-        "<label>钱包地址（签名者地址）<input id='liveWallet' type='text' autocomplete='off'></label>"
-        "<label>钱包私钥（签名者地址）<input id='livePrivateKey' type='password' autocomplete='off'></label>"
-        "<label>Relayer API 密钥<input id='liveRelayerKey' type='password' autocomplete='off'></label>"
-        "<label>Relayer API 地址<input id='liveRelayerAddress' type='text' autocomplete='off'></label>"
+        "<label>钱包地址（签名者地址或派生钱包）<input id='liveWallet' type='text' autocomplete='off' placeholder='签名者地址或由其派生的 Polymarket 钱包'></label>"
+        "<label>钱包私钥（签名者私钥）<input id='livePrivateKey' type='password' autocomplete='off' placeholder='与钱包地址匹配的签名者私钥'></label>"
+        "<label>Relayer API 密钥（可选）<input id='liveRelayerKey' type='password' autocomplete='off' placeholder='选填，填写时需同时填地址'></label>"
+        "<label>Relayer API 地址（签名者地址）<input id='liveRelayerAddress' type='text' autocomplete='off' placeholder='签名者地址，通常与钱包地址一致'></label>"
         "</div>"
         "<div class='form-actions'><button id='liveLoginBtn'>登录真实账户</button>"
         "<span class='message' id='liveLoginMessage'></span></div>"

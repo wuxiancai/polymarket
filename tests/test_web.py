@@ -9,6 +9,7 @@ from polyarb.runner import PaperRunner, RealtimePaperRunner, ScanResult
 from polyarb.store import PaperStore
 from polyarb.web import (
     WebState,
+    _friendly_live_login_error,
     _live_monitored_pairs_html,
     _profit_class,
     dashboard_payload,
@@ -16,6 +17,27 @@ from polyarb.web import (
     render_dashboard,
     save_allocation_settings,
 )
+
+
+def test_friendly_live_login_error_translates_wallet_mismatch():
+    exc = RuntimeError(
+        "Wallet 0x756D8A56be00b3a41BeCC3e06EcC3994E0C3e987 does not match "
+        "the signer 0xd176fABECf796b281423f3B30692bCCFA4349340 or any "
+        "supported deterministic wallet address."
+    )
+
+    message = _friendly_live_login_error(exc)
+
+    assert "钱包地址 0x756D8A56be00b3a41BeCC3e06EcC3994E0C3e987 与签名者地址 0xd176fABECf796b281423f3B30692bCCFA4349340 不匹配" in message
+    assert "由该签名者派生出的 Polymarket 钱包地址" in message
+
+
+def test_friendly_live_login_error_explains_relayer_pair_requirement():
+    exc = RuntimeError("Relayer API 密钥需要同时提供 Relayer API 地址。")
+
+    message = _friendly_live_login_error(exc)
+
+    assert message == "Relayer API 密钥为选填；若填写，必须同时填写 Relayer API 地址（签名者地址）。"
 
 
 def test_dashboard_renders_chinese_status(tmp_path):

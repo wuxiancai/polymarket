@@ -30,6 +30,24 @@ DISPLAY_TZ = ZoneInfo("Asia/Shanghai")
 APP_STARTED_AT = datetime.now(timezone.utc)
 
 
+def _friendly_live_login_error(exc: Exception) -> str:
+    text = str(exc)
+    match = re.search(
+        r"Wallet (0x[0-9a-fA-F]{40}) does not match the signer (0x[0-9a-fA-F]{40})",
+        text,
+    )
+    if match:
+        wallet, signer = match.groups()
+        return (
+            f"钱包地址 {wallet} 与签名者地址 {signer} 不匹配。"
+            "钱包地址必须填写签名者地址，或由该签名者派生出的 Polymarket 钱包地址；"
+            "Relayer API 地址应填签名者地址，通常与钱包地址一致。"
+        )
+    if "Relayer API 密钥需要同时提供 Relayer API 地址" in text:
+        return "Relayer API 密钥为选填；若填写，必须同时填写 Relayer API 地址（签名者地址）。"
+    return text
+
+
 @dataclass
 class WebState:
     config: Config
@@ -297,7 +315,10 @@ class PolyarbHandler(BaseHTTPRequestHandler):
         wallet = str(payload.get("wallet") or "").strip()
         private_key = str(payload.get("private_key") or "").strip()
         if not wallet or not private_key:
-            self._json({"ok": False, "message": "请输入钱包地址和钱包私钥（签名者地址）。"}, HTTPStatus.BAD_REQUEST)
+            self._json(
+                {"ok": False, "message": "请输入钱包地址（签名者地址或派生钱包）和钱包私钥（签名者私钥）。"},
+                HTTPStatus.BAD_REQUEST,
+            )
             return
         credentials = LiveCredentials(
             wallet=wallet,
@@ -316,7 +337,10 @@ class PolyarbHandler(BaseHTTPRequestHandler):
                 )
             )
         except Exception as exc:
-            self._json({"ok": False, "message": f"登录失败：{exc}"}, HTTPStatus.UNAUTHORIZED)
+            self._json(
+                {"ok": False, "message": f"登录失败：{_friendly_live_login_error(exc)}"},
+                HTTPStatus.UNAUTHORIZED,
+            )
 
     def _live_auto(self) -> None:
         payload = self._read_json_body()
