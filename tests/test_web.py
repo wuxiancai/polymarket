@@ -70,6 +70,9 @@ def test_dashboard_renders_allocation_settings_above_earnings_overview(tmp_path)
         assert f'id="alloc{symbol}"' in html
     assert 'id="settingsPassword"' in html
     assert 'id="saveSettingsBtn"' in html
+    assert "真实交易" in html
+    assert "href='/'" in html
+    assert html.index('id="saveSettingsBtn"') < html.index("真实交易")
     assert "noneboy780308" not in html
 
 

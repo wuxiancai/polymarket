@@ -486,6 +486,20 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
       color: var(--ink);
       border-color: var(--line);
     }}
+    .settings-link {{
+      border: 1px solid var(--line);
+      background: white;
+      color: var(--ink);
+      min-height: 40px;
+      padding: 0 14px;
+      border-radius: 6px;
+      font-weight: 700;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+    }}
     .metrics {{
       display: grid;
       grid-template-columns: repeat(4, minmax(150px, 1fr));
@@ -500,7 +514,7 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
     }}
     .settings-row {{
       display: grid;
-      grid-template-columns: auto repeat(4, minmax(92px, 1fr)) minmax(170px, 1fr) auto auto;
+      grid-template-columns: auto repeat(4, minmax(92px, 1fr)) minmax(170px, 1fr) auto auto auto;
       align-items: end;
       gap: 10px;
       margin-bottom: 16px;
@@ -602,6 +616,7 @@ def render_dashboard(states: Union[WebState, list[WebState]]) -> str:
       .settings-title {{ grid-column: 1 / -1; }}
       .settings-field.settings-password-field {{ grid-column: 1 / -1; min-width: 0; }}
       #saveSettingsBtn {{ grid-column: 1 / -1; }}
+      .settings-link {{ grid-column: 1 / -1; width: 100%; min-height: 44px; }}
       .settings-message {{ grid-column: 1 / -1; min-width: 0; }}
       .metrics, .portfolio-grid {{ grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }}
       .metric {{ min-width: 0; padding: 11px 10px; border-radius: 10px; }}
@@ -1006,6 +1021,7 @@ def _settings_html(states: list[WebState]) -> str:
         + "".join(fields)
         + password_field
         + "<button class='secondary' id=\"saveSettingsBtn\" type='button'>保存设置</button>"
+        + "<a class='settings-link' href='/'>真实交易</a>"
         + "<span class='settings-message' id=\"settingsMessage\"></span>"
         + "</div>"
     )
