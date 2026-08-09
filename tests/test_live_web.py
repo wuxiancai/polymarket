@@ -150,6 +150,14 @@ def test_live_dashboard_payload_includes_allocation_settings():
     }
 
 
+def test_live_opportunities_time_renders_as_beijing_time():
+    payload = live_dashboard_payload(logged_session(), [])
+
+    assert "时间UTC+8" in payload["opportunities_html"]
+    assert "<span class='time-date'>2026-08-07</span><span class='time-clock'>08:00:00</span>" in payload["opportunities_html"]
+    assert "2026-08-07T00:00:00+00:00" not in payload["opportunities_html"]
+
+
 def test_live_page_renders_simulation_monitored_pairs():
     monitored = (
         "<div class='table-scroll monitored-pairs-scroll'>"

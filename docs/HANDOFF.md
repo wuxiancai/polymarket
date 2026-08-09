@@ -1,5 +1,11 @@
 # Handoff
 
+## 2026-08-09 v2.5.3 实时套利机会时间改为北京时间
+
+- 真实交易页“实时套利机会”的时间列不再直接输出 ISO UTC 字符串，改为 Asia/Shanghai 的 `YYYY-MM-DD HH:MM:SS`，表头同步标注“时间UTC+8”。
+- 版本号提升为 `2.5.3`，完成后打 tag `v2.5.3`；`v1.0.0` 仍可回退。
+- 验证：`python3 -m pytest -p no:cacheprovider tests -q` 与 `git diff --check` 通过。
+
 ## 2026-08-09 v2.5.2 真实交易登录表单文案
 
 - 首页登录表单标签改为“钱包地址（签名者地址）”“钱包私钥（签名者地址）”“Relayer API 密钥”“Relayer API 地址”。

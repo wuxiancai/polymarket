@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from html import escape
 from typing import Dict, List, Optional
+from zoneinfo import ZoneInfo
 
 from .models import DEFAULT_ALLOCATION_RATIOS, DEFAULT_ASSETS
+
+DISPLAY_TZ = ZoneInfo("Asia/Shanghai")
 
 
 def render_live_page(
@@ -554,7 +558,7 @@ def _live_opportunities_html(rows: List[dict]) -> str:
             spread_text = "0.00¢"
         body.append(
             "<tr>"
-            f"<td>{escape(_text(row.get('time')))}</td>"
+            f"<td class='time-cell'>{_live_time_html(row.get('time'))}</td>"
             f"<td>{escape(_text(row.get('asset')))}</td>"
             f"<td>{escape(_text(row.get('yes_question')))}</td>"
             f"<td>{escape(_text(row.get('no_question')))}</td>"
@@ -567,7 +571,7 @@ def _live_opportunities_html(rows: List[dict]) -> str:
     return (
         "<div class='panel'><h2>实时套利机会</h2>"
         "<div class='table-scroll'><table><thead><tr>"
-        "<th>时间</th><th>币种</th><th>YES 交易对</th><th>NO 交易对</th><th>保证利润</th><th>价差</th><th>状态</th><th>说明</th>"
+        "<th>时间UTC+8</th><th>币种</th><th>YES 交易对</th><th>NO 交易对</th><th>保证利润</th><th>价差</th><th>状态</th><th>说明</th>"
         "</tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table></div></div>"
@@ -712,6 +716,30 @@ def _profit_class(value: object) -> str:
     except (TypeError, ValueError):
         number = 0.0
     return "profit-positive" if number >= 0 else "profit-negative"
+
+
+def _live_time_html(value: object) -> str:
+    formatted = _format_live_time(value)
+    date, separator, clock = str(formatted).partition(" ")
+    if not separator:
+        return escape(formatted)
+    return f"<span class='time-date'>{escape(date)}</span><span class='time-clock'>{escape(clock)}</span>"
+
+
+def _format_live_time(value: object) -> str:
+    if isinstance(value, datetime):
+        parsed = value
+    else:
+        text = str(value or "")
+        if not text:
+            return "-"
+        try:
+            parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        except ValueError:
+            return text
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(DISPLAY_TZ).replace(microsecond=0).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def _text(value: object) -> str:
