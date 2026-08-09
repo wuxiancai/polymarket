@@ -417,10 +417,10 @@ def _login_html() -> str:
         "<div class='panel'>"
         "<h2>连接 Polymarket 账户</h2>"
         "<div class='form-grid'>"
-        "<label>钱包地址<input id='liveWallet' type='text' autocomplete='off'></label>"
-        "<label>签名私钥<input id='livePrivateKey' type='password' autocomplete='off'></label>"
-        "<label>Relayer API Key（可选）<input id='liveRelayerKey' type='password' autocomplete='off'></label>"
-        "<label>Relayer 地址（可选）<input id='liveRelayerAddress' type='text' autocomplete='off'></label>"
+        "<label>钱包地址（签名者地址）<input id='liveWallet' type='text' autocomplete='off'></label>"
+        "<label>钱包私钥（签名者地址）<input id='livePrivateKey' type='password' autocomplete='off'></label>"
+        "<label>Relayer API 密钥<input id='liveRelayerKey' type='password' autocomplete='off'></label>"
+        "<label>Relayer API 地址<input id='liveRelayerAddress' type='text' autocomplete='off'></label>"
         "</div>"
         "<div class='form-actions'><button id='liveLoginBtn'>登录真实账户</button>"
         "<span class='message' id='liveLoginMessage'></span></div>"
@@ -453,7 +453,7 @@ def _account_html(session: dict) -> str:
         ("钱包", account.get("wallet")),
         ("签名地址", account.get("signer")),
         ("账户类型", _wallet_type_label(account.get("wallet_type"))),
-        ("Relayer API Key", "已配置" if account.get("has_relayer") else "未配置"),
+        ("Relayer API 密钥", "已配置" if account.get("has_relayer") else "未配置"),
     ]
     body = "".join(f"<tr><td>{escape(k)}</td><td>{escape(str(v))}</td></tr>" for k, v in rows)
     return (

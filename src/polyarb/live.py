@@ -40,7 +40,7 @@ class LiveTradingClient:
         if self._sdk_client is not None:
             return self._sdk_client
         if self.credentials.relayer_api_key and not self.credentials.relayer_api_key_address:
-            raise LiveTradingError("Relayer API key 需要同时提供 Relayer 地址。")
+            raise LiveTradingError("Relayer API 密钥需要同时提供 Relayer API 地址。")
         try:
             from polymarket import RelayerApiKey, SecureClient
         except ImportError as exc:

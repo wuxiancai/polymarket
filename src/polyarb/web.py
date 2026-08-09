@@ -297,7 +297,7 @@ class PolyarbHandler(BaseHTTPRequestHandler):
         wallet = str(payload.get("wallet") or "").strip()
         private_key = str(payload.get("private_key") or "").strip()
         if not wallet or not private_key:
-            self._json({"ok": False, "message": "请输入钱包地址和签名私钥。"}, HTTPStatus.BAD_REQUEST)
+            self._json({"ok": False, "message": "请输入钱包地址和钱包私钥（签名者地址）。"}, HTTPStatus.BAD_REQUEST)
             return
         credentials = LiveCredentials(
             wallet=wallet,
