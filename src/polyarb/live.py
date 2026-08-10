@@ -12,6 +12,37 @@ REDEEM_RETRY_SECONDS = 300
 MAX_REDEMPTION_LOG = 100
 
 
+def _same_address(a: str, b: str) -> bool:
+    return bool(a and b and a.strip().lower() == b.strip().lower())
+
+
+def _signer_address_from_private_key(private_key: str) -> str:
+    if not private_key:
+        return ""
+    try:
+        from eth_account import Account
+
+        return Account.from_key(private_key).address
+    except Exception:
+        return ""
+
+
+def _normalize_wallet_for_sdk(
+    wallet: str,
+    private_key: str,
+    relayer_address: str = "",
+) -> Optional[str]:
+    wallet = (wallet or "").strip()
+    if not wallet:
+        return None
+    signer = _signer_address_from_private_key(private_key)
+    if signer and _same_address(wallet, signer):
+        return None
+    if relayer_address and _same_address(wallet, relayer_address):
+        return None
+    return wallet
+
+
 class LiveTradingError(RuntimeError):
     pass
 
@@ -49,7 +80,11 @@ class LiveTradingClient:
             ) from exc
         kwargs = {
             "private_key": self.credentials.private_key,
-            "wallet": self.credentials.wallet,
+            "wallet": _normalize_wallet_for_sdk(
+                self.credentials.wallet,
+                self.credentials.private_key,
+                self.credentials.relayer_api_key_address,
+            ),
         }
         if self.credentials.relayer_api_key:
             kwargs["api_key"] = RelayerApiKey(
@@ -399,7 +434,7 @@ class LiveSession:
 def live_credentials_from_env() -> Optional[LiveCredentials]:
     private_key = os.getenv("POLYMARKET_PRIVATE_KEY") or ""
     wallet = os.getenv("POLYMARKET_WALLET_ADDRESS") or ""
-    if not private_key or not wallet:
+    if not private_key:
         return None
     return LiveCredentials(
         private_key=private_key,

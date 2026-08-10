@@ -1,5 +1,14 @@
 # Handoff
 
+## 2026-08-10 v2.6.0 真实交易余额读取与 SDK 版本升级
+
+- 核对官方迁移文档：项目当前使用的是新版统一 Python SDK `polymarket-client`，不是旧版 `py-clob-client-v2`；依赖从 `>=0.3,<0.4` 升级到 `>=0.5,<0.6`。
+- 修复真实交易页余额仍为 `0.00`：线上 `/api/live/dashboard` 实测 `钱包 == 签名地址` 且账户类型为 EOA，说明 SDK 被要求按签名者地址读取账户；现在“钱包地址”可留空，后端也会把签名者地址/Relayer 地址自动归一化为留空，让 SDK 走 Polymarket 默认存款钱包流程。
+- 登录表单与 README 同步说明：`POLYMARKET_WALLET_ADDRESS` 可留空；网页显示余额但页面为 0 时，不要填签名者地址，应保持留空或填 Polymarket 个人资料中的地址。
+- 补充 `_normalize_wallet_for_sdk()`、SDK 创建参数和仅私钥环境变量的回归测试。
+- 版本号提升为 `2.6.0`，完成后打 tag `v2.6.0`；`v1.0.0` 仍可回退。
+- 验证：重建 Python 3.11.15 `.venv` 并安装最新依赖后，全量 pytest 84 passed；`bash -n start.sh deploy.sh` 与 `git diff --check` 通过。
+
 ## 2026-08-10 v2.5.5 真实交易登录表单精准填写说明
 
 - 首页登录表单新增精准填写提示：钱包地址必须是签名者地址，或由该签名者派生出的 Polymarket 钱包地址，不要填任意无关地址；钱包私钥必须与签名者地址匹配；Relayer API 密钥选填，填写时必须同时填写 Relayer API 地址（签名者地址）。

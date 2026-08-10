@@ -72,14 +72,15 @@ def test_live_page_has_simulation_button_and_login_form_when_logged_out():
 
     assert "模拟交易" in html
     assert "连接 Polymarket 账户" in html
-    assert "钱包地址（签名者地址或派生钱包）" in html
+    assert "钱包地址（选填，默认 Polymarket 钱包）" in html
     assert "钱包私钥（签名者私钥）" in html
     assert "Relayer API 密钥（可选）" in html
     assert "Relayer API 地址（签名者地址）" in html
-    assert "钱包地址必须填签名者地址" in html
-    assert "由该签名者派生出的 Polymarket 钱包地址" in html
+    assert "钱包地址可留空" in html
+    assert "Polymarket 默认钱包" in html
+    assert "Polymarket 个人资料中的“地址”" in html
     assert "Relayer API 密钥选填" in html
-    assert "钱包地址（签名者地址）" not in html
+    assert "钱包地址（签名者地址或派生钱包）" not in html
     assert "钱包私钥（签名者地址）" not in html
     assert "Relayer API Key（可选）" not in html
     assert "Relayer 地址（可选）" not in html

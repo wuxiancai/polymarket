@@ -421,9 +421,9 @@ def _login_html() -> str:
     return (
         "<div class='panel'>"
         "<h2>连接 Polymarket 账户</h2>"
-        "<p class='login-tip'>钱包地址必须填签名者地址，或由该签名者派生出的 Polymarket 钱包地址；不要填任意无关地址。钱包私钥必须与签名者地址匹配。Relayer API 密钥选填，填写时必须同时填写 Relayer API 地址，该地址应填签名者地址。</p>"
+        "<p class='login-tip'>钱包地址可留空：留空时会自动使用该签名者的 Polymarket 默认钱包。若你在 Polymarket 网页显示余额但页面为 0，通常是因为之前填了签名者地址，请把钱包地址留空，或填 Polymarket 个人资料中的“地址”。钱包私钥必须与签名者地址匹配。Relayer API 密钥选填，填写时必须同时填写 Relayer API 地址（签名者地址）。</p>"
         "<div class='form-grid'>"
-        "<label>钱包地址（签名者地址或派生钱包）<input id='liveWallet' type='text' autocomplete='off' placeholder='签名者地址或由其派生的 Polymarket 钱包'></label>"
+        "<label>钱包地址（选填，默认 Polymarket 钱包）<input id='liveWallet' type='text' autocomplete='off' placeholder='留空或填签名者地址，自动读取默认钱包'></label>"
         "<label>钱包私钥（签名者私钥）<input id='livePrivateKey' type='password' autocomplete='off' placeholder='与钱包地址匹配的签名者私钥'></label>"
         "<label>Relayer API 密钥（可选）<input id='liveRelayerKey' type='password' autocomplete='off' placeholder='选填，填写时需同时填地址'></label>"
         "<label>Relayer API 地址（签名者地址）<input id='liveRelayerAddress' type='text' autocomplete='off' placeholder='签名者地址，通常与钱包地址一致'></label>"

@@ -1,3 +1,4 @@
+import sys
 from types import SimpleNamespace
 
 import pytest
@@ -7,8 +8,12 @@ from polyarb.live import (
     LiveSession,
     LiveTradingClient,
     LiveTradingError,
+    _normalize_wallet_for_sdk,
     live_credentials_from_env,
 )
+
+
+TEST_PRIVATE_KEY = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
 
 
 class FakePage:
@@ -257,4 +262,59 @@ def test_live_credentials_from_env(monkeypatch):
     assert value is not None
     assert value.private_key == "0xsecret"
     assert value.relayer_api_key == "relayer"
+    assert "0xsecret" not in repr(value)
+
+
+def test_normalize_wallet_for_sdk_uses_default_deposit_wallet_when_blank_or_signer():
+    from eth_account import Account
+
+    signer = Account.from_key(TEST_PRIVATE_KEY).address
+
+    assert _normalize_wallet_for_sdk("", TEST_PRIVATE_KEY) is None
+    assert _normalize_wallet_for_sdk("  ", TEST_PRIVATE_KEY) is None
+    assert _normalize_wallet_for_sdk(signer, TEST_PRIVATE_KEY) is None
+    assert _normalize_wallet_for_sdk(
+        signer, TEST_PRIVATE_KEY, relayer_address=signer
+    ) is None
+    assert (
+        _normalize_wallet_for_sdk("0xactualPolymarketWallet", TEST_PRIVATE_KEY)
+        == "0xactualPolymarketWallet"
+    )
+
+
+def test_live_client_omits_signer_wallet_when_creating_sdk(monkeypatch):
+    from eth_account import Account
+
+    signer = Account.from_key(TEST_PRIVATE_KEY).address
+    created = []
+
+    class FakeSecureClient:
+        @classmethod
+        def create(cls, **kwargs):
+            created.append(kwargs)
+            return object()
+
+    monkeypatch.setitem(
+        sys.modules,
+        "polymarket",
+        SimpleNamespace(RelayerApiKey=object, SecureClient=FakeSecureClient),
+    )
+
+    item = LiveTradingClient(
+        LiveCredentials(private_key=TEST_PRIVATE_KEY, wallet=signer)
+    )
+    item._ensure_sdk_client()
+
+    assert created[0]["wallet"] is None
+    assert created[0]["private_key"] == TEST_PRIVATE_KEY
+
+
+def test_live_credentials_from_env_accepts_private_key_without_wallet(monkeypatch):
+    monkeypatch.delenv("POLYMARKET_WALLET_ADDRESS", raising=False)
+    monkeypatch.setenv("POLYMARKET_PRIVATE_KEY", "0xsecret")
+
+    value = live_credentials_from_env()
+
+    assert value is not None
+    assert value.wallet == ""
     assert "0xsecret" not in repr(value)

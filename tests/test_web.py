@@ -29,6 +29,7 @@ def test_friendly_live_login_error_translates_wallet_mismatch():
     message = _friendly_live_login_error(exc)
 
     assert "钱包地址 0x756D8A56be00b3a41BeCC3e06EcC3994E0C3e987 与签名者地址 0xd176fABECf796b281423f3B30692bCCFA4349340 不匹配" in message
+    assert "钱包地址可留空（默认 Polymarket 存款钱包）" in message
     assert "由该签名者派生出的 Polymarket 钱包地址" in message
 
 

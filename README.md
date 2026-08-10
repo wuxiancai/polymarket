@@ -2,7 +2,7 @@
 
 Polyarb 是一个 Polymarket BTC / ETH / XRP / SOL 日线及以上周期套利扫描与纸面模拟交易系统。
 
-> 当前版本：`v2.5.5`；稳定回退点：`v1.0.0`。
+> 当前版本：`v2.6.0`；稳定回退点：`v1.0.0`。
 
 系统默认首页为真实交易系统，模拟系统独立保留在 `/simulation`。
 
@@ -147,7 +147,7 @@ REFRESH_SECONDS=30
 POLYARB_DB=data/paper.sqlite3
 HOST=0.0.0.0
 PORT=8787
-POLYMARKET_WALLET_ADDRESS=0x...
+POLYMARKET_WALLET_ADDRESS=
 POLYMARKET_PRIVATE_KEY=0x...
 POLYMARKET_RELAYER_API_KEY=
 POLYMARKET_RELAYER_API_KEY_ADDRESS=
@@ -156,7 +156,7 @@ POLYMARKET_AUTO_LOGIN=false
 
 真实交易凭证也可在首页登录表单中填写；登录态只保留在当前进程内，不持久化私钥。默认不会在服务启动时自动登录，只有显式设置 `POLYMARKET_AUTO_LOGIN=true` 才会读取环境变量自动连接。
 
-首页登录表单中的“钱包地址”必须填写签名者地址，或由该签名者派生出的 Polymarket 钱包地址，不要填任意无关地址；“钱包私钥”必须是与该地址匹配的签名者私钥。Relayer API 密钥选填，填写时必须同时填写 Relayer API 地址（签名者地址）。
+`POLYMARKET_WALLET_ADDRESS` 可留空：留空时会自动使用该签名者的 Polymarket 默认存款钱包。若你在 Polymarket 网页显示余额但页面为 0，通常是因为把签名者地址填到了“钱包地址”；请保持留空，或填写 Polymarket 个人资料中的地址。“钱包私钥”必须是与该地址匹配的签名者私钥。Relayer API 密钥选填，填写时必须同时填写 Relayer API 地址（签名者地址）。
 
 如果系统已存在 `polyarb.service` 且旧数据库文件还在，`POLYARB_DB` 留空会自动复用旧路径。需要主动迁移数据库时，先复制旧 sqlite 文件，再用新路径启动：
 

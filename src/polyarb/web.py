@@ -40,7 +40,7 @@ def _friendly_live_login_error(exc: Exception) -> str:
         wallet, signer = match.groups()
         return (
             f"钱包地址 {wallet} 与签名者地址 {signer} 不匹配。"
-            "钱包地址必须填写签名者地址，或由该签名者派生出的 Polymarket 钱包地址；"
+            "钱包地址可留空（默认 Polymarket 存款钱包），或填写由该签名者派生出的 Polymarket 钱包地址；"
             "Relayer API 地址应填签名者地址，通常与钱包地址一致。"
         )
     if "Relayer API 密钥需要同时提供 Relayer API 地址" in text:
@@ -314,11 +314,8 @@ class PolyarbHandler(BaseHTTPRequestHandler):
             return
         wallet = str(payload.get("wallet") or "").strip()
         private_key = str(payload.get("private_key") or "").strip()
-        if not wallet or not private_key:
-            self._json(
-                {"ok": False, "message": "请输入钱包地址（签名者地址或派生钱包）和钱包私钥（签名者私钥）。"},
-                HTTPStatus.BAD_REQUEST,
-            )
+        if not private_key:
+            self._json({"ok": False, "message": "请输入钱包私钥（签名者私钥）。"}, HTTPStatus.BAD_REQUEST)
             return
         credentials = LiveCredentials(
             wallet=wallet,
