@@ -551,6 +551,7 @@ def _live_opportunities_html(rows: List[dict]) -> str:
             "已成交": "profit-positive",
             "可成交": "profit-positive",
             "已触发，未成功": "profit-negative",
+            "区域受限": "profit-negative",
             "资金不足": "profit-negative",
             "交易失败": "profit-negative",
         }.get(status, "")

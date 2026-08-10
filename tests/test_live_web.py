@@ -181,3 +181,14 @@ def test_live_page_renders_simulation_monitored_pairs():
     assert "monitored-pair-table" in html
     assert "Bitcoin price event" in html
     assert "监控事件" not in html
+
+
+def test_live_page_renders_region_restricted_opportunity_and_error():
+    session = logged_session()
+    session["live_opportunities"][0]["status"] = "区域受限"
+    session["auto_trader_error"] = "真实交易区域受限：服务器出口 IP 1.2.3.4（SG）被 Polymarket 限制开仓。"
+
+    html = render_live_page(session, [])
+
+    assert "<td class='profit-negative'>区域受限</td>" in html
+    assert "真实交易区域受限" in html

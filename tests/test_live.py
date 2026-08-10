@@ -251,6 +251,15 @@ def test_live_session_auto_redeems_redeemable_positions_once_per_condition():
     assert all(row["ok"] for row in session.redemption_log)
 
 
+def test_live_session_marks_region_blocked_without_network():
+    session = LiveSession()
+
+    session.mark_region_blocked()
+
+    assert session.is_trading_region_blocked() is True
+    assert "Polymarket" in session.geoblock_error()
+
+
 def test_live_credentials_from_env(monkeypatch):
     monkeypatch.setenv("POLYMARKET_PRIVATE_KEY", "0xsecret")
     monkeypatch.setenv("POLYMARKET_WALLET_ADDRESS", "0xwallet")

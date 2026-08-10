@@ -7,11 +7,13 @@ from polyarb.runner import ScanResult
 
 
 class FakeLiveSession:
-    def __init__(self, enabled=True, balance=1000.0, positions=None, buy_result=None):
+    def __init__(self, enabled=True, balance=1000.0, positions=None, buy_result=None, geo_blocked=False):
         self.enabled = enabled
         self.balance = balance
         self.positions = positions or []
         self.buy_result = buy_result
+        self.geo_blocked = geo_blocked
+        self.geoblock_info = {"blocked": geo_blocked, "ip": "1.2.3.4", "country": "SG", "region": ""}
         self.buys = []
         self.logs = []
         self.errors = []
@@ -22,6 +24,21 @@ class FakeLiveSession:
 
     def is_auto_trading_enabled(self):
         return self.enabled
+
+    def geoblock(self):
+        return dict(self.geoblock_info)
+
+    def is_trading_region_blocked(self):
+        return self.geo_blocked
+
+    def mark_region_blocked(self):
+        self.geo_blocked = True
+        self.geoblock_info["blocked"] = True
+
+    def geoblock_error(self):
+        if not self.geo_blocked:
+            return ""
+        return "真实交易区域受限：服务器出口 IP 1.2.3.4（SG）被 Polymarket 限制开仓，仅可平仓。"
 
     def dashboard(self):
         return {"logged_in": True, "balance_pusd": self.balance, "positions": self.positions}
@@ -181,3 +198,54 @@ def test_live_auto_trader_marks_order_failure_as_triggered_insufficient_funds():
     assert session.logs[0]["ok"] is False
     assert session.opportunities[-1]["status"] == "已触发，未成功"
     assert session.opportunities[-1]["detail"] == "资金不足"
+
+
+def test_live_auto_trader_skips_when_region_blocked():
+    item, session = trader(FakeLiveSession(geo_blocked=True))
+
+    item.on_result(
+        ScanResult(
+            markets=[],
+            pairs=1,
+            opportunities=[opportunity()],
+            scanned_at=datetime(2026, 8, 7, 12, 0, tzinfo=timezone.utc),
+        )
+    )
+
+    assert session.buys == []
+    assert session.logs == []
+    assert session.opportunities[-1]["status"] == "区域受限"
+    assert "Polymarket" in session.errors[-1]
+
+
+def test_live_auto_trader_marks_region_restricted_from_order_error():
+    restricted = (
+        "Trading restricted in your region - "
+        "https://docs.polymarket.com/developers/CLOB/geoblock"
+    )
+    item, session = trader(
+        FakeLiveSession(
+            balance=1000.0,
+            buy_result={"ok": False, "message": restricted},
+        )
+    )
+    result = ScanResult(
+        markets=[],
+        pairs=1,
+        opportunities=[opportunity()],
+        scanned_at=datetime(2026, 8, 7, 12, 0, tzinfo=timezone.utc),
+    )
+
+    item.on_result(result)
+
+    assert len(session.buys) == 2
+    assert len(session.logs) == 1
+    assert session.opportunities[-1]["status"] == "区域受限"
+    assert session.geo_blocked is True
+    assert "Polymarket" in session.errors[-1]
+
+    item.on_result(result)
+
+    assert len(session.buys) == 2
+    assert len(session.logs) == 1
+    assert session.opportunities[-1]["status"] == "区域受限"

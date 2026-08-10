@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import threading
 import time
@@ -10,6 +11,9 @@ from typing import Any, Dict, List, Optional, Tuple
 PUSD_DECIMALS = 1_000_000
 REDEEM_RETRY_SECONDS = 300
 MAX_REDEMPTION_LOG = 100
+GEOBLOCK_URL = "https://polymarket.com/api/geoblock"
+GEOBLOCK_TTL_SECONDS = 60.0
+GEOBLOCK_TIMEOUT_SECONDS = 4.0
 
 
 def _same_address(a: str, b: str) -> bool:
@@ -41,6 +45,44 @@ def _normalize_wallet_for_sdk(
     if relayer_address and _same_address(wallet, relayer_address):
         return None
     return wallet
+
+
+def _fetch_geoblock() -> Optional[dict]:
+    try:
+        from urllib.request import Request, urlopen
+
+        request = Request(
+            GEOBLOCK_URL,
+            headers={
+                "User-Agent": "polyarb/live",
+                "Accept": "application/json",
+            },
+        )
+        with urlopen(request, timeout=GEOBLOCK_TIMEOUT_SECONDS) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        if not isinstance(payload, dict):
+            return None
+        return {
+            "blocked": bool(payload.get("blocked")),
+            "ip": str(payload.get("ip") or ""),
+            "country": str(payload.get("country") or ""),
+            "region": str(payload.get("region") or ""),
+        }
+    except Exception:
+        return None
+
+
+def geoblock_message(geo: Optional[dict]) -> str:
+    if not geo or not geo.get("blocked"):
+        return ""
+    ip = str(geo.get("ip") or "未知 IP")
+    country = str(geo.get("country") or "未知地区")
+    region = str(geo.get("region") or "")
+    location = country if not region else f"{country}/{region}"
+    return (
+        f"真实交易区域受限：服务器出口 IP {ip}（{location}）被 Polymarket 限制开仓，仅可平仓。"
+        "请将服务部署或代理迁移到允许地区（如 eu-west-1）后重启服务。"
+    )
 
 
 class LiveTradingError(RuntimeError):
@@ -232,16 +274,58 @@ class LiveSession:
         self._live_opportunities: Dict[str, dict] = {}
         self.redemption_log: List[dict] = []
         self._redeem_attempted: Dict[str, float] = {}
+        self._geoblock: Optional[dict] = None
+        self._geoblock_at = 0.0
+        self._geoblock_last_attempt = 0.0
 
     def is_logged_in(self) -> bool:
         with self._lock:
             return self._client is not None
 
+    def geoblock(self, force: bool = False) -> Optional[dict]:
+        now = time.time()
+        with self._lock:
+            if (
+                self._geoblock is not None
+                and not force
+                and now - self._geoblock_at < GEOBLOCK_TTL_SECONDS
+            ):
+                return dict(self._geoblock)
+            if not force and now - self._geoblock_last_attempt < GEOBLOCK_TTL_SECONDS:
+                return dict(self._geoblock) if self._geoblock is not None else None
+            self._geoblock_last_attempt = now
+        data = _fetch_geoblock()
+        if data is None:
+            with self._lock:
+                return dict(self._geoblock) if self._geoblock is not None else None
+        with self._lock:
+            self._geoblock = data
+            self._geoblock_at = now
+        return dict(data)
+
+    def is_trading_region_blocked(self, force: bool = False) -> bool:
+        data = self.geoblock(force=force)
+        return bool(data and data.get("blocked"))
+
+    def geoblock_error(self) -> str:
+        with self._lock:
+            geo = dict(self._geoblock) if self._geoblock is not None else None
+        return geoblock_message(geo)
+
+    def mark_region_blocked(self) -> None:
+        with self._lock:
+            current = dict(self._geoblock or {})
+            current["blocked"] = True
+            self._geoblock = current
+            self._geoblock_at = time.time()
+
     def connect(self, credentials: LiveCredentials) -> dict:
         client = LiveTradingClient(credentials)
         snapshot = client.snapshot()
+        geo = self.geoblock(force=True)
+        auto_trader_error = geoblock_message(geo) if geo and geo.get("blocked") else None
         snapshot["auto_trading_enabled"] = True
-        snapshot["auto_trader_error"] = None
+        snapshot["auto_trader_error"] = auto_trader_error
         snapshot["execution_log"] = []
         snapshot["live_opportunities"] = []
         with self._lock:
@@ -249,7 +333,7 @@ class LiveSession:
             self._client = client
             self.last_error = None
             self.auto_trading_enabled = True
-            self.auto_trader_error = None
+            self.auto_trader_error = auto_trader_error
             self._live_opportunities = {}
             self.redemption_log = []
             self._redeem_attempted = {}
@@ -298,7 +382,12 @@ class LiveSession:
             self.auto_trading_enabled = bool(enabled)
             if self.auto_trading_enabled:
                 self.auto_trader_error = None
-            return self.auto_trading_enabled
+            result = self.auto_trading_enabled
+        if result:
+            geo = self.geoblock(force=True)
+            if geo and geo.get("blocked"):
+                self.set_auto_trader_error(geoblock_message(geo))
+        return result
 
     def add_execution_log(self, entry: dict) -> None:
         with self._lock:
@@ -422,6 +511,9 @@ class LiveSession:
             self._live_opportunities = {}
             self.redemption_log = []
             self._redeem_attempted = {}
+            self._geoblock = None
+            self._geoblock_at = 0.0
+            self._geoblock_last_attempt = 0.0
         if client is not None:
             client.close()
 

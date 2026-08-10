@@ -62,6 +62,9 @@ class LiveAutoTrader:
             return last_status or "已成交", ""
         if not self.live_session.is_auto_trading_enabled():
             return last_status or "可成交", ""
+        if self.live_session.is_trading_region_blocked():
+            self._set_error(self.live_session.geoblock_error() or "真实交易区域受限。")
+            return "区域受限", "服务器 IP 所在地区被 Polymarket 限制开仓，仅可平仓"
         sized, sizing_status = self._size_opportunity(opportunity)
         if sized is None:
             if sizing_status == "资金不足":
@@ -73,6 +76,9 @@ class LiveAutoTrader:
         if status == "资金不足":
             display_status = "已触发，未成功"
             detail = "资金不足"
+        elif status == "区域受限":
+            display_status = "区域受限"
+            detail = "服务器 IP 所在地区被 Polymarket 限制开仓，仅可平仓"
         else:
             display_status = status
             detail = ""
@@ -195,6 +201,10 @@ class LiveAutoTrader:
             f"NO={no_result.get('message')}"
         )
         self._set_error(detail)
+        if _is_region_restricted(detail):
+            self.live_session.mark_region_blocked()
+            self._set_error(self.live_session.geoblock_error() or "真实交易区域受限。")
+            return "区域受限"
         if _is_insufficient_funds(detail):
             return "资金不足"
         return "交易失败"
@@ -245,3 +255,7 @@ def _is_insufficient_funds(message: str) -> bool:
         keyword in lowered
         for keyword in ("not enough balance", "insufficient", "资金不足", "allowance")
     )
+
+
+def _is_region_restricted(message: str) -> bool:
+    return "trading restricted in your region" in message.lower()

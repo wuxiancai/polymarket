@@ -1,5 +1,13 @@
 # Handoff
 
+## 2026-08-11 v2.6.1 真实交易地区限制预检与“区域受限”状态
+
+- 线上 `fojing.art:8787` 实测：`/api/live/dashboard` 的自动交易错误为 YES/NO 均返回 `Trading restricted in your region`，自动成交记录已产生多条失败；服务公网 IP `43.160.192.215` 归属新加坡，官方 [Geographic Restrictions](https://docs.polymarket.com/developers/CLOB/geoblock) 将新加坡列为 API `close-only`，因此开仓单会被拒绝。
+- 新增官方 geoblock 预检：登录真实账户和启用自动交易时请求 `https://polymarket.com/api/geoblock`，缓存 60 秒；命中限制地区后，可执行机会显示“区域受限”，不再向真实下单接口重复提交 YES/NO 开仓单。
+- 兜底识别下单返回的 `Trading restricted in your region` 错误：即使预检未命中，也会把该地区标记为受限，避免后续扫描继续重复下单；页面自动交易错误改为中文可操作提示，并提示迁移到允许地区或配置允许地区代理（如 `eu-west-1`）。
+- 版本号提升为 `2.6.1`，完成后打 tag `v2.6.1`；`v1.0.0` 仍可回退。
+- 验证：全量 pytest 88 passed；`bash -n start.sh deploy.sh` 与 `git diff --check` 通过。
+
 ## 2026-08-10 v2.6.0 真实交易余额读取与 SDK 版本升级
 
 - 核对官方迁移文档：项目当前使用的是新版统一 Python SDK `polymarket-client`，不是旧版 `py-clob-client-v2`；依赖从 `>=0.3,<0.4` 升级到 `>=0.5,<0.6`。
