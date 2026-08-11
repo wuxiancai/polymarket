@@ -212,24 +212,32 @@ def render_live_page(
       if (el) el.innerHTML = html;
     }}
     async function liveRefresh() {{
-      const response = await fetch('/api/live/dashboard');
-      const payload = await response.json();
-      if (!payload.logged_in) {{
+      try {{
+        const response = await fetch('/api/live/dashboard');
+        if (!response.ok) {{
+          throw new Error(`接口返回 ${{response.status}}`);
+        }}
+        const payload = await response.json();
+        if (!payload.logged_in) {{
+          setHtml('liveError', payload.error_html || '');
+          return;
+        }}
         setHtml('liveError', payload.error_html || '');
-        return;
+        setHtml('liveAccount', payload.account_html || '');
+        setHtml('liveAutoTrade', payload.auto_trade_html || '');
+        setHtml('liveExecutionLog', payload.execution_log_html || '');
+        setHtml('liveRedemptions', payload.redemption_html || '');
+        setHtml('liveMonitoredPairs', payload.monitored_pairs_html || '');
+        setHtml('liveOpportunities', payload.opportunities_html || '');
+        setHtml('livePositions', payload.positions_html || '');
+        setHtml('liveClosed', payload.closed_html || '');
+        setHtml('liveOrders', payload.orders_html || '');
+        setHtml('liveTrades', payload.trades_html || '');
+        bindLiveEvents();
+      }} catch (error) {{
+        const reason = error && error.message ? `：${{error.message}}` : '';
+        setHtml('liveError', `<div class='error'>网络请求失败${{reason}}。请检查浏览器代理、防火墙或网络连接，并确认服务器 IP 已加入代理绕过。</div>`);
       }}
-      setHtml('liveError', payload.error_html || '');
-      setHtml('liveAccount', payload.account_html || '');
-      setHtml('liveAutoTrade', payload.auto_trade_html || '');
-      setHtml('liveExecutionLog', payload.execution_log_html || '');
-      setHtml('liveRedemptions', payload.redemption_html || '');
-      setHtml('liveMonitoredPairs', payload.monitored_pairs_html || '');
-      setHtml('liveOpportunities', payload.opportunities_html || '');
-      setHtml('livePositions', payload.positions_html || '');
-      setHtml('liveClosed', payload.closed_html || '');
-      setHtml('liveOrders', payload.orders_html || '');
-      setHtml('liveTrades', payload.trades_html || '');
-      bindLiveEvents();
     }}
     async function liveLogin() {{
       const message = document.getElementById('liveLoginMessage');
@@ -248,6 +256,9 @@ def render_live_page(
             relayer_api_key_address: document.getElementById('liveRelayerAddress').value,
           }}),
         }});
+        if (!response.ok && response.status >= 500) {{
+          throw new Error(`接口返回 ${{response.status}}`);
+        }}
         const payload = await response.json();
         if (response.ok) {{
           window.location.reload();
@@ -255,7 +266,12 @@ def render_live_page(
           message.textContent = payload.message || '登录失败';
           message.className = 'message error';
         }}
-      }} finally {{
+      }} catch (error) {{
+        const reason = error && error.message ? `：${{error.message}}` : '：网络连接中断';
+        message.textContent = `登录请求失败${{reason}}。请关闭代理或把 ${{location.hostname}} 加入代理绕过后再试。`;
+        message.className = 'message error';
+      }}
+      finally {{
         button.disabled = false;
         button.textContent = '登录真实账户';
       }}
@@ -365,7 +381,7 @@ def live_dashboard_payload(
         "closed_html": _closed_html(session.get("closed_positions", [])) if logged_in else "",
         "orders_html": _orders_html(session.get("open_orders", [])) if logged_in else "",
         "trades_html": _trades_html(session.get("trades", [])) if logged_in else "",
-        "markets": markets,
+        "markets": markets if logged_in else [],
         "settings": {"allocation_ratios": _allocation_ratios(allocation_ratios)},
     }
 

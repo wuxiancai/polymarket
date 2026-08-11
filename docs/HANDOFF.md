@@ -1,5 +1,13 @@
 # Handoff
 
+## 2026-08-11 v2.6.3 登录请求网络失败提示与实时接口瘦身
+
+- 新服务器 `43.128.31.227:8787` 实测：服务器本地登录接口正常，空钱包 + 有效签名私钥可登录；浏览器端失败路径是访问链路代理把 `/api/live/dashboard` 与 `/api/live/login` 返回 502，服务器日志仅出现客户端中断的 `ConnectionResetError`。
+- 登录成功响应从完整 200KB dashboard 改为轻量 `{"ok": true, "logged_in": true}`；未登录的实时 dashboard 不再返回数百个市场对象，避免代理/弱网在登录或轮询时中断。
+- 前端登录与 5 秒轮询增加网络错误捕获：502/504 或连接中断时页面直接显示“请关闭代理或把服务器 IP 加入代理绕过”的可操作提示，不再静默无反应。
+- 版本号提升为 `2.6.3`，完成后打 tag `v2.6.3`；`v1.0.0` 仍可回退。
+- 验证：全量 pytest 通过；`bash -n start.sh deploy.sh stop.sh` 与 `git diff --check` 通过。
+
 ## 2026-08-11 v2.6.2 一键停止服务
 
 - 新增 `stop.sh`：执行后先通过 `sudo systemctl stop polyarb` 停止 systemd 服务，再兜底终止本机直接运行的 `python -m polyarb` 进程；不删除数据库、日志或其他运行数据。

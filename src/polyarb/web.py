@@ -324,15 +324,8 @@ class PolyarbHandler(BaseHTTPRequestHandler):
             relayer_api_key_address=str(payload.get("relayer_api_key_address") or "").strip(),
         )
         try:
-            data = self.live_session.connect(credentials)
-            self._json(
-                live_dashboard_payload(
-                    data,
-                    _live_markets(self.web_states),
-                    _allocation_ratios(self.web_states),
-                    _live_monitored_pairs_html(self.web_states),
-                )
-            )
+            self.live_session.connect(credentials)
+            self._json({"ok": True, "logged_in": True, "message": "登录成功。"})
         except Exception as exc:
             self._json(
                 {"ok": False, "message": f"登录失败：{_friendly_live_login_error(exc)}"},

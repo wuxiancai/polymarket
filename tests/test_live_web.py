@@ -123,6 +123,26 @@ def test_live_dashboard_payload_keeps_login_form_when_logged_out():
     assert "redemption_html" in payload
 
 
+def test_live_dashboard_payload_omits_markets_when_logged_out():
+    payload = live_dashboard_payload({"logged_in": False}, [{"question": "Will Bitcoin rise?"}])
+
+    assert payload["markets"] == []
+
+
+def test_live_dashboard_payload_keeps_markets_when_logged_in():
+    payload = live_dashboard_payload(logged_session(), [{"question": "Will Bitcoin rise?"}])
+
+    assert payload["markets"] == [{"question": "Will Bitcoin rise?"}]
+
+
+def test_live_page_shows_network_error_guidance_in_scripts():
+    html = render_live_page({"logged_in": False}, [])
+
+    assert "网络请求失败" in html
+    assert "代理绕过" in html
+    assert "response.status >= 500" in html
+
+
 def test_live_page_renders_allocation_settings_with_persisted_values():
     html = render_live_page(
         {"logged_in": False},
