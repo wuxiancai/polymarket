@@ -2,7 +2,7 @@
 
 Polyarb 是一个 Polymarket BTC / ETH / XRP / SOL 日线及以上周期套利扫描与纸面模拟交易系统。
 
-> 当前版本：`v2.6.1`；稳定回退点：`v1.0.0`。
+> 当前版本：`v2.6.2`；稳定回退点：`v1.0.0`。
 
 系统默认首页为真实交易系统，模拟系统独立保留在 `/simulation`。
 
@@ -77,6 +77,21 @@ sudo systemctl status polyarb
 sudo journalctl -u polyarb -f
 sudo systemctl restart polyarb
 sudo systemctl stop polyarb
+```
+
+## 一键停止系统
+
+```bash
+cd ~/polymarket
+bash stop.sh
+```
+
+停止脚本会先停止 systemd 服务 `polyarb`，再兜底终止本机直接运行的 `python -m polyarb` 进程。脚本不删除数据库、日志或运行数据，可随时用 `bash start.sh` 重新启动。
+
+如果使用了自定义服务名：
+
+```bash
+SERVICE_NAME=polyarb bash stop.sh
 ```
 
 页面会显示：

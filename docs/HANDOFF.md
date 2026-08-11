@@ -1,5 +1,12 @@
 # Handoff
 
+## 2026-08-11 v2.6.2 一键停止服务
+
+- 新增 `stop.sh`：执行后先通过 `sudo systemctl stop polyarb` 停止 systemd 服务，再兜底终止本机直接运行的 `python -m polyarb` 进程；不删除数据库、日志或其他运行数据。
+- 支持 `SERVICE_NAME` 覆盖默认服务名；systemd 服务不存在时不会要求 sudo，直接清理本机 polyarb 进程。
+- 版本号提升为 `2.6.2`，完成后打 tag `v2.6.2`；`v1.0.0` 仍可回退。
+- 验证：全量 pytest 通过；`bash -n stop.sh start.sh deploy.sh` 与 `git diff --check` 通过。
+
 ## 2026-08-11 v2.6.1 真实交易地区限制预检与“区域受限”状态
 
 - 线上 `fojing.art:8787` 实测：`/api/live/dashboard` 的自动交易错误为 YES/NO 均返回 `Trading restricted in your region`，自动成交记录已产生多条失败；服务公网 IP `43.160.192.215` 归属新加坡，官方 [Geographic Restrictions](https://docs.polymarket.com/developers/CLOB/geoblock) 将新加坡列为 API `close-only`，因此开仓单会被拒绝。
