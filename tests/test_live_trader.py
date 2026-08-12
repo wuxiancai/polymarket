@@ -7,16 +7,16 @@ from polyarb.runner import ScanResult
 
 
 class FakeLiveSession:
-    def __init__(self, enabled=True, balance=1000.0, positions=None, buy_result=None, hedge_result=None, geo_blocked=False):
+    def __init__(self, enabled=True, balance=1000.0, positions=None, buy_result=None, exit_result=None, geo_blocked=False):
         self.enabled = enabled
         self.balance = balance
         self.positions = positions or []
         self.buy_result = buy_result
-        self.hedge_result = hedge_result
+        self.exit_result = exit_result
         self.geo_blocked = geo_blocked
         self.geoblock_info = {"blocked": geo_blocked, "ip": "1.2.3.4", "country": "SG", "region": ""}
         self.buys = []
-        self.hedges = []
+        self.exits = []
         self.logs = []
         self.errors = []
         self.opportunities = []
@@ -57,11 +57,11 @@ class FakeLiveSession:
             {"ok": True, "order_id": f"order-{len(self.buys)}"},
         ]
 
-    def place_protected_market_buy(self, *, token_id, shares, max_price):
-        self.hedges.append((token_id, shares, max_price))
-        if self.hedge_result is not None:
-            return dict(self.hedge_result)
-        return {"ok": True, "order_id": "hedge-order"}
+    def place_emergency_market_sell(self, *, token_id, shares):
+        self.exits.append((token_id, shares))
+        if self.exit_result is not None:
+            return dict(self.exit_result)
+        return {"ok": True, "order_id": "exit-order", "making_amount": shares}
 
     def add_execution_log(self, entry):
         self.logs.append(entry)
@@ -232,7 +232,7 @@ def test_live_auto_trader_marks_order_failure_as_triggered_insufficient_funds():
     assert session.opportunities[-1]["detail"] == "资金不足"
 
 
-def test_live_auto_trader_immediately_hedges_a_single_failed_leg_at_safe_price():
+def test_live_auto_trader_immediately_exits_a_single_filled_leg():
     item, session = trader(
         FakeLiveSession(
             balance=1000.0,
@@ -240,7 +240,7 @@ def test_live_auto_trader_immediately_hedges_a_single_failed_leg_at_safe_price()
                 {"ok": True, "order_id": "yes-order", "message": "订单已提交。"},
                 {"ok": False, "message": "order couldn't be fully filled"},
             ],
-            hedge_result={"ok": True, "order_id": "no-hedge", "message": "订单已提交。"},
+            exit_result={"ok": True, "order_id": "yes-exit", "making_amount": 1000.0},
         )
     )
 
@@ -253,12 +253,12 @@ def test_live_auto_trader_immediately_hedges_a_single_failed_leg_at_safe_price()
         )
     )
 
-    assert session.hedges == [("no-token", session.buys[0][1], 0.57)]
-    assert session.opportunities[-1]["status"] == "已成交"
-    assert "已补齐对冲" in session.opportunities[-1]["detail"]
+    assert session.exits == [("yes-token", session.buys[0][1])]
+    assert session.opportunities[-1]["status"] == "已平仓"
+    assert "已全部平仓" in session.opportunities[-1]["detail"]
 
 
-def test_live_auto_trader_alerts_when_the_immediate_hedge_cannot_fill():
+def test_live_auto_trader_freezes_pair_when_emergency_exit_cannot_fully_fill():
     item, session = trader(
         FakeLiveSession(
             balance=1000.0,
@@ -266,7 +266,7 @@ def test_live_auto_trader_alerts_when_the_immediate_hedge_cannot_fill():
                 {"ok": True, "order_id": "yes-order", "message": "订单已提交。"},
                 {"ok": False, "message": "order couldn't be fully filled"},
             ],
-            hedge_result={"ok": False, "message": "order couldn't be fully filled"},
+            exit_result={"ok": True, "order_id": "partial-exit", "making_amount": 400.0},
         )
     )
 
@@ -279,9 +279,9 @@ def test_live_auto_trader_alerts_when_the_immediate_hedge_cannot_fill():
         )
     )
 
-    assert len(session.hedges) == 1
-    assert session.opportunities[-1]["status"] == "对冲失败"
-    assert "对冲失败" in session.opportunities[-1]["detail"]
+    assert len(session.exits) == 1
+    assert session.opportunities[-1]["status"] == "平仓未完成"
+    assert "剩余 600" in session.opportunities[-1]["detail"]
 
     item.on_result(
         ScanResult(
@@ -292,7 +292,7 @@ def test_live_auto_trader_alerts_when_the_immediate_hedge_cannot_fill():
         )
     )
     assert len(session.buys) == 2
-    assert len(session.hedges) == 1
+    assert len(session.exits) == 1
 
 
 def test_live_auto_trader_skips_when_region_blocked():

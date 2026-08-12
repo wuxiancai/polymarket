@@ -32,7 +32,7 @@ class LiveAutoTrader:
         self.lock = threading.Lock()
         self.last_execution: Dict[str, float] = {}
         self.last_execution_status: Dict[str, str] = {}
-        self.unhedged_pairs: Dict[str, str] = {}
+        self.blocked_pairs: Dict[str, str] = {}
         self.last_scan_at: Optional[datetime] = None
         self.last_error: Optional[str] = None
         self._snapshot_cache: Optional[dict] = None
@@ -61,9 +61,9 @@ class LiveAutoTrader:
         spread_cents = _spread_cents(opportunity)
         if spread_cents < MIN_SPREAD_TO_OPEN_CENTS:
             return "仅观察", ""
-        unhedged_detail = self.unhedged_pairs.get(opportunity.pair_key)
-        if unhedged_detail:
-            return "对冲失败", unhedged_detail
+        blocked_detail = self.blocked_pairs.get(opportunity.pair_key)
+        if blocked_detail:
+            return "平仓未完成", blocked_detail
         last_status = self.last_execution_status.get(opportunity.pair_key)
         last_time = self.last_execution.get(opportunity.pair_key)
         if last_time is not None and time.time() - last_time < self.config.cooldown_seconds:
@@ -213,25 +213,24 @@ class LiveAutoTrader:
             return "已成交", ""
         if successes == 1:
             successful_is_yes = bool(yes_result.get("ok"))
-            successful_cap = yes_max_price if successful_is_yes else no_max_price
-            remaining_cap = float(MAX_TOTAL_OPEN_COST - Decimal(str(successful_cap)))
-            failed_token = sized.no_token_id if successful_is_yes else sized.yes_token_id
-            hedge_result = self._safe_hedge_buy(
-                token_id=failed_token,
+            successful_token = sized.yes_token_id if successful_is_yes else sized.no_token_id
+            exit_result = self._safe_emergency_exit(
+                token_id=successful_token,
                 shares=sized.shares,
-                max_price=remaining_cap,
             )
-            if hedge_result.get("ok"):
-                self._log_execution(sized, yes_result, no_result, 2, hedge_result)
-                return "已成交", "初始一腿未成交，已补齐对冲（受限价格）。"
+            filled_shares = _filled_sell_shares(exit_result, sized.shares)
+            remaining_shares = max(0.0, sized.shares - filled_shares)
+            if remaining_shares <= 1e-6:
+                self._log_execution(sized, yes_result, no_result, 0, exit_result)
+                return "已平仓", "初始一腿未成交，已全部平仓并释放资金。"
             detail = (
                 f"初始订单 YES={yes_result.get('message')}; NO={no_result.get('message')}; "
-                f"对冲失败={hedge_result.get('message')}"
+                f"立即平仓未完成，剩余 {remaining_shares:g} 份：{exit_result.get('message')}"
             )
-            self._log_execution(sized, yes_result, no_result, successes, hedge_result)
+            self._log_execution(sized, yes_result, no_result, 0, exit_result)
             self._set_error(detail)
-            self.unhedged_pairs[sized.pair_key] = detail
-            return "对冲失败", detail
+            self.blocked_pairs[sized.pair_key] = detail
+            return "平仓未完成", detail
         self._log_execution(sized, yes_result, no_result, successes)
         detail = (
             f"YES={yes_result.get('message')}; "
@@ -269,12 +268,11 @@ class LiveAutoTrader:
             failure = {"ok": False, "message": str(exc)}
             return failure, failure
 
-    def _safe_hedge_buy(self, *, token_id: str, shares: float, max_price: float) -> dict:
+    def _safe_emergency_exit(self, *, token_id: str, shares: float) -> dict:
         try:
-            return self.live_session.place_protected_market_buy(
+            return self.live_session.place_emergency_market_sell(
                 token_id=token_id,
                 shares=shares,
-                max_price=max_price,
             )
         except Exception as exc:
             return {"ok": False, "message": str(exc)}
@@ -285,7 +283,7 @@ class LiveAutoTrader:
         yes_result: dict,
         no_result: dict,
         successes: int,
-        hedge_result: Optional[dict] = None,
+        exit_result: Optional[dict] = None,
     ) -> None:
         self.live_session.add_execution_log(
             {
@@ -301,7 +299,7 @@ class LiveAutoTrader:
                 "detail": (
                     f"YES={yes_result.get('message')}; "
                     f"NO={no_result.get('message')}"
-                    + (f"; 对冲={hedge_result.get('message')}" if hedge_result else "")
+                    + (f"; 平仓={exit_result.get('message')}" if exit_result else "")
                 ),
             }
         )
@@ -331,6 +329,16 @@ def _is_insufficient_funds(message: str) -> bool:
 
 def _is_region_restricted(message: str) -> bool:
     return "trading restricted in your region" in message.lower()
+
+
+def _filled_sell_shares(result: dict, requested_shares: float) -> float:
+    if not result.get("ok"):
+        return 0.0
+    try:
+        filled = float(result.get("making_amount"))
+    except (TypeError, ValueError):
+        return 0.0
+    return min(max(0.0, filled), requested_shares)
 
 
 def _price_caps(opportunity: ArbOpportunity) -> Optional[tuple[float, float]]:

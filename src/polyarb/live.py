@@ -268,27 +268,19 @@ class LiveTradingClient:
         ]
         return [_order_response_dict(response) for response in client.post_orders(signed_orders)]
 
-    def place_protected_market_buy(
-        self,
-        *,
-        token_id: str,
-        shares: float,
-        max_price: float,
-    ) -> dict:
-        """Fill the missing leg only when the full remaining hedge can be bought."""
+    def place_emergency_market_sell(self, *, token_id: str, shares: float) -> dict:
+        """Immediately release a one-leg position; partial fills are reported to the caller."""
         try:
-            target_shares = Decimal(str(shares))
-            price_limit = Decimal(str(max_price))
+            quantity = Decimal(str(shares))
         except (InvalidOperation, ValueError) as exc:
-            raise LiveTradingError("对冲订单的份额或价格上限无效。") from exc
-        if not token_id or target_shares <= 0 or price_limit <= 0 or price_limit >= Decimal("1"):
-            raise LiveTradingError("对冲订单需要 token、正数份额和 0 到 1 之间的最高价格。")
+            raise LiveTradingError("平仓份额无效。") from exc
+        if not token_id or quantity <= 0:
+            raise LiveTradingError("平仓需要 token 和正数份额。")
         response = self._ensure_sdk_client().place_market_order(
             token_id=token_id,
-            side="BUY",
-            amount=str(target_shares * price_limit),
-            max_price=str(price_limit),
-            order_type="FOK",
+            side="SELL",
+            shares=str(quantity),
+            order_type="FAK",
         )
         return _order_response_dict(response)
 
@@ -535,10 +527,10 @@ class LiveSession:
             client = self._require_client()
             return client.place_protected_pair_buy(**kwargs)
 
-    def place_protected_market_buy(self, **kwargs) -> dict:
+    def place_emergency_market_sell(self, **kwargs) -> dict:
         with self._lock:
             client = self._require_client()
-            return client.place_protected_market_buy(**kwargs)
+            return client.place_emergency_market_sell(**kwargs)
 
     def place_order(
         self,
@@ -688,6 +680,8 @@ def _order_response_dict(response: Any) -> dict:
             "status": _safe_text(getattr(response, "status", "")),
             "trade_ids": list(getattr(response, "trade_ids", []) or []),
             "transactions_hashes": list(getattr(response, "transactions_hashes", []) or []),
+            "making_amount": _safe_float(getattr(response, "making_amount", 0)),
+            "taking_amount": _safe_float(getattr(response, "taking_amount", 0)),
             "message": "订单已提交。",
         }
     return {
