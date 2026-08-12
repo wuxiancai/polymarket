@@ -255,6 +255,25 @@ def test_live_client_places_protected_fok_pair_as_one_batch():
     assert all(result["ok"] for result in results)
 
 
+def test_live_client_places_single_missing_leg_hedge_as_protected_fok():
+    item, fake = client()
+
+    result = item.place_protected_market_buy(
+        token_id="token-no",
+        shares=10,
+        max_price=0.57,
+    )
+
+    assert result["ok"] is True
+    assert fake.market_order_calls == [{
+        "token_id": "token-no",
+        "side": "BUY",
+        "amount": "5.70",
+        "max_price": "0.57",
+        "order_type": "FOK",
+    }]
+
+
 def test_live_client_redeems_position():
     item, fake = client()
 

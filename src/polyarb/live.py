@@ -268,6 +268,30 @@ class LiveTradingClient:
         ]
         return [_order_response_dict(response) for response in client.post_orders(signed_orders)]
 
+    def place_protected_market_buy(
+        self,
+        *,
+        token_id: str,
+        shares: float,
+        max_price: float,
+    ) -> dict:
+        """Fill the missing leg only when the full remaining hedge can be bought."""
+        try:
+            target_shares = Decimal(str(shares))
+            price_limit = Decimal(str(max_price))
+        except (InvalidOperation, ValueError) as exc:
+            raise LiveTradingError("对冲订单的份额或价格上限无效。") from exc
+        if not token_id or target_shares <= 0 or price_limit <= 0 or price_limit >= Decimal("1"):
+            raise LiveTradingError("对冲订单需要 token、正数份额和 0 到 1 之间的最高价格。")
+        response = self._ensure_sdk_client().place_market_order(
+            token_id=token_id,
+            side="BUY",
+            amount=str(target_shares * price_limit),
+            max_price=str(price_limit),
+            order_type="FOK",
+        )
+        return _order_response_dict(response)
+
     def cancel_order(self, order_id: str) -> dict:
         if not order_id:
             raise LiveTradingError("order_id 不能为空。")
@@ -510,6 +534,11 @@ class LiveSession:
         with self._lock:
             client = self._require_client()
             return client.place_protected_pair_buy(**kwargs)
+
+    def place_protected_market_buy(self, **kwargs) -> dict:
+        with self._lock:
+            client = self._require_client()
+            return client.place_protected_market_buy(**kwargs)
 
     def place_order(
         self,

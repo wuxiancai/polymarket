@@ -32,6 +32,7 @@ class LiveAutoTrader:
         self.lock = threading.Lock()
         self.last_execution: Dict[str, float] = {}
         self.last_execution_status: Dict[str, str] = {}
+        self.unhedged_pairs: Dict[str, str] = {}
         self.last_scan_at: Optional[datetime] = None
         self.last_error: Optional[str] = None
         self._snapshot_cache: Optional[dict] = None
@@ -60,6 +61,9 @@ class LiveAutoTrader:
         spread_cents = _spread_cents(opportunity)
         if spread_cents < MIN_SPREAD_TO_OPEN_CENTS:
             return "仅观察", ""
+        unhedged_detail = self.unhedged_pairs.get(opportunity.pair_key)
+        if unhedged_detail:
+            return "对冲失败", unhedged_detail
         last_status = self.last_execution_status.get(opportunity.pair_key)
         last_time = self.last_execution.get(opportunity.pair_key)
         if last_time is not None and time.time() - last_time < self.config.cooldown_seconds:
@@ -79,7 +83,7 @@ class LiveAutoTrader:
         price_caps = _price_caps(sized)
         if price_caps is None:
             return "仅观察", "价格上限无法保留至少 3¢ 套利空间"
-        status = self._execute_pair(sized, *price_caps)
+        status, execution_detail = self._execute_pair(sized, *price_caps)
         if status == "资金不足":
             display_status = "已触发，未成功"
             detail = "资金不足"
@@ -88,7 +92,7 @@ class LiveAutoTrader:
             detail = "服务器 IP 所在地区被 Polymarket 限制开仓，仅可平仓"
         else:
             display_status = status
-            detail = ""
+            detail = execution_detail
         self.last_execution_status[opportunity.pair_key] = display_status
         if status in {"已成交", "部分成交"}:
             with self.lock:
@@ -192,18 +196,43 @@ class LiveAutoTrader:
             total += _to_float(position.get("initial_value") or position.get("current_value"))
         return total
 
-    def _execute_pair(self, sized: ArbOpportunity, yes_max_price: float, no_max_price: float) -> str:
+    def _execute_pair(
+        self,
+        sized: ArbOpportunity,
+        yes_max_price: float,
+        no_max_price: float,
+    ) -> tuple[str, str]:
         yes_result, no_result = self._safe_pair_buy(
             sized,
             yes_max_price=yes_max_price,
             no_max_price=no_max_price,
         )
         successes = int(bool(yes_result.get("ok"))) + int(bool(no_result.get("ok")))
-        self._log_execution(sized, yes_result, no_result, successes)
         if successes == 2:
-            return "已成交"
+            self._log_execution(sized, yes_result, no_result, successes)
+            return "已成交", ""
         if successes == 1:
-            return "部分成交"
+            successful_is_yes = bool(yes_result.get("ok"))
+            successful_cap = yes_max_price if successful_is_yes else no_max_price
+            remaining_cap = float(MAX_TOTAL_OPEN_COST - Decimal(str(successful_cap)))
+            failed_token = sized.no_token_id if successful_is_yes else sized.yes_token_id
+            hedge_result = self._safe_hedge_buy(
+                token_id=failed_token,
+                shares=sized.shares,
+                max_price=remaining_cap,
+            )
+            if hedge_result.get("ok"):
+                self._log_execution(sized, yes_result, no_result, 2, hedge_result)
+                return "已成交", "初始一腿未成交，已补齐对冲（受限价格）。"
+            detail = (
+                f"初始订单 YES={yes_result.get('message')}; NO={no_result.get('message')}; "
+                f"对冲失败={hedge_result.get('message')}"
+            )
+            self._log_execution(sized, yes_result, no_result, successes, hedge_result)
+            self._set_error(detail)
+            self.unhedged_pairs[sized.pair_key] = detail
+            return "对冲失败", detail
+        self._log_execution(sized, yes_result, no_result, successes)
         detail = (
             f"YES={yes_result.get('message')}; "
             f"NO={no_result.get('message')}"
@@ -212,10 +241,10 @@ class LiveAutoTrader:
         if _is_region_restricted(detail):
             self.live_session.mark_region_blocked()
             self._set_error(self.live_session.geoblock_error() or "真实交易区域受限。")
-            return "区域受限"
+            return "区域受限", ""
         if _is_insufficient_funds(detail):
-            return "资金不足"
-        return "交易失败"
+            return "资金不足", ""
+        return "交易失败", detail
 
     def _safe_pair_buy(
         self,
@@ -240,7 +269,24 @@ class LiveAutoTrader:
             failure = {"ok": False, "message": str(exc)}
             return failure, failure
 
-    def _log_execution(self, sized: ArbOpportunity, yes_result: dict, no_result: dict, successes: int) -> None:
+    def _safe_hedge_buy(self, *, token_id: str, shares: float, max_price: float) -> dict:
+        try:
+            return self.live_session.place_protected_market_buy(
+                token_id=token_id,
+                shares=shares,
+                max_price=max_price,
+            )
+        except Exception as exc:
+            return {"ok": False, "message": str(exc)}
+
+    def _log_execution(
+        self,
+        sized: ArbOpportunity,
+        yes_result: dict,
+        no_result: dict,
+        successes: int,
+        hedge_result: Optional[dict] = None,
+    ) -> None:
         self.live_session.add_execution_log(
             {
                 "time": datetime.now(timezone.utc).isoformat(),
@@ -255,6 +301,7 @@ class LiveAutoTrader:
                 "detail": (
                     f"YES={yes_result.get('message')}; "
                     f"NO={no_result.get('message')}"
+                    + (f"; 对冲={hedge_result.get('message')}" if hedge_result else "")
                 ),
             }
         )

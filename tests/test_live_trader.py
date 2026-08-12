@@ -7,14 +7,16 @@ from polyarb.runner import ScanResult
 
 
 class FakeLiveSession:
-    def __init__(self, enabled=True, balance=1000.0, positions=None, buy_result=None, geo_blocked=False):
+    def __init__(self, enabled=True, balance=1000.0, positions=None, buy_result=None, hedge_result=None, geo_blocked=False):
         self.enabled = enabled
         self.balance = balance
         self.positions = positions or []
         self.buy_result = buy_result
+        self.hedge_result = hedge_result
         self.geo_blocked = geo_blocked
         self.geoblock_info = {"blocked": geo_blocked, "ip": "1.2.3.4", "country": "SG", "region": ""}
         self.buys = []
+        self.hedges = []
         self.logs = []
         self.errors = []
         self.opportunities = []
@@ -54,6 +56,12 @@ class FakeLiveSession:
             {"ok": True, "order_id": f"order-{len(self.buys) - 1}"},
             {"ok": True, "order_id": f"order-{len(self.buys)}"},
         ]
+
+    def place_protected_market_buy(self, *, token_id, shares, max_price):
+        self.hedges.append((token_id, shares, max_price))
+        if self.hedge_result is not None:
+            return dict(self.hedge_result)
+        return {"ok": True, "order_id": "hedge-order"}
 
     def add_execution_log(self, entry):
         self.logs.append(entry)
@@ -222,6 +230,69 @@ def test_live_auto_trader_marks_order_failure_as_triggered_insufficient_funds():
     assert session.logs[0]["ok"] is False
     assert session.opportunities[-1]["status"] == "已触发，未成功"
     assert session.opportunities[-1]["detail"] == "资金不足"
+
+
+def test_live_auto_trader_immediately_hedges_a_single_failed_leg_at_safe_price():
+    item, session = trader(
+        FakeLiveSession(
+            balance=1000.0,
+            buy_result=[
+                {"ok": True, "order_id": "yes-order", "message": "订单已提交。"},
+                {"ok": False, "message": "order couldn't be fully filled"},
+            ],
+            hedge_result={"ok": True, "order_id": "no-hedge", "message": "订单已提交。"},
+        )
+    )
+
+    item.on_result(
+        ScanResult(
+            markets=[],
+            pairs=1,
+            opportunities=[opportunity()],
+            scanned_at=datetime(2026, 8, 7, 12, 0, tzinfo=timezone.utc),
+        )
+    )
+
+    assert session.hedges == [("no-token", session.buys[0][1], 0.57)]
+    assert session.opportunities[-1]["status"] == "已成交"
+    assert "已补齐对冲" in session.opportunities[-1]["detail"]
+
+
+def test_live_auto_trader_alerts_when_the_immediate_hedge_cannot_fill():
+    item, session = trader(
+        FakeLiveSession(
+            balance=1000.0,
+            buy_result=[
+                {"ok": True, "order_id": "yes-order", "message": "订单已提交。"},
+                {"ok": False, "message": "order couldn't be fully filled"},
+            ],
+            hedge_result={"ok": False, "message": "order couldn't be fully filled"},
+        )
+    )
+
+    item.on_result(
+        ScanResult(
+            markets=[],
+            pairs=1,
+            opportunities=[opportunity()],
+            scanned_at=datetime(2026, 8, 7, 12, 0, tzinfo=timezone.utc),
+        )
+    )
+
+    assert len(session.hedges) == 1
+    assert session.opportunities[-1]["status"] == "对冲失败"
+    assert "对冲失败" in session.opportunities[-1]["detail"]
+
+    item.on_result(
+        ScanResult(
+            markets=[],
+            pairs=1,
+            opportunities=[opportunity()],
+            scanned_at=datetime(2026, 8, 7, 12, 1, tzinfo=timezone.utc),
+        )
+    )
+    assert len(session.buys) == 2
+    assert len(session.hedges) == 1
 
 
 def test_live_auto_trader_skips_when_region_blocked():
