@@ -56,6 +56,33 @@ exit 0
     service = service_output.read_text()
     assert f"Environment=POLYARB_DB={old_db}" in service
     assert f"Environment=POLYARB_DB={root / 'data' / 'paper.sqlite3'}" not in service
+    assert "Environment=FEE_BUFFER=0" in service
+
+
+def test_start_script_passes_fee_buffer_to_systemd(tmp_path):
+    root = tmp_path / "app"
+    root.mkdir()
+    shutil.copy(Path("start.sh"), root / "start.sh")
+    python_bin = root / ".venv" / "bin" / "python"
+    python_bin.parent.mkdir(parents=True)
+    _write_executable(python_bin, "#!/usr/bin/env bash\nexit 0\n")
+
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    service_output = tmp_path / "generated.service"
+    _write_executable(fake_bin / "systemctl", "#!/usr/bin/env bash\nexit 0\n")
+    _write_executable(
+        fake_bin / "sudo",
+        f"#!/usr/bin/env bash\nif [[ \"$1\" == \"tee\" ]]; then cat > \"{service_output}\"; fi\n",
+    )
+    _write_executable(fake_bin / "hostname", "#!/usr/bin/env bash\necho '127.0.1.1'\n")
+    env = os.environ.copy()
+    env["FEE_BUFFER"] = "0.0125"
+    env["PATH"] = f"{fake_bin}:{env['PATH']}"
+
+    subprocess.run(["bash", "start.sh"], cwd=root, env=env, check=True, text=True, capture_output=True)
+
+    assert "Environment=FEE_BUFFER=0.0125" in service_output.read_text()
 
 
 def test_start_script_allows_explicit_database_override(tmp_path):

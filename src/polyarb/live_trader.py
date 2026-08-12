@@ -93,7 +93,7 @@ class LiveAutoTrader:
             return sizing_status or "仅观察", ""
         if not self._should_execute(opportunity):
             return last_status or "可成交", ""
-        price_caps = _price_caps(sized)
+        price_caps = _price_caps(sized, self.config.fee_buffer)
         if price_caps is None:
             return "仅观察", "价格上限无法保留至少 3¢ 套利空间"
         status, execution_detail = self._execute_pair(sized, *price_caps)
@@ -107,7 +107,7 @@ class LiveAutoTrader:
             display_status = status
             detail = execution_detail
         self.last_execution_status[opportunity.pair_key] = display_status
-        if status in {"已成交", "部分成交"}:
+        if status in {"已成交", "部分成交", "已平仓"}:
             with self.lock:
                 self.last_execution[opportunity.pair_key] = time.time()
         return display_status, detail
@@ -235,14 +235,15 @@ class LiveAutoTrader:
                 yes_token_id=sized.yes_token_id,
                 no_token_id=sized.no_token_id,
                 shares=sized.shares,
-                reserved_capital=sized.total_cost,
+                reserved_capital=_max_pair_spend(sized.shares, yes_max_price, no_max_price, self.config.fee_buffer),
                 baseline_yes_shares=_token_shares(baseline.get("positions", []), sized.yes_token_id),
                 baseline_no_shares=_token_shares(baseline.get("positions", []), sized.no_token_id),
             )
             reservation_id = str(intent["id"])
         else:
             reservation_id = f"memory:{sized.pair_key}:{time.time_ns()}"
-        if not self.reservations.reserve(reservation_id, self.asset.symbol, sized.total_cost, _to_float(baseline.get("balance_pusd"))):
+        reserved_capital = _max_pair_spend(sized.shares, yes_max_price, no_max_price, self.config.fee_buffer)
+        if not self.reservations.reserve(reservation_id, self.asset.symbol, reserved_capital, _to_float(baseline.get("balance_pusd"))):
             if intent is not None:
                 self.execution_store.update(reservation_id, state="failed", detail="提交前资金预留失败。")
             return "资金不足", ""
@@ -366,6 +367,7 @@ class LiveAutoTrader:
                 shares=sized.shares,
                 yes_max_price=yes_max_price,
                 no_max_price=no_max_price,
+                fee_buffer=self.config.fee_buffer,
             )
             if len(results) == 2:
                 return results[0], results[1]
@@ -476,17 +478,25 @@ def _all_used_capital(positions: List[dict]) -> float:
     return sum(_to_float(position.get("initial_value") or position.get("current_value")) for position in positions)
 
 
-def _price_caps(opportunity: ArbOpportunity) -> Optional[tuple[float, float]]:
-    """Split the observed edge across both legs without crossing the 97¢ ceiling."""
+def _price_caps(opportunity: ArbOpportunity, fee_buffer: float = 0.0) -> Optional[tuple[float, float]]:
+    """Split observed headroom while reserving 3¢ profit plus configured fees."""
     yes_price = Decimal(str(opportunity.yes_avg_price))
     no_price = Decimal(str(opportunity.no_avg_price))
-    observed_total = yes_price + no_price
-    if observed_total > MAX_TOTAL_OPEN_COST:
+    fee = Decimal(str(fee_buffer))
+    max_price_total = MAX_TOTAL_OPEN_COST - fee
+    if fee < 0 or max_price_total <= 0:
         return None
-    half_headroom = (MAX_TOTAL_OPEN_COST - observed_total) / Decimal("2")
+    observed_total = yes_price + no_price
+    if observed_total > max_price_total:
+        return None
+    half_headroom = (max_price_total - observed_total) / Decimal("2")
     cents = Decimal("0.01")
     yes_cap = (yes_price + half_headroom).quantize(cents, rounding=ROUND_DOWN)
     no_cap = (no_price + half_headroom).quantize(cents, rounding=ROUND_DOWN)
-    if yes_cap <= 0 or no_cap <= 0 or yes_cap + no_cap > MAX_TOTAL_OPEN_COST:
+    if yes_cap <= 0 or no_cap <= 0 or yes_cap + no_cap + fee > MAX_TOTAL_OPEN_COST:
         return None
     return float(yes_cap), float(no_cap)
+
+
+def _max_pair_spend(shares: float, yes_max_price: float, no_max_price: float, fee_buffer: float) -> float:
+    return max(0.0, shares * (yes_max_price + no_max_price + max(0.0, fee_buffer)))

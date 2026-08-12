@@ -1,4 +1,5 @@
 import sys
+from decimal import Decimal
 from types import SimpleNamespace
 
 import pytest
@@ -9,6 +10,8 @@ from polyarb.live import (
     LiveTradingClient,
     LiveTradingError,
     _normalize_wallet_for_sdk,
+    _order_response_dict,
+    _require_target_buy_shares,
     live_credentials_from_env,
 )
 
@@ -250,9 +253,47 @@ def test_live_client_places_protected_fok_pair_as_one_batch():
     assert [call["order_type"] for call in fake.created_market_orders] == ["FOK", "FOK"]
     assert [call["max_price"] for call in fake.created_market_orders] == ["0.4", "0.57"]
     assert [float(call["amount"]) for call in fake.created_market_orders] == [4.0, 5.7]
+    assert [float(call["max_spend"]) for call in fake.created_market_orders] == [4.0, 5.7]
     assert len(fake.post_orders_calls) == 1
     assert len(fake.post_orders_calls[0]) == 2
     assert all(result["ok"] for result in results)
+
+
+def test_live_client_caps_two_legs_including_fee_buffer():
+    item, fake = client()
+
+    item.place_protected_pair_buy(
+        yes_token_id="token-yes",
+        no_token_id="token-no",
+        shares=10,
+        yes_max_price=0.40,
+        no_max_price=0.56,
+        fee_buffer=0.01,
+    )
+
+    assert [float(call["max_spend"]) for call in fake.created_market_orders] == [4.05, 5.65]
+
+
+def test_live_order_response_converts_raw_clob_amounts_to_human_units():
+    response = SimpleNamespace(
+        ok=True,
+        order_id="order-1",
+        status="matched",
+        making_amount="4000000",
+        taking_amount="10000000",
+        trade_ids=("trade-1",),
+        transactions_hashes=(),
+    )
+
+    result = _order_response_dict(response)
+
+    assert result["making_amount"] == 4.0
+    assert result["taking_amount"] == 10.0
+
+
+def test_live_client_rejects_signed_order_when_fee_cap_reduces_target_shares():
+    with pytest.raises(LiveTradingError, match="手续费缓冲不足"):
+        _require_target_buy_shares(SimpleNamespace(taker_amount=9_500_000), Decimal("10"))
 
 
 def test_live_client_marks_lost_batch_response_as_unknown_submission(monkeypatch):

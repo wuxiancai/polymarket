@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from polyarb.config import Config
-from polyarb.live_trader import LiveAutoTrader
+from polyarb.live_trader import LiveAutoTrader, _price_caps
 from polyarb.live_execution import LiveExecutionStore, WalletReservations
 from polyarb.models import BTC_ASSET, ArbOpportunity
 from polyarb.runner import ScanResult
@@ -46,7 +46,7 @@ class FakeLiveSession:
     def dashboard(self):
         return {"logged_in": True, "balance_pusd": self.balance, "positions": self.positions}
 
-    def place_protected_pair_buy(self, *, yes_token_id, no_token_id, shares, yes_max_price, no_max_price):
+    def place_protected_pair_buy(self, *, yes_token_id, no_token_id, shares, yes_max_price, no_max_price, fee_buffer=0.0):
         self.buys.append((yes_token_id, shares, yes_max_price))
         self.buys.append((no_token_id, shares, no_max_price))
         if self.buy_result is not None:
@@ -190,6 +190,32 @@ def test_live_auto_trader_never_executes_when_spread_is_under_three_cents():
 
     assert session.buys == []
     assert session.opportunities[-1]["status"] == "仅观察"
+
+
+def test_live_price_caps_reserve_configured_fee_buffer_inside_97_cents():
+    caps = _price_caps(opportunity(), fee_buffer=0.01)
+
+    assert caps is not None
+    assert round(caps[0] + caps[1] + 0.01, 2) <= 0.97
+
+
+def test_live_auto_trader_cools_down_after_single_leg_exit():
+    item, session = trader(
+        FakeLiveSession(
+            buy_result=[
+                {"ok": True, "order_id": "yes-order", "status": "matched", "taking_amount": 1000.0, "trade_ids": ["yes-trade"]},
+                {"ok": False, "message": "order couldn't be fully filled"},
+            ],
+            exit_result={"ok": True, "order_id": "yes-exit", "making_amount": 1000.0},
+        )
+    )
+    result = ScanResult(markets=[], pairs=1, opportunities=[opportunity()], scanned_at=datetime.now(timezone.utc))
+
+    item.on_result(result)
+    item.on_result(result)
+
+    assert len(session.buys) == 2
+    assert session.opportunities[-1]["status"] == "已平仓"
 
 
 def test_live_auto_trader_marks_zero_budget_as_insufficient_funds():

@@ -243,29 +243,35 @@ class LiveTradingClient:
         shares: float,
         yes_max_price: float,
         no_max_price: float,
+        fee_buffer: float = 0.0,
     ) -> List[dict]:
         """Submit both legs together as full-or-kill buys with hard price caps."""
         try:
             target_shares = Decimal(str(shares))
             yes_price = Decimal(str(yes_max_price))
             no_price = Decimal(str(no_max_price))
+            fee = Decimal(str(fee_buffer))
         except (InvalidOperation, ValueError) as exc:
             raise LiveTradingError("套利订单的份额或价格上限无效。") from exc
         if not yes_token_id or not no_token_id or target_shares <= 0:
             raise LiveTradingError("套利订单需要两个 token 和正数份额。")
-        if yes_price <= 0 or no_price <= 0 or yes_price + no_price > Decimal("0.97"):
-            raise LiveTradingError("套利两腿最高成交价之和不得超过 97¢。")
+        if fee < 0 or yes_price <= 0 or no_price <= 0 or yes_price + no_price + fee > Decimal("0.97"):
+            raise LiveTradingError("套利两腿价格与手续费缓冲之和不得超过 97¢。")
         client = self._ensure_sdk_client()
+        fee_per_leg = fee / Decimal("2")
         signed_orders = [
             client.create_market_order(
                 token_id=token_id,
                 side="BUY",
                 amount=str(target_shares * max_price),
+                max_spend=str(target_shares * (max_price + fee_per_leg)),
                 max_price=str(max_price),
                 order_type="FOK",
             )
             for token_id, max_price in ((yes_token_id, yes_price), (no_token_id, no_price))
         ]
+        for signed_order in signed_orders:
+            _require_target_buy_shares(signed_order, target_shares)
         try:
             return [_order_response_dict(response) for response in client.post_orders(signed_orders)]
         except Exception as exc:
@@ -687,8 +693,8 @@ def _order_response_dict(response: Any) -> dict:
             "status": _safe_text(getattr(response, "status", "")),
             "trade_ids": list(getattr(response, "trade_ids", []) or []),
             "transactions_hashes": list(getattr(response, "transactions_hashes", []) or []),
-            "making_amount": _safe_float(getattr(response, "making_amount", 0)),
-            "taking_amount": _safe_float(getattr(response, "taking_amount", 0)),
+            "making_amount": _safe_float(getattr(response, "making_amount", 0)) / PUSD_DECIMALS,
+            "taking_amount": _safe_float(getattr(response, "taking_amount", 0)) / PUSD_DECIMALS,
             "message": "订单已提交。",
         }
     return {
@@ -696,6 +702,18 @@ def _order_response_dict(response: Any) -> dict:
         "code": _safe_text(getattr(response, "code", "unknown")),
         "message": _safe_text(getattr(response, "message", "订单被拒绝。")),
     }
+
+
+def _require_target_buy_shares(signed_order: Any, target_shares: Decimal) -> None:
+    """Reject a fee-capped SDK draft that no longer requests the target shares."""
+    raw_taker_amount = getattr(signed_order, "taker_amount", None)
+    if raw_taker_amount is None:
+        return  # Lightweight test doubles do not expose SDK wire units.
+    actual_shares = Decimal(str(raw_taker_amount)) / Decimal(PUSD_DECIMALS)
+    if actual_shares + Decimal("0.000001") < target_shares:
+        raise LiveTradingError(
+            "手续费缓冲不足，SDK 已缩减目标份额；为避免不等份双腿成交，订单未提交。"
+        )
 
 
 def _safe_float(value: Any) -> float:

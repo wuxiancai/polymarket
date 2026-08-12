@@ -2,7 +2,7 @@
 
 Polyarb 是一个 Polymarket BTC / ETH / XRP / SOL 日线及以上周期套利扫描与纸面模拟交易系统。
 
-> 当前版本：`v2.7.3`；稳定回退点：`v1.0.0`。
+> 当前版本：`v2.7.4`；稳定回退点：`v1.0.0`。
 
 系统默认首页为真实交易系统，模拟系统独立保留在 `/simulation`。
 
@@ -35,6 +35,7 @@ Polyarb 是一个 Polymarket BTC / ETH / XRP / SOL 日线及以上周期套利�
 - `MIN_24H_VOLUME_USD=1000`
 - `MIN_ARBITRAGE_DEPTH_USD=100`
 - `SLIPPAGE_BUFFER_CENTS=3`（真实开仓要求 YES + NO 不高于 97¢，保留至少 3¢/份套利空间）
+- `FEE_BUFFER=0`（每份两腿合计的最高手续费缓冲；收费市场必须设置为足以覆盖实际费率的值，系统会将其从 97¢ 总成本上限中预留）
 - `ALLOW_NEAR_EXPIRY_LONG_PERIODS=true`
 - `NEAR_EXPIRY_DAYS=30`
 
@@ -155,6 +156,7 @@ PYTHONPATH=src python3 -m polyarb scan --once
 MIN_24H_VOLUME_USD=1000
 MIN_ARBITRAGE_DEPTH_USD=100
 SLIPPAGE_BUFFER_CENTS=3
+FEE_BUFFER=0
 ALLOW_NEAR_EXPIRY_LONG_PERIODS=true
 NEAR_EXPIRY_DAYS=30
 PAPER_INITIAL_CAPITAL_USDT=10000
@@ -182,7 +184,7 @@ POLYARB_DB=/path/to/paper.sqlite3 bash start.sh
 示例：
 
 ```bash
-SLIPPAGE_BUFFER_CENTS=3 MIN_ARBITRAGE_DEPTH_USD=500 bash start.sh
+SLIPPAGE_BUFFER_CENTS=3 FEE_BUFFER=0.01 MIN_ARBITRAGE_DEPTH_USD=500 bash start.sh
 ```
 
 如果服务器访问 Polymarket 需要本机代理，先导出代理再启动。`start.sh` 会把代理变量写入 systemd 服务，避免终端关闭后服务丢失代理环境：
