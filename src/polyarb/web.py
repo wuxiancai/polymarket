@@ -21,6 +21,7 @@ from .live import (
     live_credentials_from_env,
 )
 from .live_trader import LiveAutoTrader
+from .live_execution import LiveExecutionStore, WalletReservations
 from .live_web import live_dashboard_payload, render_live_page
 from .models import DEFAULT_ASSETS, AssetSpec
 from .runner import MIN_SPREAD_TO_OPEN_CENTS, PaperRunner, RealtimePaperRunner, ScanResult
@@ -187,8 +188,16 @@ def serve(config: Config, host: str = "127.0.0.1", port: int = 8787, auto_scan: 
         WebState(config=config, store=store, asset=asset, runner=PaperRunner(config, asset))
         for asset in DEFAULT_ASSETS
     ]
+    execution_store = LiveExecutionStore(config.database_path)
+    reservations = WalletReservations()
     for state in states:
-        state.live_trader = LiveAutoTrader(live_session, config, state.asset)
+        state.live_trader = LiveAutoTrader(
+            live_session,
+            config,
+            state.asset,
+            execution_store=execution_store,
+            reservations=reservations,
+        )
     if auto_scan:
         for state in states:
             _start_realtime_loop(state)

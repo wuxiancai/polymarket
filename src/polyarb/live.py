@@ -266,7 +266,14 @@ class LiveTradingClient:
             )
             for token_id, max_price in ((yes_token_id, yes_price), (no_token_id, no_price))
         ]
-        return [_order_response_dict(response) for response in client.post_orders(signed_orders)]
+        try:
+            return [_order_response_dict(response) for response in client.post_orders(signed_orders)]
+        except Exception as exc:
+            # The CLOB may have received signed orders even when the HTTP response was lost.
+            return [
+                {"ok": False, "unknown_submission": True, "message": f"批量订单提交结果未知：{exc}"},
+                {"ok": False, "unknown_submission": True, "message": f"批量订单提交结果未知：{exc}"},
+            ]
 
     def place_emergency_market_sell(self, *, token_id: str, shares: float) -> dict:
         """Immediately release a one-leg position; partial fills are reported to the caller."""

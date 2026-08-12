@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 from polyarb.config import Config
 from polyarb.live_trader import LiveAutoTrader
+from polyarb.live_execution import LiveExecutionStore, WalletReservations
 from polyarb.models import BTC_ASSET, ArbOpportunity
 from polyarb.runner import ScanResult
 
@@ -53,8 +54,8 @@ class FakeLiveSession:
                 return [dict(item) for item in self.buy_result]
             return [dict(self.buy_result), dict(self.buy_result)]
         return [
-            {"ok": True, "order_id": f"order-{len(self.buys) - 1}"},
-            {"ok": True, "order_id": f"order-{len(self.buys)}"},
+            {"ok": True, "order_id": f"order-{len(self.buys) - 1}", "status": "matched", "taking_amount": 1000.0, "trade_ids": ["yes-trade"]},
+            {"ok": True, "order_id": f"order-{len(self.buys)}", "status": "matched", "taking_amount": 1000.0, "trade_ids": ["no-trade"]},
         ]
 
     def place_emergency_market_sell(self, *, token_id, shares):
@@ -100,7 +101,7 @@ def opportunity() -> ArbOpportunity:
     )
 
 
-def trader(session=None):
+def trader(session=None, **kwargs):
     session = session or FakeLiveSession()
     config = Config(
         database_path="data/paper.sqlite3",
@@ -108,7 +109,7 @@ def trader(session=None):
         allocation_ratios={"BTC": 1.0, "ETH": 0.0, "XRP": 0.0, "SOL": 0.0},
         cooldown_seconds=30,
     )
-    return LiveAutoTrader(session, config, BTC_ASSET), session
+    return LiveAutoTrader(session, config, BTC_ASSET, **kwargs), session
 
 
 def test_live_auto_trader_places_yes_and_no_market_buys():
@@ -237,7 +238,7 @@ def test_live_auto_trader_immediately_exits_a_single_filled_leg():
         FakeLiveSession(
             balance=1000.0,
             buy_result=[
-                {"ok": True, "order_id": "yes-order", "message": "订单已提交。"},
+                {"ok": True, "order_id": "yes-order", "status": "matched", "taking_amount": 1000.0, "trade_ids": ["yes-trade"], "message": "订单已成交。"},
                 {"ok": False, "message": "order couldn't be fully filled"},
             ],
             exit_result={"ok": True, "order_id": "yes-exit", "making_amount": 1000.0},
@@ -263,7 +264,7 @@ def test_live_auto_trader_freezes_pair_when_emergency_exit_cannot_fully_fill():
         FakeLiveSession(
             balance=1000.0,
             buy_result=[
-                {"ok": True, "order_id": "yes-order", "message": "订单已提交。"},
+                {"ok": True, "order_id": "yes-order", "status": "matched", "taking_amount": 1000.0, "trade_ids": ["yes-trade"], "message": "订单已成交。"},
                 {"ok": False, "message": "order couldn't be fully filled"},
             ],
             exit_result={"ok": True, "order_id": "partial-exit", "making_amount": 400.0},
@@ -293,6 +294,71 @@ def test_live_auto_trader_freezes_pair_when_emergency_exit_cannot_fully_fill():
     )
     assert len(session.buys) == 2
     assert len(session.exits) == 1
+
+
+def test_live_auto_trader_does_not_mark_delayed_orders_as_filled():
+    item, session = trader(
+        FakeLiveSession(
+            buy_result=[
+                {"ok": True, "order_id": "yes-order", "status": "delayed", "taking_amount": 0, "trade_ids": []},
+                {"ok": True, "order_id": "no-order", "status": "delayed", "taking_amount": 0, "trade_ids": []},
+            ]
+        )
+    )
+
+    item.on_result(ScanResult(markets=[], pairs=1, opportunities=[opportunity()], scanned_at=datetime.now(timezone.utc)))
+
+    assert session.opportunities[-1]["status"] == "成交确认中"
+    assert session.exits == []
+    assert "等待持仓对账" in session.opportunities[-1]["detail"]
+
+
+def test_live_auto_trader_does_not_exit_a_matched_leg_while_other_leg_is_delayed():
+    item, session = trader(
+        FakeLiveSession(
+            buy_result=[
+                {"ok": True, "order_id": "yes-order", "status": "matched", "taking_amount": 1000, "trade_ids": ["yes-trade"]},
+                {"ok": True, "order_id": "no-order", "status": "delayed", "taking_amount": 0, "trade_ids": []},
+            ]
+        )
+    )
+
+    item.on_result(ScanResult(markets=[], pairs=1, opportunities=[opportunity()], scanned_at=datetime.now(timezone.utc)))
+
+    assert session.opportunities[-1]["status"] == "成交确认中"
+    assert session.exits == []
+
+
+def test_live_auto_trader_reserves_wallet_capital_between_opportunities():
+    item, session = trader(FakeLiveSession(balance=1000.0))
+    first = opportunity()
+    second = first.__class__(**{**first.__dict__, "pair_key": "pair-2"})
+    item.on_result(ScanResult(markets=[], pairs=2, opportunities=[first, second], scanned_at=datetime.now(timezone.utc)))
+
+    assert len(session.buys) == 2
+    assert session.opportunities[-1]["status"] == "已触发，未成功"
+    assert session.opportunities[-1]["detail"] == "资金不足"
+
+
+def test_live_auto_trader_restores_pending_intent_and_blocks_before_reconciliation(tmp_path):
+    store = LiveExecutionStore(tmp_path / "paper.sqlite3")
+    saved = store.create(
+        asset="BTC",
+        pair_key="pair-1",
+        yes_token_id="yes-token",
+        no_token_id="no-token",
+        shares=10.0,
+        reserved_capital=9.7,
+        baseline_yes_shares=0.0,
+        baseline_no_shares=0.0,
+    )
+    item, session = trader(FakeLiveSession(balance=1000.0), execution_store=store, reservations=WalletReservations())
+
+    item.on_result(ScanResult(markets=[], pairs=1, opportunities=[opportunity()], scanned_at=datetime.now(timezone.utc)))
+
+    assert session.buys == []
+    assert session.opportunities[-1]["status"] == "平仓未完成"
+    assert store.get(saved["id"])["state"] == "pending_confirmation"
 
 
 def test_live_auto_trader_skips_when_region_blocked():

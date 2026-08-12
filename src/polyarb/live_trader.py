@@ -9,6 +9,7 @@ from typing import Dict, List, Optional
 
 from .config import Config
 from .live import LiveSession
+from .live_execution import LiveExecutionStore, WalletReservations
 from .models import ArbOpportunity, AssetSpec
 from .runner import (
     MIN_DISPLAYED_POSITION_VALUE,
@@ -25,7 +26,14 @@ MAX_TOTAL_OPEN_COST = Decimal("0.97")
 
 
 class LiveAutoTrader:
-    def __init__(self, live_session: LiveSession, config: Config, asset: AssetSpec) -> None:
+    def __init__(
+        self,
+        live_session: LiveSession,
+        config: Config,
+        asset: AssetSpec,
+        execution_store: Optional[LiveExecutionStore] = None,
+        reservations: Optional[WalletReservations] = None,
+    ) -> None:
         self.live_session = live_session
         self.config = config
         self.asset = asset
@@ -37,6 +45,10 @@ class LiveAutoTrader:
         self.last_error: Optional[str] = None
         self._snapshot_cache: Optional[dict] = None
         self._snapshot_at = 0.0
+        self.execution_store = execution_store
+        self.reservations = reservations or WalletReservations()
+        self._restored = False
+        self._confirmed_reservations: Dict[str, float] = {}
 
     def on_result(self, result: ScanResult) -> None:
         if not self.live_session.is_logged_in():
@@ -61,6 +73,7 @@ class LiveAutoTrader:
         spread_cents = _spread_cents(opportunity)
         if spread_cents < MIN_SPREAD_TO_OPEN_CENTS:
             return "仅观察", ""
+        self._restore_and_reconcile()
         blocked_detail = self.blocked_pairs.get(opportunity.pair_key)
         if blocked_detail:
             return "平仓未完成", blocked_detail
@@ -139,7 +152,13 @@ class LiveAutoTrader:
         balance = _to_float(snapshot.get("balance_pusd"))
         allocation = balance * self._allocation_ratio()
         used = self._used_capital(snapshot.get("positions", []))
-        available = max(0.0, allocation - used)
+        reserved_asset = self.reservations.total(self.asset.symbol)
+        reserved_total = self.reservations.total()
+        total_used = _all_used_capital(snapshot.get("positions", []))
+        available = min(
+            max(0.0, allocation - used - reserved_asset),
+            max(0.0, balance - total_used - reserved_total),
+        )
         target_budget = min(opportunity.total_cost, allocation * position_ratio)
         if available < target_budget:
             return None, "资金不足"
@@ -162,9 +181,9 @@ class LiveAutoTrader:
             "",
         )
 
-    def _snapshot(self) -> dict:
+    def _snapshot(self, force: bool = False) -> dict:
         now = time.time()
-        if self._snapshot_cache is None or now - self._snapshot_at >= 30:
+        if force or self._snapshot_cache is None or now - self._snapshot_at >= 30:
             try:
                 data = self.live_session.dashboard()
             except Exception as exc:
@@ -177,6 +196,10 @@ class LiveAutoTrader:
             if "balance_pusd" in data:
                 self._snapshot_cache = data
                 self._snapshot_at = now
+                for reservation_id, confirmed_at in list(self._confirmed_reservations.items()):
+                    if now - confirmed_at >= 5:
+                        self.reservations.release(reservation_id)
+                        self._confirmed_reservations.pop(reservation_id, None)
         return self._snapshot_cache or {}
 
     def _allocation_ratio(self) -> float:
@@ -202,17 +225,58 @@ class LiveAutoTrader:
         yes_max_price: float,
         no_max_price: float,
     ) -> tuple[str, str]:
+        baseline = self._snapshot(force=True)
+        reservation_id = ""
+        intent = None
+        if self.execution_store is not None:
+            intent = self.execution_store.create(
+                asset=self.asset.symbol,
+                pair_key=sized.pair_key,
+                yes_token_id=sized.yes_token_id,
+                no_token_id=sized.no_token_id,
+                shares=sized.shares,
+                reserved_capital=sized.total_cost,
+                baseline_yes_shares=_token_shares(baseline.get("positions", []), sized.yes_token_id),
+                baseline_no_shares=_token_shares(baseline.get("positions", []), sized.no_token_id),
+            )
+            reservation_id = str(intent["id"])
+        else:
+            reservation_id = f"memory:{sized.pair_key}:{time.time_ns()}"
+        if not self.reservations.reserve(reservation_id, self.asset.symbol, sized.total_cost, _to_float(baseline.get("balance_pusd"))):
+            if intent is not None:
+                self.execution_store.update(reservation_id, state="failed", detail="提交前资金预留失败。")
+            return "资金不足", ""
         yes_result, no_result = self._safe_pair_buy(
             sized,
             yes_max_price=yes_max_price,
             no_max_price=no_max_price,
         )
-        successes = int(bool(yes_result.get("ok"))) + int(bool(no_result.get("ok")))
+        if intent is not None:
+            self.execution_store.update(
+                reservation_id,
+                yes_order_id=str(yes_result.get("order_id") or ""),
+                no_order_id=str(no_result.get("order_id") or ""),
+            )
+        successes = int(_is_confirmed_full_buy(yes_result, sized.shares)) + int(_is_confirmed_full_buy(no_result, sized.shares))
+        # A delayed or response-lost leg may still fill after this method returns.  Do not
+        # liquidate the confirmed leg until the uncertain leg is reconciled; doing so can
+        # create the very one-leg exposure this safeguard is intended to prevent.
+        if _is_ambiguous_submission(yes_result) or _is_ambiguous_submission(no_result):
+            detail = "订单提交或成交仍不确定，已冻结交易对并等待持仓对账，禁止重复开仓。"
+            self.blocked_pairs[sized.pair_key] = detail
+            self._update_intent(reservation_id, "unknown_submission", detail)
+            self._set_error(detail)
+            self._log_execution(sized, yes_result, no_result, 0)
+            return "成交确认中", detail
         if successes == 2:
+            # Keep the reservation until a fresh account snapshot includes the new position.
+            # Otherwise another opportunity in this same scan can spend the same cached balance.
+            self._complete_intent(reservation_id, "confirmed", "YES/NO 两腿均已确认完整成交。", release=False)
+            self._confirmed_reservations[reservation_id] = time.time()
             self._log_execution(sized, yes_result, no_result, successes)
             return "已成交", ""
         if successes == 1:
-            successful_is_yes = bool(yes_result.get("ok"))
+            successful_is_yes = _is_confirmed_full_buy(yes_result, sized.shares)
             successful_token = sized.yes_token_id if successful_is_yes else sized.no_token_id
             exit_result = self._safe_emergency_exit(
                 token_id=successful_token,
@@ -221,6 +285,7 @@ class LiveAutoTrader:
             filled_shares = _filled_sell_shares(exit_result, sized.shares)
             remaining_shares = max(0.0, sized.shares - filled_shares)
             if remaining_shares <= 1e-6:
+                self._complete_intent(reservation_id, "closed", "单腿成交已确认，紧急平仓已确认完成。")
                 self._log_execution(sized, yes_result, no_result, 0, exit_result)
                 return "已平仓", "初始一腿未成交，已全部平仓并释放资金。"
             detail = (
@@ -230,7 +295,9 @@ class LiveAutoTrader:
             self._log_execution(sized, yes_result, no_result, 0, exit_result)
             self._set_error(detail)
             self.blocked_pairs[sized.pair_key] = detail
+            self._update_intent(reservation_id, "exit_pending", detail)
             return "平仓未完成", detail
+        self._complete_intent(reservation_id, "failed", "两腿均未确认成交。")
         self._log_execution(sized, yes_result, no_result, successes)
         detail = (
             f"YES={yes_result.get('message')}; "
@@ -244,6 +311,46 @@ class LiveAutoTrader:
         if _is_insufficient_funds(detail):
             return "资金不足", ""
         return "交易失败", detail
+
+    def _update_intent(self, reservation_id: str, state: str, detail: str) -> None:
+        if self.execution_store is not None and not reservation_id.startswith("memory:"):
+            self.execution_store.update(reservation_id, state=state, detail=detail)
+
+    def _complete_intent(self, reservation_id: str, state: str, detail: str, *, release: bool = True) -> None:
+        self._update_intent(reservation_id, state, detail)
+        if release:
+            self.reservations.release(reservation_id)
+
+    def _restore_and_reconcile(self) -> None:
+        if self.execution_store is None:
+            return
+        active = self.execution_store.active(self.asset.symbol)
+        for intent in active:
+            intent_id = str(intent["id"])
+            if not self._restored:
+                self.reservations.reserve(intent_id, self.asset.symbol, _to_float(intent["reserved_capital"]), float("inf"))
+            snapshot = self._snapshot(force=True)
+            yes_delta = _token_shares(snapshot.get("positions", []), str(intent["yes_token_id"])) - _to_float(intent["baseline_yes_shares"])
+            no_delta = _token_shares(snapshot.get("positions", []), str(intent["no_token_id"])) - _to_float(intent["baseline_no_shares"])
+            shares = _to_float(intent["shares"])
+            if yes_delta >= shares - 1e-6 and no_delta >= shares - 1e-6:
+                self._complete_intent(intent_id, "confirmed", "服务恢复后已对账确认两腿完整成交。")
+                self.blocked_pairs.pop(str(intent["pair_key"]), None)
+            elif yes_delta <= 1e-6 and no_delta <= 1e-6:
+                detail = "订单/成交状态尚未可确认；已保持冻结，等待下一次真实持仓对账。"
+                self.blocked_pairs[str(intent["pair_key"])] = detail
+            else:
+                token_id = str(intent["yes_token_id"] if yes_delta > no_delta else intent["no_token_id"])
+                exposed = max(yes_delta, no_delta)
+                exit_result = self._safe_emergency_exit(token_id=token_id, shares=exposed)
+                if _filled_sell_shares(exit_result, exposed) >= exposed - 1e-6:
+                    self._complete_intent(intent_id, "closed", "服务恢复后发现单腿仓位，已紧急平仓。")
+                    self.blocked_pairs.pop(str(intent["pair_key"]), None)
+                else:
+                    detail = "服务恢复后发现单腿仓位，但紧急平仓尚未完成；该交易对已冻结。"
+                    self._update_intent(intent_id, "exit_pending", detail)
+                    self.blocked_pairs[str(intent["pair_key"])] = detail
+        self._restored = True
 
     def _safe_pair_buy(
         self,
@@ -339,6 +446,34 @@ def _filled_sell_shares(result: dict, requested_shares: float) -> float:
     except (TypeError, ValueError):
         return 0.0
     return min(max(0.0, filled), requested_shares)
+
+
+def _is_confirmed_full_buy(result: dict, requested_shares: float) -> bool:
+    if not result.get("ok") or str(result.get("status") or "").lower() != "matched":
+        return False
+    try:
+        filled = float(result.get("taking_amount"))
+    except (TypeError, ValueError):
+        return False
+    return filled >= requested_shares - 1e-6 and bool(result.get("trade_ids"))
+
+
+def _is_ambiguous_submission(result: dict) -> bool:
+    if not result.get("ok"):
+        return bool(result.get("unknown_submission"))
+    return str(result.get("status") or "").lower() in {"delayed", "live", "unmatched", ""}
+
+
+def _token_shares(positions: List[dict], token_id: str) -> float:
+    return sum(
+        _to_float(position.get("size"))
+        for position in positions
+        if str(position.get("token_id") or "") == token_id
+    )
+
+
+def _all_used_capital(positions: List[dict]) -> float:
+    return sum(_to_float(position.get("initial_value") or position.get("current_value")) for position in positions)
 
 
 def _price_caps(opportunity: ArbOpportunity) -> Optional[tuple[float, float]]:

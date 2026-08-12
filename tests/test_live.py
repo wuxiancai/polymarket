@@ -255,6 +255,25 @@ def test_live_client_places_protected_fok_pair_as_one_batch():
     assert all(result["ok"] for result in results)
 
 
+def test_live_client_marks_lost_batch_response_as_unknown_submission(monkeypatch):
+    item, fake = client()
+
+    def lose_response(_orders):
+        raise TimeoutError("gateway timeout")
+
+    monkeypatch.setattr(fake, "post_orders", lose_response)
+    results = item.place_protected_pair_buy(
+        yes_token_id="token-yes",
+        no_token_id="token-no",
+        shares=10,
+        yes_max_price=0.40,
+        no_max_price=0.57,
+    )
+
+    assert len(results) == 2
+    assert all(result["unknown_submission"] for result in results)
+
+
 def test_live_client_places_emergency_exit_as_market_fak_sell():
     item, fake = client()
 
