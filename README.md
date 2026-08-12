@@ -2,7 +2,7 @@
 
 Polyarb 是一个 Polymarket BTC / ETH / XRP / SOL 日线及以上周期套利扫描与纸面模拟交易系统。
 
-> 当前版本：`v2.7.4`；稳定回退点：`v1.0.0`。
+> 当前版本：`v2.7.5`；稳定回退点：`v1.0.0`。
 
 系统默认首页为真实交易系统，模拟系统独立保留在 `/simulation`。
 
@@ -40,6 +40,8 @@ Polyarb 是一个 Polymarket BTC / ETH / XRP / SOL 日线及以上周期套利�
 - `NEAR_EXPIRY_DAYS=30`
 
 套利判断会逐档读取 order book 深度。只有当前边际档位在扣除滑点安全垫后仍然盈利，系统才会继续吃深度；前面档位的利润不会补贴后面亏损档位。
+
+`/simulation` 与真实交易共用开仓逻辑：同份额 YES/NO、97¢（含 `FEE_BUFFER`）总上限、FOK 全额成交校验、单腿成交后的 FAK 平仓、冻结与冷却规则完全一致；唯一差别是模拟盘只使用 `PAPER_INITIAL_CAPITAL_USDT`，不连接钱包也不发送真实订单。
 
 ## 一键部署
 

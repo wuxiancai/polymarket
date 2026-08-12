@@ -4,10 +4,10 @@ import threading
 import time
 from dataclasses import replace
 from datetime import datetime, timezone
-from decimal import Decimal, ROUND_DOWN
 from typing import Dict, List, Optional
 
 from .config import Config
+from .execution_rules import MAX_TOTAL_OPEN_COST, max_pair_spend as _max_pair_spend, price_caps as _price_caps
 from .live import LiveSession
 from .live_execution import LiveExecutionStore, WalletReservations
 from .models import ArbOpportunity, AssetSpec
@@ -20,9 +20,6 @@ from .runner import (
     _settlement_at,
     _spread_cents,
 )
-
-
-MAX_TOTAL_OPEN_COST = Decimal("0.97")
 
 
 class LiveAutoTrader:
@@ -476,27 +473,3 @@ def _token_shares(positions: List[dict], token_id: str) -> float:
 
 def _all_used_capital(positions: List[dict]) -> float:
     return sum(_to_float(position.get("initial_value") or position.get("current_value")) for position in positions)
-
-
-def _price_caps(opportunity: ArbOpportunity, fee_buffer: float = 0.0) -> Optional[tuple[float, float]]:
-    """Split observed headroom while reserving 3¢ profit plus configured fees."""
-    yes_price = Decimal(str(opportunity.yes_avg_price))
-    no_price = Decimal(str(opportunity.no_avg_price))
-    fee = Decimal(str(fee_buffer))
-    max_price_total = MAX_TOTAL_OPEN_COST - fee
-    if fee < 0 or max_price_total <= 0:
-        return None
-    observed_total = yes_price + no_price
-    if observed_total > max_price_total:
-        return None
-    half_headroom = (max_price_total - observed_total) / Decimal("2")
-    cents = Decimal("0.01")
-    yes_cap = (yes_price + half_headroom).quantize(cents, rounding=ROUND_DOWN)
-    no_cap = (no_price + half_headroom).quantize(cents, rounding=ROUND_DOWN)
-    if yes_cap <= 0 or no_cap <= 0 or yes_cap + no_cap + fee > MAX_TOTAL_OPEN_COST:
-        return None
-    return float(yes_cap), float(no_cap)
-
-
-def _max_pair_spend(shares: float, yes_max_price: float, no_max_price: float, fee_buffer: float) -> float:
-    return max(0.0, shares * (yes_max_price + no_max_price + max(0.0, fee_buffer)))

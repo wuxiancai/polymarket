@@ -9,6 +9,7 @@ from typing import Callable, Dict, List, Optional
 
 from .arbitrage import build_pairs, find_opportunities
 from .config import Config
+from .execution_rules import fak_sell_fill, fok_buy_fill, price_caps
 from .models import BTC_ASSET, DEFAULT_ASSETS, AssetSpec, ArbOpportunity, Market, OrderBook
 from .polymarket import ClobClient, GammaClient
 from .store import PaperStore
@@ -84,6 +85,7 @@ class PaperRunner:
         self.asset = asset
         self.store = PaperStore(config.database_path)
         self.last_execution: Dict[str, float] = {}
+        self.blocked_pairs: Dict[str, str] = {}
 
     def run_forever(self) -> None:
         self.store.initialize()
@@ -100,13 +102,17 @@ class PaperRunner:
         for opportunity in result.opportunities:
             self.store.record_opportunity(opportunity)
         for opportunity in sorted((item for item in result.opportunities if item.executable), key=_settlement_at):
+            if opportunity.pair_key in self.blocked_pairs:
+                continue
             if not self._should_execute(opportunity):
                 continue
             sized = self._sized_opportunity(opportunity)
             if sized is None:
                 continue
-            self.store.record_paper_trade(sized)
+            executed = self._simulate_protected_pair(sized, result.books)
             self.last_execution[opportunity.pair_key] = time.time()
+            if executed is not None:
+                self.store.record_paper_trade(executed)
 
     def _should_execute(self, opportunity: ArbOpportunity) -> bool:
         if not opportunity.executable:
@@ -171,6 +177,51 @@ class PaperRunner:
             except (TypeError, ValueError):
                 continue
         return total
+
+    def _simulate_protected_pair(
+        self,
+        opportunity: ArbOpportunity,
+        books: Dict[str, OrderBook],
+    ) -> Optional[ArbOpportunity]:
+        """Paper equivalent of live protected FOK buys plus one-leg FAK exit."""
+        caps = price_caps(opportunity, self.config.fee_buffer)
+        yes_book = books.get(opportunity.yes_token_id)
+        no_book = books.get(opportunity.no_token_id)
+        if caps is None or yes_book is None or no_book is None:
+            return None
+        yes_fill = fok_buy_fill(yes_book.asks, opportunity.shares, caps[0])
+        no_fill = fok_buy_fill(no_book.asks, opportunity.shares, caps[1])
+        if yes_fill is not None and no_fill is not None:
+            yes_cost, yes_avg = yes_fill
+            no_cost, no_avg = no_fill
+            fee_cost = opportunity.shares * max(0.0, self.config.fee_buffer)
+            total_cost = yes_cost + no_cost + fee_cost
+            profit = opportunity.shares - total_cost
+            if profit < MIN_DISPLAYED_POSITION_VALUE:
+                return None
+            return replace(
+                opportunity,
+                yes_avg_price=yes_avg,
+                no_avg_price=no_avg,
+                total_cost=total_cost,
+                min_payout=opportunity.shares,
+                guaranteed_profit=profit,
+                edge_per_share=profit / opportunity.shares,
+            )
+        filled_legs = [
+            (yes_fill, yes_book, "YES"),
+            (no_fill, no_book, "NO"),
+        ]
+        for fill, book, label in filled_legs:
+            if fill is None:
+                continue
+            sold = fak_sell_fill(book.bids, opportunity.shares)
+            if sold < opportunity.shares - 1e-6:
+                self.blocked_pairs[opportunity.pair_key] = (
+                    f"模拟 {label} 单腿 FOK 成交后 FAK 平仓未完成，剩余 {opportunity.shares - sold:g} 份。"
+                )
+            break
+        return None
 
 
 def _spread_cents(opportunity: ArbOpportunity) -> float:
