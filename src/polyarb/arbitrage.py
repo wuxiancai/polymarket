@@ -120,7 +120,7 @@ def _take_profitable_depth(
     while i < len(yes_asks) and j < len(no_asks):
         yes_price, _ = yes_asks[i]
         no_price, _ = no_asks[j]
-        if yes_price + no_price >= 1.0 - buffer:
+        if yes_price + no_price > 1.0 - buffer + 1e-12:
             break
         quantity = min(yes_remaining, no_remaining)
         if quantity <= 0:

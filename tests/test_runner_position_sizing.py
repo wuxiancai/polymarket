@@ -48,10 +48,10 @@ def test_runner_uses_position_size_tiers_by_spread(tmp_path):
     full = item._sized_opportunity(opportunity(profit=44.0, total_cost=1000.0, spread_cents=4.4))
     sixty = item._sized_opportunity(opportunity(profit=43.0, total_cost=1000.0, spread_cents=4.3))
     thirty = item._sized_opportunity(opportunity(profit=35.0, total_cost=1000.0, spread_cents=3.5))
-    just_above_min = item._sized_opportunity(
-        opportunity(profit=26.0, total_cost=1000.0, spread_cents=2.6)
+    at_minimum = item._sized_opportunity(
+        opportunity(profit=30.0, total_cost=1000.0, spread_cents=3.0)
     )
-    too_small = item._sized_opportunity(opportunity(profit=25.0, total_cost=1000.0, spread_cents=2.5))
+    too_small = item._sized_opportunity(opportunity(profit=29.0, total_cost=1000.0, spread_cents=2.9))
 
     assert full is not None
     assert round(full.total_cost, 2) == 400.00
@@ -62,9 +62,9 @@ def test_runner_uses_position_size_tiers_by_spread(tmp_path):
     assert thirty is not None
     assert round(thirty.total_cost, 2) == 120.00
     assert round(thirty.shares, 2) == 120.00
-    assert just_above_min is not None
-    assert round(just_above_min.total_cost, 2) == 120.00
-    assert round(just_above_min.shares, 2) == 120.00
+    assert at_minimum is not None
+    assert round(at_minimum.total_cost, 2) == 120.00
+    assert round(at_minimum.shares, 2) == 120.00
     assert too_small is None
 
 
@@ -73,7 +73,7 @@ def test_runner_sizes_spread_tiers_against_current_asset_allocation(tmp_path):
     item = PaperRunner(config, ETH_ASSET)
     item.store.initialize()
 
-    sized = item._sized_opportunity(opportunity(profit=26.0, total_cost=1000.0, spread_cents=2.6))
+    sized = item._sized_opportunity(opportunity(profit=30.0, total_cost=1000.0, spread_cents=3.0))
 
     assert sized is not None
     assert round(sized.total_cost, 2) == 90.00

@@ -5,6 +5,7 @@ import os
 import threading
 import time
 from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -233,6 +234,39 @@ class LiveTradingClient:
             amount=str(round(amount, 6)),
         )
         return _order_response_dict(response)
+
+    def place_protected_pair_buy(
+        self,
+        *,
+        yes_token_id: str,
+        no_token_id: str,
+        shares: float,
+        yes_max_price: float,
+        no_max_price: float,
+    ) -> List[dict]:
+        """Submit both legs together as full-or-kill buys with hard price caps."""
+        try:
+            target_shares = Decimal(str(shares))
+            yes_price = Decimal(str(yes_max_price))
+            no_price = Decimal(str(no_max_price))
+        except (InvalidOperation, ValueError) as exc:
+            raise LiveTradingError("套利订单的份额或价格上限无效。") from exc
+        if not yes_token_id or not no_token_id or target_shares <= 0:
+            raise LiveTradingError("套利订单需要两个 token 和正数份额。")
+        if yes_price <= 0 or no_price <= 0 or yes_price + no_price > Decimal("0.97"):
+            raise LiveTradingError("套利两腿最高成交价之和不得超过 97¢。")
+        client = self._ensure_sdk_client()
+        signed_orders = [
+            client.create_market_order(
+                token_id=token_id,
+                side="BUY",
+                amount=str(target_shares * max_price),
+                max_price=str(max_price),
+                order_type="FOK",
+            )
+            for token_id, max_price in ((yes_token_id, yes_price), (no_token_id, no_price))
+        ]
+        return [_order_response_dict(response) for response in client.post_orders(signed_orders)]
 
     def cancel_order(self, order_id: str) -> dict:
         if not order_id:
@@ -471,6 +505,11 @@ class LiveSession:
         with self._lock:
             client = self._require_client()
             return client.place_market_buy(token_id=token_id, amount=amount)
+
+    def place_protected_pair_buy(self, **kwargs) -> List[dict]:
+        with self._lock:
+            client = self._require_client()
+            return client.place_protected_pair_buy(**kwargs)
 
     def place_order(
         self,

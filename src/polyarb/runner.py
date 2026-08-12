@@ -16,7 +16,7 @@ from .websocket import apply_market_message, market_subscription_message
 
 WEBSOCKET_RECONNECT_DELAY_SECONDS = 10
 MIN_DISPLAYED_POSITION_VALUE = 0.01
-MIN_SPREAD_TO_OPEN_CENTS = 2.5
+MIN_SPREAD_TO_OPEN_CENTS = 3.0
 THIRTY_PERCENT_MAX_SPREAD_CENTS = 3.5
 SIXTY_PERCENT_MAX_SPREAD_CENTS = 4.3
 
@@ -120,7 +120,7 @@ class PaperRunner:
         if opportunity.total_cost <= 0:
             return None
         spread_cents = _spread_cents(opportunity)
-        if spread_cents <= MIN_SPREAD_TO_OPEN_CENTS:
+        if spread_cents < MIN_SPREAD_TO_OPEN_CENTS:
             return None
         if spread_cents <= THIRTY_PERCENT_MAX_SPREAD_CENTS:
             position_ratio = 0.3

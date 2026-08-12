@@ -41,6 +41,8 @@ class FakeSdkClient:
 
     def __init__(self):
         self.market_order_calls = []
+        self.created_market_orders = []
+        self.post_orders_calls = []
         self.limit_order_calls = []
         self.redeem_calls = []
 
@@ -130,6 +132,17 @@ class FakeSdkClient:
     def place_market_order(self, **kwargs):
         self.market_order_calls.append(kwargs)
         return {"ok": True, "order_id": "market-order", "message": "订单已提交。"}
+
+    def create_market_order(self, **kwargs):
+        self.created_market_orders.append(kwargs)
+        return {"signed": kwargs}
+
+    def post_orders(self, orders):
+        self.post_orders_calls.append(list(orders))
+        return (
+            {"ok": True, "order_id": "yes-order", "message": "订单已提交。"},
+            {"ok": True, "order_id": "no-order", "message": "订单已提交。"},
+        )
 
     def place_limit_order(self, **kwargs):
         self.limit_order_calls.append(kwargs)
@@ -221,6 +234,25 @@ def test_live_order_places_market_buy_sell_and_limit():
     )
     assert fake.limit_order_calls[0]["side"] == "BUY"
     assert fake.limit_order_calls[0]["size"] == "7"
+
+
+def test_live_client_places_protected_fok_pair_as_one_batch():
+    item, fake = client()
+
+    results = item.place_protected_pair_buy(
+        yes_token_id="token-yes",
+        no_token_id="token-no",
+        shares=10,
+        yes_max_price=0.40,
+        no_max_price=0.57,
+    )
+
+    assert [call["order_type"] for call in fake.created_market_orders] == ["FOK", "FOK"]
+    assert [call["max_price"] for call in fake.created_market_orders] == ["0.4", "0.57"]
+    assert [float(call["amount"]) for call in fake.created_market_orders] == [4.0, 5.7]
+    assert len(fake.post_orders_calls) == 1
+    assert len(fake.post_orders_calls[0]) == 2
+    assert all(result["ok"] for result in results)
 
 
 def test_live_client_redeems_position():

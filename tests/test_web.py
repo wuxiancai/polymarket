@@ -1000,7 +1000,7 @@ def test_opportunity_table_shows_spread_and_execution_state(tmp_path):
     assert "<span class='spread-value'>2.50¢</span>" in html
     assert "<span class='spread-value'>2.60¢</span>" in html
     assert "<span class='pill watch'>仅观察</span></td><td><span class='spread-value'>2.50¢</span>" in html
-    assert "<span class='pill exec'>可模拟成交</span></td><td><span class='spread-value'>2.60¢</span>" in html
+    assert "<span class='pill watch'>仅观察</span></td><td><span class='spread-value'>2.60¢</span>" in html
     assert "<span class='spread-value'>1.50¢</span>" in html
 
 

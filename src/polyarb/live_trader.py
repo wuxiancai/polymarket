@@ -4,6 +4,7 @@ import threading
 import time
 from dataclasses import replace
 from datetime import datetime, timezone
+from decimal import Decimal, ROUND_DOWN
 from typing import Dict, List, Optional
 
 from .config import Config
@@ -18,6 +19,9 @@ from .runner import (
     _settlement_at,
     _spread_cents,
 )
+
+
+MAX_TOTAL_OPEN_COST = Decimal("0.97")
 
 
 class LiveAutoTrader:
@@ -54,7 +58,7 @@ class LiveAutoTrader:
         if not opportunity.executable:
             return "仅观察", ""
         spread_cents = _spread_cents(opportunity)
-        if spread_cents <= MIN_SPREAD_TO_OPEN_CENTS:
+        if spread_cents < MIN_SPREAD_TO_OPEN_CENTS:
             return "仅观察", ""
         last_status = self.last_execution_status.get(opportunity.pair_key)
         last_time = self.last_execution.get(opportunity.pair_key)
@@ -72,7 +76,10 @@ class LiveAutoTrader:
             return sizing_status or "仅观察", ""
         if not self._should_execute(opportunity):
             return last_status or "可成交", ""
-        status = self._execute_pair(sized)
+        price_caps = _price_caps(sized)
+        if price_caps is None:
+            return "仅观察", "价格上限无法保留至少 3¢ 套利空间"
+        status = self._execute_pair(sized, *price_caps)
         if status == "资金不足":
             display_status = "已触发，未成功"
             detail = "资金不足"
@@ -115,7 +122,7 @@ class LiveAutoTrader:
         if opportunity.total_cost <= 0:
             return None, "仅观察"
         spread_cents = _spread_cents(opportunity)
-        if spread_cents <= MIN_SPREAD_TO_OPEN_CENTS:
+        if spread_cents < MIN_SPREAD_TO_OPEN_CENTS:
             return None, "仅观察"
         if spread_cents <= THIRTY_PERCENT_MAX_SPREAD_CENTS:
             position_ratio = 0.3
@@ -185,11 +192,12 @@ class LiveAutoTrader:
             total += _to_float(position.get("initial_value") or position.get("current_value"))
         return total
 
-    def _execute_pair(self, sized: ArbOpportunity) -> str:
-        yes_amount = sized.shares * sized.yes_avg_price
-        no_amount = sized.shares * sized.no_avg_price
-        yes_result = self._safe_buy(sized.yes_token_id, yes_amount)
-        no_result = self._safe_buy(sized.no_token_id, no_amount)
+    def _execute_pair(self, sized: ArbOpportunity, yes_max_price: float, no_max_price: float) -> str:
+        yes_result, no_result = self._safe_pair_buy(
+            sized,
+            yes_max_price=yes_max_price,
+            no_max_price=no_max_price,
+        )
         successes = int(bool(yes_result.get("ok"))) + int(bool(no_result.get("ok")))
         self._log_execution(sized, yes_result, no_result, successes)
         if successes == 2:
@@ -209,11 +217,28 @@ class LiveAutoTrader:
             return "资金不足"
         return "交易失败"
 
-    def _safe_buy(self, token_id: str, amount: float) -> dict:
+    def _safe_pair_buy(
+        self,
+        sized: ArbOpportunity,
+        *,
+        yes_max_price: float,
+        no_max_price: float,
+    ) -> tuple[dict, dict]:
         try:
-            return self.live_session.place_market_buy(token_id=token_id, amount=amount)
+            results = self.live_session.place_protected_pair_buy(
+                yes_token_id=sized.yes_token_id,
+                no_token_id=sized.no_token_id,
+                shares=sized.shares,
+                yes_max_price=yes_max_price,
+                no_max_price=no_max_price,
+            )
+            if len(results) == 2:
+                return results[0], results[1]
+            failure = {"ok": False, "message": "套利批量订单返回不完整。"}
+            return failure, failure
         except Exception as exc:
-            return {"ok": False, "message": str(exc)}
+            failure = {"ok": False, "message": str(exc)}
+            return failure, failure
 
     def _log_execution(self, sized: ArbOpportunity, yes_result: dict, no_result: dict, successes: int) -> None:
         self.live_session.add_execution_log(
@@ -259,3 +284,19 @@ def _is_insufficient_funds(message: str) -> bool:
 
 def _is_region_restricted(message: str) -> bool:
     return "trading restricted in your region" in message.lower()
+
+
+def _price_caps(opportunity: ArbOpportunity) -> Optional[tuple[float, float]]:
+    """Split the observed edge across both legs without crossing the 97¢ ceiling."""
+    yes_price = Decimal(str(opportunity.yes_avg_price))
+    no_price = Decimal(str(opportunity.no_avg_price))
+    observed_total = yes_price + no_price
+    if observed_total > MAX_TOTAL_OPEN_COST:
+        return None
+    half_headroom = (MAX_TOTAL_OPEN_COST - observed_total) / Decimal("2")
+    cents = Decimal("0.01")
+    yes_cap = (yes_price + half_headroom).quantize(cents, rounding=ROUND_DOWN)
+    no_cap = (no_price + half_headroom).quantize(cents, rounding=ROUND_DOWN)
+    if yes_cap <= 0 or no_cap <= 0 or yes_cap + no_cap > MAX_TOTAL_OPEN_COST:
+        return None
+    return float(yes_cap), float(no_cap)

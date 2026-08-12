@@ -43,11 +43,17 @@ class FakeLiveSession:
     def dashboard(self):
         return {"logged_in": True, "balance_pusd": self.balance, "positions": self.positions}
 
-    def place_market_buy(self, token_id, amount):
-        self.buys.append((token_id, amount))
+    def place_protected_pair_buy(self, *, yes_token_id, no_token_id, shares, yes_max_price, no_max_price):
+        self.buys.append((yes_token_id, shares, yes_max_price))
+        self.buys.append((no_token_id, shares, no_max_price))
         if self.buy_result is not None:
-            return dict(self.buy_result)
-        return {"ok": True, "order_id": f"order-{len(self.buys)}"}
+            if isinstance(self.buy_result, (list, tuple)):
+                return [dict(item) for item in self.buy_result]
+            return [dict(self.buy_result), dict(self.buy_result)]
+        return [
+            {"ok": True, "order_id": f"order-{len(self.buys) - 1}"},
+            {"ok": True, "order_id": f"order-{len(self.buys)}"},
+        ]
 
     def add_execution_log(self, entry):
         self.logs.append(entry)
@@ -111,9 +117,9 @@ def test_live_auto_trader_places_yes_and_no_market_buys():
 
     assert len(session.buys) == 2
     assert session.buys[0][0] == "yes-token"
-    assert round(session.buys[0][1], 2) == 400.0
+    assert round(session.buys[0][1], 2) == round(session.buys[1][1], 2)
     assert session.buys[1][0] == "no-token"
-    assert round(session.buys[1][1], 2) == 556.0
+    assert round(session.buys[0][2] + session.buys[1][2], 2) <= 0.97
     assert len(session.logs) == 1
     assert session.logs[0]["ok"] is True
     assert session.opportunities[-1]["status"] == "已成交"
@@ -157,6 +163,24 @@ def test_live_auto_trader_marks_insufficient_funds():
     assert session.buys == []
     assert session.opportunities[-1]["status"] == "已触发，未成功"
     assert session.opportunities[-1]["detail"] == "资金不足"
+
+
+def test_live_auto_trader_never_executes_when_spread_is_under_three_cents():
+    item, session = trader()
+    unsafe = opportunity()
+    unsafe = unsafe.__class__(**{**unsafe.__dict__, "yes_avg_price": 0.40, "no_avg_price": 0.571, "total_cost": 971.0, "guaranteed_profit": 29.0})
+
+    item.on_result(
+        ScanResult(
+            markets=[],
+            pairs=1,
+            opportunities=[unsafe],
+            scanned_at=datetime(2026, 8, 7, 12, 0, tzinfo=timezone.utc),
+        )
+    )
+
+    assert session.buys == []
+    assert session.opportunities[-1]["status"] == "仅观察"
 
 
 def test_live_auto_trader_marks_zero_budget_as_insufficient_funds():

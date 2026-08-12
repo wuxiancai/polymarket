@@ -1848,7 +1848,7 @@ def _opportunity_state(row: dict) -> tuple[str, str]:
         return "done", "已成交"
     if row.get("_execution_type") == "cooldown":
         return "watch", "冷却中"
-    if _spread_cents(row) <= MIN_SPREAD_TO_OPEN_CENTS:
+    if _spread_cents(row) < MIN_SPREAD_TO_OPEN_CENTS:
         return "watch", "仅观察"
     if row.get("executable"):
         return "exec", "可模拟成交"
