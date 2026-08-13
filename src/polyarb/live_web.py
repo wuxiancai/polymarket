@@ -87,7 +87,7 @@ def render_live_page(
     .settings-field {{ display: grid; gap: 4px; min-width: 0; }}
     .settings-field label {{ color: var(--muted); font-size: 13px; font-weight: 700; }}
     .settings-input {{ min-width: 0; min-height: 40px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; font-size: 15px; color: var(--ink); background: #fff; }}
-    .settings-field:not(.settings-password-field) .settings-input {{ width: 5.5ch; field-sizing: content; }}
+    .settings-field:not(.settings-password-field) .settings-input {{ width: auto; min-width: 92px; }}
     .settings-field.settings-password-field {{ min-width: 170px; }}
     .settings-message {{ align-self: center; min-width: 120px; min-height: 18px; font-size: 13px; }}
     .settings-message.ok {{ color: var(--accent); }}
@@ -138,7 +138,7 @@ def render_live_page(
       .form-grid {{ grid-template-columns: 1fr; }}
       .settings-row {{ display: grid; grid-template-columns: 1fr; }}
       .settings-field.settings-password-field {{ min-width: 0; }}
-      .settings-field:not(.settings-password-field) .settings-input {{ width: 100%; field-sizing: initial; }}
+      .settings-field:not(.settings-password-field) .settings-input {{ width: 100%; }}
       .settings-message {{ min-width: 0; }}
       .live-auto-trade {{ min-width: 0; margin-left: 0; padding: 14px 0 0; border-top: 1px solid var(--line); border-left: 0; }}
       .market-text {{ min-width: 0; max-width: none; }}
@@ -310,6 +310,22 @@ def render_live_page(
         const input = document.getElementById('liveAlloc' + symbol);
         if (input) input.value = allocations[symbol] ?? 0;
       }}
+      resizeLiveAllocationInputs();
+    }}
+    function resizeLiveAllocationInput(input) {{
+      if (!input) return;
+      const value = input.value || input.placeholder || '0';
+      const ruler = document.createElement('span');
+      ruler.style.cssText = 'position:absolute;visibility:hidden;white-space:pre;font:inherit;';
+      ruler.textContent = value;
+      document.body.appendChild(ruler);
+      input.style.width = Math.max(92, Math.ceil(ruler.getBoundingClientRect().width) + 32) + 'px';
+      ruler.remove();
+    }}
+    function resizeLiveAllocationInputs() {{
+      for (const symbol of ['BTC', 'ETH', 'XRP', 'SOL']) {{
+        resizeLiveAllocationInput(document.getElementById('liveAlloc' + symbol));
+      }}
     }}
     async function saveLiveSettings() {{
       const allocations = {{}};
@@ -347,6 +363,9 @@ def render_live_page(
     }}
     function bindLiveSettings() {{
       document.getElementById('liveSaveSettingsBtn')?.addEventListener('click', saveLiveSettings);
+      for (const symbol of ['BTC', 'ETH', 'XRP', 'SOL']) {{
+        document.getElementById('liveAlloc' + symbol)?.addEventListener('input', (event) => resizeLiveAllocationInput(event.currentTarget));
+      }}
       document.getElementById('liveSettingsPassword')?.addEventListener('keydown', (event) => {{
         if (event.key === 'Enter') {{
           event.preventDefault();
@@ -356,6 +375,7 @@ def render_live_page(
     }}
     bindLiveEvents();
     bindLiveSettings();
+    resizeLiveAllocationInputs();
     setInterval(liveRefresh, 5000);
   </script>
 </body>

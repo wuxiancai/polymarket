@@ -159,7 +159,8 @@ def test_live_page_renders_allocation_settings_with_persisted_values():
     assert "noneboy780308" not in html
     assert "value='100'" in html
     assert "saveLiveSettings" in html
-    assert "field-sizing: content" in html
+    assert "resizeLiveAllocationInputs" in html
+    assert "Math.max(92" in html
     assert html.index('id="allocationSettings"') < html.index('id="liveAccount"')
 
 
