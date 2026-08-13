@@ -23,6 +23,7 @@ def render_live_page(
     closed_html = _closed_html(session.get("closed_positions", [])) if logged_in else ""
     orders_html = _orders_html(session.get("open_orders", [])) if logged_in else ""
     trades_html = _trades_html(session.get("trades", [])) if logged_in else ""
+    system_errors_html = _system_errors_html(session.get("system_error_log", [])) if logged_in else ""
     execution_log_html = _execution_log_html(session.get("execution_log", [])) if logged_in else ""
     redemption_html = _redemption_html(session.get("redemption_log", [])) if logged_in else ""
     opportunities_html = (
@@ -208,6 +209,7 @@ def render_live_page(
     <div id="liveClosed">{closed_html}</div>
     <div id="liveOrders">{orders_html}</div>
     <div id="liveTrades">{trades_html}</div>
+    <div id="liveSystemErrors">{system_errors_html}</div>
   </main>
   <script>
     function setText(id, value) {{
@@ -240,6 +242,7 @@ def render_live_page(
         setHtml('liveClosed', payload.closed_html || '');
         setHtml('liveOrders', payload.orders_html || '');
         setHtml('liveTrades', payload.trades_html || '');
+        setHtml('liveSystemErrors', payload.system_errors_html || '');
         bindLiveEvents();
       }} catch (error) {{
         const reason = error && error.message ? `：${{error.message}}` : '';
@@ -408,6 +411,7 @@ def live_dashboard_payload(
         "closed_html": _closed_html(session.get("closed_positions", [])) if logged_in else "",
         "orders_html": _orders_html(session.get("open_orders", [])) if logged_in else "",
         "trades_html": _trades_html(session.get("trades", [])) if logged_in else "",
+        "system_errors_html": _system_errors_html(session.get("system_error_log", [])) if logged_in else "",
         "markets": markets if logged_in else [],
         "settings": {"allocation_ratios": _allocation_ratios(allocation_ratios)},
     }
@@ -672,6 +676,28 @@ def _trades_html(rows: List[dict]) -> str:
         ("status", "状态"),
         ("matched_at", "时间"),
     ), "liveTrades")
+
+
+def _system_errors_html(rows: List[dict]) -> str:
+    if not rows:
+        return "<div class='panel'><h2>系统日志</h2><div class='empty'>运行期间暂无错误日志。</div></div>"
+    body = []
+    for row in reversed(rows):
+        body.append(
+            "<tr>"
+            f"<td>{_live_time_html(row.get('time'))}</td>"
+            f"<td>{escape(_text(row.get('source')))}</td>"
+            f"<td class='profit-negative'>{escape(_text(row.get('message')))}</td>"
+            "</tr>"
+        )
+    return (
+        "<div class='panel'><h2>系统日志</h2>"
+        "<div class='table-scroll'><table><thead><tr>"
+        "<th>时间UTC+8</th><th>来源</th><th>错误信息</th>"
+        "</tr></thead><tbody>"
+        + "".join(body)
+        + "</tbody></table></div></div>"
+    )
 
 
 def _table_panel(title: str, rows: List[dict], columns, panel_id: str, cancelable: bool = False) -> str:

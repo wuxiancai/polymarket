@@ -20,6 +20,7 @@ class FakeLiveSession:
         self.exits = []
         self.logs = []
         self.errors = []
+        self.system_errors = []
         self.opportunities = []
 
     def is_logged_in(self):
@@ -73,6 +74,9 @@ class FakeLiveSession:
 
     def set_auto_trader_error(self, message):
         self.errors.append(message)
+
+    def add_system_error(self, source, message):
+        self.system_errors.append({"source": source, "message": str(message)})
 
     def upsert_live_opportunity(self, entry):
         self.opportunities.append(entry)

@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from html import escape
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Optional, Union
+from typing import Callable, Optional, Union
 from zoneinfo import ZoneInfo
 
 from .config import Config
@@ -63,6 +63,7 @@ class WebState:
     connection_logs: list[dict] = field(default_factory=list)
     lock: threading.Lock = field(default_factory=threading.Lock)
     live_trader: Optional[LiveAutoTrader] = None
+    error_logger: Optional[Callable[[str, object], None]] = None
 
 
     def run_scan(self) -> None:
@@ -139,6 +140,8 @@ class WebState:
                 }
             )
             self.connection_logs = self.connection_logs[-80:]
+        if level == "error" and self.error_logger is not None:
+            self.error_logger(f"扫描/{self.asset.symbol}", message)
 
     def snapshot(self) -> dict:
         with self.lock:
@@ -184,8 +187,15 @@ def serve(config: Config, host: str = "127.0.0.1", port: int = 8787, auto_scan: 
             live_session.connect(env_credentials)
         except Exception as exc:
             print(f"真实账户环境登录失败：{exc}")
+            live_session.add_system_error("环境自动登录", exc)
     states = [
-        WebState(config=config, store=store, asset=asset, runner=PaperRunner(config, asset))
+        WebState(
+            config=config,
+            store=store,
+            asset=asset,
+            runner=PaperRunner(config, asset),
+            error_logger=live_session.add_system_error,
+        )
         for asset in DEFAULT_ASSETS
     ]
     execution_store = LiveExecutionStore(config.database_path)
@@ -224,6 +234,7 @@ def _start_redemption_loop(live_session: LiveSession) -> None:
                 live_session.auto_redeem_once()
             except Exception as exc:
                 print(f"自动兑换检查失败：{exc}")
+                live_session.add_system_error("自动兑换循环", exc)
             time.sleep(60)
 
     thread = threading.Thread(target=loop, name="polyarb-auto-redeem", daemon=True)

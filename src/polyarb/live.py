@@ -338,12 +338,13 @@ class LiveTradingClient:
 
 class LiveSession:
     def __init__(self) -> None:
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._client: Optional[LiveTradingClient] = None
         self.last_error: Optional[str] = None
         self.auto_trading_enabled = False
         self.auto_trader_error: Optional[str] = None
         self.execution_log: List[dict] = []
+        self.system_error_log: List[dict] = []
         self._live_opportunities: Dict[str, dict] = {}
         self.redemption_log: List[dict] = []
         self._redeem_attempted: Dict[str, float] = {}
@@ -400,6 +401,7 @@ class LiveSession:
         snapshot["auto_trading_enabled"] = True
         snapshot["auto_trader_error"] = auto_trader_error
         snapshot["execution_log"] = []
+        snapshot["system_error_log"] = self.system_errors()
         snapshot["live_opportunities"] = []
         with self._lock:
             old_client = self._client
@@ -429,18 +431,21 @@ class LiveSession:
                 data["logged_in"] = True
             except Exception as exc:
                 self.last_error = str(exc)
+                self.add_system_error("真实账户快照", exc)
                 return {
                     "logged_in": True,
                     "error": str(exc),
                     "auto_trading_enabled": self.auto_trading_enabled,
                     "auto_trader_error": self.last_error,
                     "execution_log": list(self.execution_log[-200:]),
+                    "system_error_log": self.system_errors(),
                     "live_opportunities": self._opportunity_snapshot(),
                     "redemption_log": list(self.redemption_log[-MAX_REDEMPTION_LOG:]),
                 }
             data["auto_trading_enabled"] = self.auto_trading_enabled
             data["auto_trader_error"] = self.auto_trader_error
             data["execution_log"] = list(self.execution_log[-200:])
+            data["system_error_log"] = self.system_errors()
             data["live_opportunities"] = self._opportunity_snapshot()
             self._auto_redeem(data.get("positions", []), client)
             data["redemption_log"] = list(self.redemption_log[-MAX_REDEMPTION_LOG:])
@@ -471,6 +476,23 @@ class LiveSession:
         with self._lock:
             self.auto_trader_error = message
 
+    def add_system_error(self, source: str, message: object) -> None:
+        text = str(message or "").strip()
+        if not text:
+            return
+        with self._lock:
+            self.system_error_log.append(
+                {
+                    "time": datetime.now(timezone.utc).isoformat(),
+                    "source": str(source or "系统"),
+                    "message": text,
+                }
+            )
+
+    def system_errors(self) -> List[dict]:
+        with self._lock:
+            return list(self.system_error_log)
+
     def _auto_redeem(self, positions: List[dict], client: LiveTradingClient) -> None:
         now = time.time()
         seen_conditions = set()
@@ -499,6 +521,7 @@ class LiveSession:
                         "detail": str(exc),
                     }
                 )
+                self.add_system_error("自动兑换", exc)
                 continue
             self._append_redemption_log(
                 {
@@ -510,6 +533,8 @@ class LiveSession:
                     "detail": "已自动兑换。" if result.get("ok") else "自动兑换失败。",
                 }
             )
+            if not result.get("ok"):
+                self.add_system_error("自动兑换", result.get("message") or "自动兑换失败。")
 
     def _append_redemption_log(self, entry: dict) -> None:
         self.redemption_log.append(entry)
@@ -524,6 +549,7 @@ class LiveSession:
                 data = client.snapshot()
             except Exception as exc:
                 self.last_error = str(exc)
+                self.add_system_error("自动兑换检查", exc)
                 return
             self._auto_redeem(data.get("positions", []), client)
 

@@ -419,6 +419,8 @@ class LiveAutoTrader:
         with self.lock:
             self.last_error = message
         self.live_session.set_auto_trader_error(message)
+        if message:
+            self.live_session.add_system_error(f"自动交易/{self.asset.symbol}", message)
 
 
 def _to_float(value: object) -> float:

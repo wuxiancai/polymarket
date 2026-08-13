@@ -64,6 +64,13 @@ def logged_session():
         "closed_positions": [],
         "open_orders": [],
         "trades": [],
+        "system_error_log": [
+            {
+                "time": "2026-08-07T02:00:00+00:00",
+                "source": "自动交易/BTC",
+                "message": "订单提交失败",
+            }
+        ],
     }
 
 
@@ -113,6 +120,9 @@ def test_live_page_renders_account_positions_and_auto_trading_when_logged_in():
     assert "提交真实订单" not in html
     assert "模拟交易" in html
     assert "Polymarket 真实交易系统" in html
+    assert html.index('id="liveTrades"') < html.index('id="liveSystemErrors"')
+    assert "系统日志" in html
+    assert "订单提交失败" in html
 
 
 def test_live_dashboard_payload_keeps_login_form_when_logged_out():
@@ -124,6 +134,7 @@ def test_live_dashboard_payload_keeps_login_form_when_logged_out():
     assert payload["opportunities_html"] == ""
     assert "monitored_pairs_html" in payload
     assert "redemption_html" in payload
+    assert payload["system_errors_html"] == ""
 
 
 def test_live_dashboard_payload_omits_markets_when_logged_out():
@@ -220,3 +231,25 @@ def test_live_page_renders_region_restricted_opportunity_and_error():
 
     assert "<td class='profit-negative'>区域受限</td>" in html
     assert "真实交易区域受限" in html
+
+
+def test_system_log_omits_normal_messages_and_formats_errors():
+    session = logged_session()
+    session["system_error_log"] = [
+        {"time": "2026-08-07T00:00:00+00:00", "source": "扫描/BTC", "message": "请求失败"},
+    ]
+
+    payload = live_dashboard_payload(session, [])
+
+    assert "系统日志" in payload["system_errors_html"]
+    assert "请求失败" in payload["system_errors_html"]
+    assert "手动扫描完成" not in payload["system_errors_html"]
+
+
+def test_system_log_shows_empty_state_without_errors():
+    session = logged_session()
+    session["system_error_log"] = []
+
+    html = render_live_page(session, [])
+
+    assert "运行期间暂无错误日志。" in html
