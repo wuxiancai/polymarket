@@ -23,13 +23,12 @@ def render_live_page(
     closed_html = _closed_html(session.get("closed_positions", [])) if logged_in else ""
     orders_html = _orders_html(session.get("open_orders", [])) if logged_in else ""
     trades_html = _trades_html(session.get("trades", [])) if logged_in else ""
-    auto_trade_html = _auto_trade_html(session) if logged_in else ""
     execution_log_html = _execution_log_html(session.get("execution_log", [])) if logged_in else ""
     redemption_html = _redemption_html(session.get("redemption_log", [])) if logged_in else ""
     opportunities_html = (
         _live_opportunities_html(session.get("live_opportunities", [])) if logged_in else ""
     )
-    settings_html = _settings_html(allocation_ratios)
+    settings_html = _settings_html(session, allocation_ratios)
     monitored_pairs_panel = _monitored_pairs_panel_html(monitored_pairs_html)
     return f"""<!doctype html>
 <html lang="zh-CN">
@@ -74,8 +73,8 @@ def render_live_page(
     .message.ok {{ color: var(--accent); }}
     .message.error {{ color: var(--danger); }}
     .settings-row {{
-      display: grid;
-      grid-template-columns: repeat(4, minmax(100px, 1fr)) minmax(170px, auto) auto auto;
+      display: flex;
+      flex-wrap: wrap;
       gap: 10px;
       align-items: end;
       background: var(--panel);
@@ -88,10 +87,15 @@ def render_live_page(
     .settings-field {{ display: grid; gap: 4px; min-width: 0; }}
     .settings-field label {{ color: var(--muted); font-size: 13px; font-weight: 700; }}
     .settings-input {{ min-width: 0; min-height: 40px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; font-size: 15px; color: var(--ink); background: #fff; }}
+    .settings-field:not(.settings-password-field) .settings-input {{ width: 5.5ch; field-sizing: content; }}
     .settings-field.settings-password-field {{ min-width: 170px; }}
     .settings-message {{ align-self: center; min-width: 120px; min-height: 18px; font-size: 13px; }}
     .settings-message.ok {{ color: var(--accent); }}
     .settings-message.error {{ color: var(--danger); }}
+    .live-auto-trade {{ display: grid; gap: 6px; min-width: 190px; margin-left: auto; padding-left: 14px; border-left: 1px solid var(--line); }}
+    .live-auto-trade h2 {{ margin: 0; font-size: 16px; }}
+    .live-auto-trade .form-actions {{ margin-top: 0; }}
+    .live-auto-trade .form-actions button {{ width: 100%; }}
     .market-text {{ white-space: normal; overflow-wrap: break-word; word-break: normal; line-height: 1.35; }}
     .market-card {{ display: block; color: var(--ink); text-decoration: none; white-space: normal; overflow-wrap: break-word; }}
     a.market-card:hover .market-event {{ text-decoration: underline; }}
@@ -132,11 +136,11 @@ def render_live_page(
       button, .nav-btn {{ width: 100%; }}
       .metrics {{ grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }}
       .form-grid {{ grid-template-columns: 1fr; }}
-      .settings-row {{ grid-template-columns: 1fr; }}
-      .settings-title {{ grid-column: 1 / -1; }}
+      .settings-row {{ display: grid; grid-template-columns: 1fr; }}
       .settings-field.settings-password-field {{ min-width: 0; }}
-      #liveSaveSettingsBtn {{ grid-column: 1 / -1; }}
-      .settings-message {{ grid-column: 1 / -1; min-width: 0; }}
+      .settings-field:not(.settings-password-field) .settings-input {{ width: 100%; field-sizing: initial; }}
+      .settings-message {{ min-width: 0; }}
+      .live-auto-trade {{ min-width: 0; margin-left: 0; padding: 14px 0 0; border-top: 1px solid var(--line); border-left: 0; }}
       .market-text {{ min-width: 0; max-width: none; }}
       .panel {{ border-radius: 12px; }}
     }}
@@ -192,7 +196,6 @@ def render_live_page(
     <div id="liveError">{error_html}</div>
     {settings_html}
     <div id="liveAccount">{account_html}</div>
-    {auto_trade_html}
     {execution_log_html}
     {redemption_html}
     {monitored_pairs_panel}
@@ -394,7 +397,7 @@ def _monitored_pairs_panel_html(content: str = "") -> str:
     )
 
 
-def _settings_html(allocation_ratios: Optional[Dict[str, float]] = None) -> str:
+def _settings_html(session: dict, allocation_ratios: Optional[Dict[str, float]] = None) -> str:
     ratios = _allocation_ratios(allocation_ratios)
     fields = []
     for asset in DEFAULT_ASSETS:
@@ -418,6 +421,7 @@ def _settings_html(allocation_ratios: Optional[Dict[str, float]] = None) -> str:
         + password_field
         + "<button class='secondary' id=\"liveSaveSettingsBtn\" type='button'>保存设置</button>"
         + "<span class='settings-message' id=\"liveSettingsMessage\"></span>"
+        + f"<div id='liveAutoTrade'>{_auto_trade_html(session) if session.get('logged_in') else ''}</div>"
         + "</div>"
     )
 
@@ -495,7 +499,7 @@ def _auto_trade_html(session: dict) -> str:
     enabled_flag = "1" if enabled else "0"
     error = session.get("auto_trader_error")
     return (
-        "<div class='panel'>"
+        "<div class='live-auto-trade'>"
         "<h2>自动真实交易</h2>"
         f"<div class='label'>状态：{escape(status)}</div>"
         f"<div class='form-actions'><button id='liveAutoTradeBtn' data-enabled='{enabled_flag}'>{escape(button_text)}</button></div>"
@@ -581,8 +585,7 @@ def _live_opportunities_html(rows: List[dict]) -> str:
             "<tr>"
             f"<td class='time-cell'>{_live_time_html(row.get('time'))}</td>"
             f"<td>{escape(_text(row.get('asset')))}</td>"
-            f"<td>{escape(_text(row.get('yes_question')))}</td>"
-            f"<td>{escape(_text(row.get('no_question')))}</td>"
+            f"<td>{escape(_text(row.get('yes_question') or row.get('no_question')))}</td>"
             f"<td>{escape(_money(row.get('guaranteed_profit')))}</td>"
             f"<td>{escape(spread_text)}</td>"
             f"<td class='{status_class}'>{escape(status)}</td>"
@@ -592,7 +595,7 @@ def _live_opportunities_html(rows: List[dict]) -> str:
     return (
         "<div class='panel'><h2>实时套利机会</h2>"
         "<div class='table-scroll'><table><thead><tr>"
-        "<th>时间UTC+8</th><th>币种</th><th>YES 交易对</th><th>NO 交易对</th><th>保证利润</th><th>价差</th><th>状态</th><th>说明</th>"
+        "<th>时间UTC+8</th><th>币种</th><th>交易对</th><th>保证利润</th><th>价差</th><th>状态</th><th>说明</th>"
         "</tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table></div></div>"

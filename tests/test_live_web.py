@@ -98,6 +98,7 @@ def test_live_page_renders_account_positions_and_auto_trading_when_logged_in():
     assert "当前持仓" in html
     assert "自动真实交易" in html
     assert "自动交易已启用" in html
+    assert html.index('id="allocationSettings"') < html.index("自动真实交易") < html.index('id="liveAccount"')
     assert "自动成交记录" in html
     assert "自动兑换记录" in html
     assert "实时交易对" in html
@@ -158,6 +159,7 @@ def test_live_page_renders_allocation_settings_with_persisted_values():
     assert "noneboy780308" not in html
     assert "value='100'" in html
     assert "saveLiveSettings" in html
+    assert "field-sizing: content" in html
     assert html.index('id="allocationSettings"') < html.index('id="liveAccount"')
 
 
@@ -180,6 +182,9 @@ def test_live_opportunities_time_renders_as_beijing_time():
     payload = live_dashboard_payload(logged_session(), [])
 
     assert "时间UTC+8" in payload["opportunities_html"]
+    assert "<th>交易对</th>" in payload["opportunities_html"]
+    assert "YES 交易对" not in payload["opportunities_html"]
+    assert "NO 交易对" not in payload["opportunities_html"]
     assert "<span class='time-date'>2026-08-07</span><span class='time-clock'>08:00:00</span>" in payload["opportunities_html"]
     assert "2026-08-07T00:00:00+00:00" not in payload["opportunities_html"]
 
