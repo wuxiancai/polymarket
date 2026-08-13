@@ -92,10 +92,12 @@ def render_live_page(
     .settings-message {{ align-self: center; min-width: 120px; min-height: 18px; font-size: 13px; }}
     .settings-message.ok {{ color: var(--accent); }}
     .settings-message.error {{ color: var(--danger); }}
-    .live-auto-trade {{ display: grid; gap: 6px; min-width: 190px; margin-left: auto; padding-left: 14px; border-left: 1px solid var(--line); }}
-    .live-auto-trade h2 {{ margin: 0; font-size: 16px; }}
-    .live-auto-trade .form-actions {{ margin-top: 0; }}
-    .live-auto-trade .form-actions button {{ width: 100%; }}
+    .live-auto-trade {{ display: flex; flex: 0 0 100%; align-items: center; gap: 12px; padding-top: 14px; border-top: 1px solid var(--line); }}
+    .live-auto-trade h2 {{ margin: 0; font-size: 16px; white-space: nowrap; }}
+    .live-auto-trade .label {{ white-space: nowrap; }}
+    .live-auto-trade .form-actions {{ margin: 0; flex-wrap: nowrap; }}
+    .live-auto-trade .form-actions button {{ width: auto; white-space: nowrap; }}
+    .live-auto-trade .error {{ margin-left: auto; }}
     .market-text {{ white-space: normal; overflow-wrap: break-word; word-break: normal; line-height: 1.35; }}
     .market-card {{ display: block; color: var(--ink); text-decoration: none; white-space: normal; overflow-wrap: break-word; }}
     a.market-card:hover .market-event {{ text-decoration: underline; }}
@@ -140,7 +142,9 @@ def render_live_page(
       .settings-field.settings-password-field {{ min-width: 0; }}
       .settings-field:not(.settings-password-field) .settings-input {{ width: 100%; }}
       .settings-message {{ min-width: 0; }}
-      .live-auto-trade {{ min-width: 0; margin-left: 0; padding: 14px 0 0; border-top: 1px solid var(--line); border-left: 0; }}
+      .live-auto-trade {{ flex-direction: column; align-items: stretch; gap: 8px; padding: 14px 0 0; }}
+      .live-auto-trade .form-actions button {{ width: 100%; }}
+      .live-auto-trade .error {{ margin-left: 0; }}
       .market-text {{ min-width: 0; max-width: none; }}
       .panel {{ border-radius: 12px; }}
     }}

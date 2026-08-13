@@ -99,6 +99,8 @@ def test_live_page_renders_account_positions_and_auto_trading_when_logged_in():
     assert "自动真实交易" in html
     assert "自动交易已启用" in html
     assert html.index('id="allocationSettings"') < html.index("自动真实交易") < html.index('id="liveAccount"')
+    assert "flex: 0 0 100%" in html
+    assert ".live-auto-trade .label { white-space: nowrap; }" in html
     assert "自动成交记录" in html
     assert "自动兑换记录" in html
     assert "实时交易对" in html
