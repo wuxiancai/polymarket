@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from polyarb.config import Config
-from polyarb.live_trader import LiveAutoTrader, _price_caps
+from polyarb.live_trader import LiveAutoTrader, _pair_is_covered, _price_caps
 from polyarb.live_execution import LiveExecutionStore, WalletReservations
 from polyarb.models import BTC_ASSET, ArbOpportunity
 from polyarb.runner import ScanResult
@@ -51,11 +51,15 @@ class FakeLiveSession:
         self.buys.append((no_token_id, shares, no_max_price))
         if self.buy_result is not None:
             if isinstance(self.buy_result, (list, tuple)):
-                return [dict(item) for item in self.buy_result]
-            return [dict(self.buy_result), dict(self.buy_result)]
+                results = [dict(item) for item in self.buy_result]
+            else:
+                results = [dict(self.buy_result), dict(self.buy_result)]
+            for result, cap in zip(results, (yes_max_price, no_max_price)):
+                result.setdefault("max_spend", shares * cap + (shares * fee_buffer / 2))
+            return results
         return [
-            {"ok": True, "order_id": f"order-{len(self.buys) - 1}", "status": "matched", "taking_amount": 1000.0, "trade_ids": ["yes-trade"]},
-            {"ok": True, "order_id": f"order-{len(self.buys)}", "status": "matched", "taking_amount": 1000.0, "trade_ids": ["no-trade"]},
+            {"ok": True, "order_id": f"order-{len(self.buys) - 1}", "status": "matched", "taking_amount": shares, "trade_ids": ["yes-trade"], "max_spend": shares * yes_max_price + (shares * fee_buffer / 2)},
+            {"ok": True, "order_id": f"order-{len(self.buys)}", "status": "matched", "taking_amount": shares, "trade_ids": ["no-trade"], "max_spend": shares * no_max_price + (shares * fee_buffer / 2)},
         ]
 
     def place_emergency_market_sell(self, *, token_id, shares):
@@ -90,11 +94,11 @@ def opportunity() -> ArbOpportunity:
         no_end_date="2026-08-11T00:00:00+00:00",
         shares=1000.0,
         yes_avg_price=0.40,
-        no_avg_price=0.556,
-        total_cost=956.0,
+        no_avg_price=0.546,
+        total_cost=946.0,
         min_payout=1000.0,
-        guaranteed_profit=44.0,
-        edge_per_share=0.044,
+        guaranteed_profit=54.0,
+        edge_per_share=0.054,
         executable=True,
         reason="executable",
         detected_at=datetime(2026, 8, 7, 12, 0, tzinfo=timezone.utc),
@@ -156,7 +160,7 @@ def test_live_auto_trader_marks_insufficient_funds():
     item, session = trader(
         FakeLiveSession(
             balance=1.0,
-            positions=[{"title": "Will Bitcoin be above $60,000 on August 10?", "initial_value": 0.5}],
+                positions=[{"title": "Will Bitcoin be above $60,000 on August 10?", "initial_value": 0.8}],
         )
     )
 
@@ -193,10 +197,18 @@ def test_live_auto_trader_never_executes_when_spread_is_under_three_cents():
 
 
 def test_live_price_caps_reserve_configured_fee_buffer_inside_97_cents():
-    caps = _price_caps(opportunity(), fee_buffer=0.01)
+    safe = opportunity().__class__(**{**opportunity().__dict__, "yes_avg_price": 0.40, "no_avg_price": 0.54})
+    caps = _price_caps(safe, fee_buffer=0.01)
 
     assert caps is not None
-    assert round(caps[0] + caps[1] + 0.01, 2) <= 0.97
+    assert caps[0] + caps[1] + 0.01 < 0.96
+
+
+def test_live_accepts_small_fee_adjusted_share_difference_when_pair_is_covered():
+    assert _pair_is_covered(
+        {"taking_amount": 10.0, "max_spend": 4.0},
+        {"taking_amount": 9.9, "max_spend": 5.4},
+    )
 
 
 def test_live_auto_trader_cools_down_after_single_leg_exit():

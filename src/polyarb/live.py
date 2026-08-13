@@ -9,6 +9,8 @@ from decimal import Decimal, InvalidOperation
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
+from .execution_rules import pair_has_strict_coverage
+
 PUSD_DECIMALS = 1_000_000
 REDEEM_RETRY_SECONDS = 300
 MAX_REDEMPTION_LOG = 100
@@ -255,8 +257,8 @@ class LiveTradingClient:
             raise LiveTradingError("套利订单的份额或价格上限无效。") from exc
         if not yes_token_id or not no_token_id or target_shares <= 0:
             raise LiveTradingError("套利订单需要两个 token 和正数份额。")
-        if fee < 0 or yes_price <= 0 or no_price <= 0 or yes_price + no_price + fee > Decimal("0.97"):
-            raise LiveTradingError("套利两腿价格与手续费缓冲之和不得超过 97¢。")
+        if fee < 0 or yes_price <= 0 or no_price <= 0 or yes_price + no_price + fee >= Decimal("0.96"):
+            raise LiveTradingError("套利两腿价格与手续费缓冲之和必须严格低于 96¢。")
         client = self._ensure_sdk_client()
         fee_per_leg = fee / Decimal("2")
         signed_orders = [
@@ -270,10 +272,18 @@ class LiveTradingClient:
             )
             for token_id, max_price in ((yes_token_id, yes_price), (no_token_id, no_price))
         ]
-        for signed_order in signed_orders:
-            _require_target_buy_shares(signed_order, target_shares)
+        requested_shares = [_signed_buy_shares(order, target_shares) for order in signed_orders]
+        max_spends = [float(target_shares * (price + fee_per_leg)) for price in (yes_price, no_price)]
+        if not pair_has_strict_coverage(*requested_shares, *max_spends):
+            raise LiveTradingError(
+                "手续费导致两腿份额差异过大，较小份额的保底兑付无法覆盖两腿最高总支出，订单未提交。"
+            )
         try:
-            return [_order_response_dict(response) for response in client.post_orders(signed_orders)]
+            results = [_order_response_dict(response) for response in client.post_orders(signed_orders)]
+            for result, shares, max_spend in zip(results, requested_shares, max_spends):
+                result["requested_shares"] = shares
+                result["max_spend"] = max_spend
+            return results
         except Exception as exc:
             # The CLOB may have received signed orders even when the HTTP response was lost.
             return [
@@ -704,16 +714,12 @@ def _order_response_dict(response: Any) -> dict:
     }
 
 
-def _require_target_buy_shares(signed_order: Any, target_shares: Decimal) -> None:
-    """Reject a fee-capped SDK draft that no longer requests the target shares."""
+def _signed_buy_shares(signed_order: Any, target_shares: Decimal) -> float:
+    """Read SDK's fee-adjusted requested shares; test doubles retain the target size."""
     raw_taker_amount = getattr(signed_order, "taker_amount", None)
     if raw_taker_amount is None:
-        return  # Lightweight test doubles do not expose SDK wire units.
-    actual_shares = Decimal(str(raw_taker_amount)) / Decimal(PUSD_DECIMALS)
-    if actual_shares + Decimal("0.000001") < target_shares:
-        raise LiveTradingError(
-            "手续费缓冲不足，SDK 已缩减目标份额；为避免不等份双腿成交，订单未提交。"
-        )
+        return float(target_shares)
+    return float(Decimal(str(raw_taker_amount)) / Decimal(PUSD_DECIMALS))
 
 
 def _safe_float(value: Any) -> float:

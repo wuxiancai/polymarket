@@ -629,7 +629,7 @@ def test_dashboard_uses_shared_id_sequence_across_assets_and_tables(tmp_path):
     assert "<tr><td>1</td><td>BTC</td>" in payload["portfolio"]["positions_html"]
     assert "<tr><td>1</td><td><span class='spread-value'>3.00¢</span>" in payload["assets"][0]["trades_html"]
     assert "<tr><td>1</td><td><span class='pill done'>已成交</span>" in payload["assets"][0]["opportunities_html"]
-    assert "<tr><td>2</td><td><span class='pill exec'>可模拟成交</span>" in payload["assets"][1]["opportunities_html"]
+    assert "<tr><td>2</td><td><span class='pill watch'>仅观察</span>" in payload["assets"][1]["opportunities_html"]
 
 
 def test_dashboard_shows_profit_and_positions(tmp_path):
@@ -842,7 +842,7 @@ def test_opportunity_table_hides_internal_english_reason(tmp_path):
     payload = dashboard_payload([state])
 
     html = payload["assets"][0]["opportunities_html"]
-    assert "可模拟成交" in html
+    assert "仅观察" in html
     assert "https://polymarket.com/event/what-price-will-bitcoin-hit-in-june" in html
     assert "9.00" in html
     assert "9.0</td>" not in html
@@ -994,7 +994,7 @@ def test_opportunity_table_shows_spread_and_execution_state(tmp_path):
     assert "已成交" in html
     assert "冷却中" in html
     assert "同交易对冷却中" in html
-    assert "可模拟成交" in html
+    assert "仅观察" in html
     assert "仅观察" in html
     assert "<span class='spread-value'>3.00¢</span>" in html
     assert "<span class='spread-value'>2.50¢</span>" in html

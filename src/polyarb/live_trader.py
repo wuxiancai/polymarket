@@ -7,7 +7,12 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 from .config import Config
-from .execution_rules import MAX_TOTAL_OPEN_COST, max_pair_spend as _max_pair_spend, price_caps as _price_caps
+from .execution_rules import (
+    MAX_TOTAL_OPEN_COST,
+    max_pair_spend as _max_pair_spend,
+    pair_has_strict_coverage,
+    price_caps as _price_caps,
+)
 from .live import LiveSession
 from .live_execution import LiveExecutionStore, WalletReservations
 from .models import ArbOpportunity, AssetSpec
@@ -68,7 +73,7 @@ class LiveAutoTrader:
         if not opportunity.executable:
             return "仅观察", ""
         spread_cents = _spread_cents(opportunity)
-        if spread_cents < MIN_SPREAD_TO_OPEN_CENTS:
+        if spread_cents <= MIN_SPREAD_TO_OPEN_CENTS:
             return "仅观察", ""
         self._restore_and_reconcile()
         blocked_detail = self.blocked_pairs.get(opportunity.pair_key)
@@ -136,7 +141,7 @@ class LiveAutoTrader:
         if opportunity.total_cost <= 0:
             return None, "仅观察"
         spread_cents = _spread_cents(opportunity)
-        if spread_cents < MIN_SPREAD_TO_OPEN_CENTS:
+        if spread_cents <= MIN_SPREAD_TO_OPEN_CENTS:
             return None, "仅观察"
         if spread_cents <= THIRTY_PERCENT_MAX_SPREAD_CENTS:
             position_ratio = 0.3
@@ -255,7 +260,7 @@ class LiveAutoTrader:
                 yes_order_id=str(yes_result.get("order_id") or ""),
                 no_order_id=str(no_result.get("order_id") or ""),
             )
-        successes = int(_is_confirmed_full_buy(yes_result, sized.shares)) + int(_is_confirmed_full_buy(no_result, sized.shares))
+        successes = int(_is_confirmed_full_buy(yes_result)) + int(_is_confirmed_full_buy(no_result))
         # A delayed or response-lost leg may still fill after this method returns.  Do not
         # liquidate the confirmed leg until the uncertain leg is reconciled; doing so can
         # create the very one-leg exposure this safeguard is intended to prevent.
@@ -266,7 +271,7 @@ class LiveAutoTrader:
             self._set_error(detail)
             self._log_execution(sized, yes_result, no_result, 0)
             return "成交确认中", detail
-        if successes == 2:
+        if successes == 2 and _pair_is_covered(yes_result, no_result):
             # Keep the reservation until a fresh account snapshot includes the new position.
             # Otherwise another opportunity in this same scan can spend the same cached balance.
             self._complete_intent(reservation_id, "confirmed", "YES/NO 两腿均已确认完整成交。", release=False)
@@ -274,7 +279,7 @@ class LiveAutoTrader:
             self._log_execution(sized, yes_result, no_result, successes)
             return "已成交", ""
         if successes == 1:
-            successful_is_yes = _is_confirmed_full_buy(yes_result, sized.shares)
+            successful_is_yes = _is_confirmed_full_buy(yes_result)
             successful_token = sized.yes_token_id if successful_is_yes else sized.no_token_id
             exit_result = self._safe_emergency_exit(
                 token_id=successful_token,
@@ -447,14 +452,19 @@ def _filled_sell_shares(result: dict, requested_shares: float) -> float:
     return min(max(0.0, filled), requested_shares)
 
 
-def _is_confirmed_full_buy(result: dict, requested_shares: float) -> bool:
+def _is_confirmed_full_buy(result: dict) -> bool:
     if not result.get("ok") or str(result.get("status") or "").lower() != "matched":
         return False
-    try:
-        filled = float(result.get("taking_amount"))
-    except (TypeError, ValueError):
-        return False
-    return filled >= requested_shares - 1e-6 and bool(result.get("trade_ids"))
+    return _to_float(result.get("taking_amount")) > 0 and bool(result.get("trade_ids"))
+
+
+def _pair_is_covered(yes_result: dict, no_result: dict) -> bool:
+    return pair_has_strict_coverage(
+        _to_float(yes_result.get("taking_amount")),
+        _to_float(no_result.get("taking_amount")),
+        _to_float(yes_result.get("max_spend")),
+        _to_float(no_result.get("max_spend")),
+    )
 
 
 def _is_ambiguous_submission(result: dict) -> bool:
