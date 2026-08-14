@@ -257,8 +257,8 @@ class LiveTradingClient:
             raise LiveTradingError("套利订单的份额或价格上限无效。") from exc
         if not yes_token_id or not no_token_id or target_shares <= 0:
             raise LiveTradingError("套利订单需要两个 token 和正数份额。")
-        if fee < 0 or yes_price <= 0 or no_price <= 0 or yes_price + no_price + fee >= Decimal("0.96"):
-            raise LiveTradingError("套利两腿价格与手续费缓冲之和必须严格低于 96¢。")
+        if fee < 0 or yes_price <= 0 or no_price <= 0 or yes_price + no_price + fee >= Decimal("0.97"):
+            raise LiveTradingError("套利两腿价格与手续费缓冲之和必须严格低于 97¢。")
         client = self._ensure_sdk_client()
         fee_per_leg = fee / Decimal("2")
         signed_orders = [
@@ -276,7 +276,7 @@ class LiveTradingClient:
         max_spends = [float(target_shares * (price + fee_per_leg)) for price in (yes_price, no_price)]
         if not pair_has_strict_coverage(*requested_shares, *max_spends):
             raise LiveTradingError(
-                "手续费导致两腿份额差异过大，较小份额的保底兑付无法覆盖两腿最高总支出，订单未提交。"
+                "手续费导致两腿份额差异过大，较小份额的结算兑付扣除两腿最高总支出后不足 $0.001，订单未提交。"
             )
         try:
             results = [_order_response_dict(response) for response in client.post_orders(signed_orders)]

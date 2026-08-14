@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "polyarb"
-version = "2.7.6"
+version = "2.7.7"
 description = "Polymarket BTC/ETH/XRP/SOL live and paper trading dashboard"
 requires-python = ">=3.11"
 dependencies = [

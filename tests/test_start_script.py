@@ -57,7 +57,7 @@ exit 0
     assert f"Environment=POLYARB_DB={old_db}" in service
     assert f"Environment=POLYARB_DB={root / 'data' / 'paper.sqlite3'}" not in service
     assert "Environment=FEE_BUFFER=0" in service
-    assert "Environment=SLIPPAGE_BUFFER_CENTS=4" in service
+    assert "Environment=SLIPPAGE_BUFFER_CENTS=3" in service
 
 
 def test_start_script_passes_fee_buffer_to_systemd(tmp_path):

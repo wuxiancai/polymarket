@@ -201,11 +201,11 @@ def test_live_auto_trader_never_executes_when_spread_is_under_three_cents():
 
 
 def test_live_price_caps_reserve_configured_fee_buffer_inside_97_cents():
-    safe = opportunity().__class__(**{**opportunity().__dict__, "yes_avg_price": 0.40, "no_avg_price": 0.54})
+    safe = opportunity().__class__(**{**opportunity().__dict__, "yes_avg_price": 0.403, "no_avg_price": 0.532})
     caps = _price_caps(safe, fee_buffer=0.01)
 
     assert caps is not None
-    assert caps[0] + caps[1] + 0.01 < 0.96
+    assert caps[0] + caps[1] + 0.01 < 0.97
 
 
 def test_live_accepts_small_fee_adjusted_share_difference_when_pair_is_covered():

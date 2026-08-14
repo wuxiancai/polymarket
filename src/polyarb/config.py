@@ -12,7 +12,7 @@ from .models import DEFAULT_ALLOCATION_RATIOS
 class Config:
     min_24h_volume_usd: float = 1000.0
     min_arbitrage_depth_usd: float = 100.0
-    slippage_buffer_cents: int = 4
+    slippage_buffer_cents: int = 3
     fee_buffer: float = 0.0
     allow_near_expiry_long_periods: bool = True
     near_expiry_days: int = 30
@@ -27,7 +27,7 @@ class Config:
 
     @property
     def slippage_buffer(self) -> float:
-        cents = min(4, max(1, int(self.slippage_buffer_cents)))
+        cents = min(3, max(1, int(self.slippage_buffer_cents)))
         return cents / 100.0
 
     @property
@@ -39,7 +39,7 @@ class Config:
         return cls(
             min_24h_volume_usd=_float_env("MIN_24H_VOLUME_USD", 1000.0),
             min_arbitrage_depth_usd=_float_env("MIN_ARBITRAGE_DEPTH_USD", 100.0),
-            slippage_buffer_cents=_int_env("SLIPPAGE_BUFFER_CENTS", 4),
+            slippage_buffer_cents=_int_env("SLIPPAGE_BUFFER_CENTS", 3),
             fee_buffer=_float_env("FEE_BUFFER", 0.0),
             allow_near_expiry_long_periods=_bool_env("ALLOW_NEAR_EXPIRY_LONG_PERIODS", True),
             near_expiry_days=_int_env("NEAR_EXPIRY_DAYS", 30),

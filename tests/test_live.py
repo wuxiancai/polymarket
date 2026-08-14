@@ -274,16 +274,16 @@ def test_live_client_caps_two_legs_including_fee_buffer():
     assert [float(call["max_spend"]) for call in fake.created_market_orders] == [4.05, 5.45]
 
 
-def test_live_client_rejects_exactly_96_cent_pair_cost():
+def test_live_client_rejects_exactly_97_cent_pair_cost():
     item, _fake = client()
 
-    with pytest.raises(LiveTradingError, match="严格低于 96¢"):
+    with pytest.raises(LiveTradingError, match="严格低于 97¢"):
         item.place_protected_pair_buy(
             yes_token_id="token-yes",
             no_token_id="token-no",
             shares=10,
             yes_max_price=0.40,
-            no_max_price=0.56,
+            no_max_price=0.57,
         )
 
 

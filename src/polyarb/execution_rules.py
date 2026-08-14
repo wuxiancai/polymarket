@@ -1,13 +1,16 @@
 from __future__ import annotations
 
-from decimal import Decimal, ROUND_DOWN
+from decimal import Decimal, InvalidOperation, ROUND_DOWN, ROUND_UP
 from typing import List, Optional, Tuple
 
 from .models import ArbOpportunity, Level
 
 
-# Strictly below 96¢: retain more than 4¢ of worst-case profit per matched pair.
-MAX_TOTAL_OPEN_COST = Decimal("0.96")
+# Strictly below 97¢: only opportunities with more than 3¢ per-share spread open.
+MAX_TOTAL_OPEN_COST = Decimal("0.97")
+# Signed SDK orders can have unequal fee-adjusted shares.  Keep a small absolute
+# margin after the losing-leg payout covers both worst-case order spends.
+MIN_SETTLEMENT_PROFIT = Decimal("0.001")
 
 
 def price_caps(opportunity: ArbOpportunity, fee_buffer: float = 0.0) -> Optional[tuple[float, float]]:
@@ -26,7 +29,13 @@ def price_caps(opportunity: ArbOpportunity, fee_buffer: float = 0.0) -> Optional
     yes_cap = (yes_price + half_headroom).quantize(cents, rounding=ROUND_DOWN)
     no_cap = (no_price + half_headroom).quantize(cents, rounding=ROUND_DOWN)
     if yes_cap <= 0 or no_cap <= 0 or yes_cap + no_cap + fee >= MAX_TOTAL_OPEN_COST:
-        return None
+        # Do not turn a strict <97¢ rule into an equality because the extra
+        # headroom happened to round to whole cents.  Fall back to the lowest
+        # cent caps that can still include the observed prices.
+        yes_cap = yes_price.quantize(cents, rounding=ROUND_UP)
+        no_cap = no_price.quantize(cents, rounding=ROUND_UP)
+        if yes_cap <= 0 or no_cap <= 0 or yes_cap + no_cap + fee >= MAX_TOTAL_OPEN_COST:
+            return None
     return float(yes_cap), float(no_cap)
 
 
@@ -40,9 +49,13 @@ def pair_has_strict_coverage(
     yes_max_spend: float,
     no_max_spend: float,
 ) -> bool:
-    """Allow unequal legs only when the smaller eventual payout covers both max costs."""
-    min_payout = min(yes_shares, no_shares)
-    return min_payout > 0 and yes_max_spend + no_max_spend < min_payout * float(MAX_TOTAL_OPEN_COST)
+    """Allow unequal legs when either settlement outcome retains net profit."""
+    try:
+        min_payout = min(Decimal(str(yes_shares)), Decimal(str(no_shares)))
+        total_max_spend = Decimal(str(yes_max_spend)) + Decimal(str(no_max_spend))
+    except (InvalidOperation, ValueError):
+        return False
+    return min_payout > 0 and total_max_spend + MIN_SETTLEMENT_PROFIT <= min_payout
 
 
 def fok_buy_fill(asks: List[Level], shares: float, max_price: float) -> Optional[tuple[float, float]]:
