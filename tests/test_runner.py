@@ -113,6 +113,23 @@ def test_runner_includes_configured_fee_buffer_in_simulated_profit(tmp_path):
     assert round(float(trade["guaranteed_profit"]), 2) == 0.50
 
 
+def test_runner_rejects_paper_pair_when_sdk_fee_adjustment_breaks_settlement_coverage(tmp_path):
+    item = PaperRunner(Config(database_path=Path(tmp_path) / "paper.sqlite3"), BTC_ASSET)
+    item.store.initialize()
+    candidate = paper_opportunity("fee-share-mismatch", "2026-08-04T00:00:00+00:00")
+    books = paper_books(candidate)
+    books[candidate.yes_token_id] = OrderBook(
+        candidate.yes_token_id, bids=[(0.39, 100)], asks=[(0.40, 100)], timestamp_ms=1, hash="", fee_rate=0.2
+    )
+    books[candidate.no_token_id] = OrderBook(
+        candidate.no_token_id, bids=[(0.54, 100)], asks=[(0.55, 100)], timestamp_ms=1, hash="", fee_rate=0.2
+    )
+
+    item._record_result(ScanResult(markets=[], pairs=1, opportunities=[candidate], scanned_at=datetime.now(timezone.utc), books=books))
+
+    assert item.store.latest_trades() == []
+
+
 class StopAfterReconnect(BaseException):
     pass
 

@@ -75,15 +75,20 @@ class GammaClient:
 class ClobClient:
     def __init__(self, config: Config):
         self.config = config
+        self._order_metadata: Dict[str, tuple[float, float, float]] = {}
 
     def order_book(self, token_id: str) -> OrderBook:
         data = _get_json(f"{self.config.clob_url}/book?{urlencode({'token_id': token_id})}")
+        fee_rate, fee_exponent, tick_size = self._metadata_for_token(token_id)
         return OrderBook(
             token_id=str(data.get("asset_id") or token_id),
             bids=_levels(data.get("bids") or []),
             asks=_levels(data.get("asks") or []),
             timestamp_ms=int(data.get("timestamp") or int(time.time() * 1000)),
             hash=str(data.get("hash") or ""),
+            fee_rate=fee_rate,
+            fee_exponent=fee_exponent,
+            tick_size=tick_size,
         )
 
     def order_books(self, token_ids: Iterable[str]) -> Dict[str, OrderBook]:
@@ -96,12 +101,37 @@ class ClobClient:
             books[token_id] = book
         return books
 
+    def _metadata_for_token(self, token_id: str) -> tuple[float, float, float]:
+        cached = self._order_metadata.get(token_id)
+        if cached is not None:
+            return cached
+        token_data = _get_json(f"{self.config.clob_url}/markets-by-token/{token_id}")
+        condition_id = str(token_data.get("condition_id") or "")
+        if not condition_id:
+            raise PolymarketError(f"CLOB 市场元数据缺少 condition_id：{token_id}")
+        market_data = _get_json(f"{self.config.clob_url}/clob-markets/{condition_id}")
+        fee_data = market_data.get("fd") or {}
+        try:
+            metadata = (
+                float(fee_data.get("r") or 0),
+                float(fee_data.get("e") or 0),
+                float(market_data.get("mts") or 0.01),
+            )
+        except (TypeError, ValueError) as exc:
+            raise PolymarketError(f"CLOB 市场手续费元数据无效：{token_id}") from exc
+        token_ids = [str(item.get("t") or "") for item in market_data.get("t") or [] if isinstance(item, dict)]
+        for market_token_id in token_ids:
+            if market_token_id:
+                self._order_metadata[market_token_id] = metadata
+        self._order_metadata[token_id] = metadata
+        return metadata
+
 
 def _get_json(url: str):
     request = Request(
         url,
         headers={
-            "User-Agent": "polyarb/2.7.7 (+https://polymarket.com)",
+            "User-Agent": "polyarb/2.7.8 (+https://polymarket.com)",
             "Accept": "application/json",
         },
     )

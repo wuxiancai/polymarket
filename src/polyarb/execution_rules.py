@@ -58,6 +58,50 @@ def pair_has_strict_coverage(
     return min_payout > 0 and total_max_spend + MIN_SETTLEMENT_PROFIT <= min_payout
 
 
+def fee_adjusted_buy_shares(
+    *,
+    target_shares: float,
+    price: float,
+    max_spend: float,
+    fee_rate: float = 0.0,
+    fee_exponent: float = 0.0,
+    tick_size: float = 0.01,
+) -> float:
+    """Mirror the SDK's protected BUY fee adjustment before order signing."""
+    try:
+        shares = Decimal(str(target_shares))
+        unit_price = Decimal(str(price))
+        cap = Decimal(str(max_spend))
+        rate = Decimal(str(fee_rate))
+        exponent = Decimal(str(fee_exponent))
+        tick = Decimal(str(tick_size))
+    except (InvalidOperation, ValueError):
+        return 0.0
+    rounding = {
+        Decimal("0.1"): (3, 1, 2),
+        Decimal("0.01"): (4, 2, 2),
+        Decimal("0.005"): (5, 3, 2),
+        Decimal("0.0025"): (6, 4, 2),
+        Decimal("0.001"): (5, 3, 2),
+        Decimal("0.0001"): (6, 4, 2),
+    }.get(tick)
+    if shares <= 0 or unit_price <= 0 or cap <= 0 or rate < 0 or exponent < 0 or rounding is None:
+        return 0.0
+    amount = shares * unit_price
+    effective_rate = rate * ((unit_price * (Decimal(1) - unit_price)) ** exponent)
+    total_cost = amount + shares * effective_rate
+    adjusted_amount = amount if cap > total_cost else cap / (Decimal(1) + effective_rate / unit_price)
+    amount_precision, price_precision, shares_precision = rounding
+    rounded_price = unit_price.quantize(Decimal(10) ** -price_precision, rounding=ROUND_DOWN)
+    rounded_amount = adjusted_amount.quantize(Decimal(10) ** -shares_precision, rounding=ROUND_DOWN)
+    requested_shares = rounded_amount / rounded_price
+    if -requested_shares.as_tuple().exponent > amount_precision:
+        requested_shares = requested_shares.quantize(Decimal(10) ** -(amount_precision + 4), rounding=ROUND_UP)
+        if -requested_shares.as_tuple().exponent > amount_precision:
+            requested_shares = requested_shares.quantize(Decimal(10) ** -amount_precision, rounding=ROUND_UP)
+    return float(requested_shares)
+
+
 def fok_buy_fill(asks: List[Level], shares: float, max_price: float) -> Optional[tuple[float, float]]:
     """Return (cost, average_price) only if the entire requested size fills at the cap."""
     remaining = shares

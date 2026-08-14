@@ -9,7 +9,7 @@ from typing import Callable, Dict, List, Optional
 
 from .arbitrage import build_pairs, find_opportunities
 from .config import Config
-from .execution_rules import fak_sell_fill, fok_buy_fill, price_caps
+from .execution_rules import fee_adjusted_buy_shares, fak_sell_fill, fok_buy_fill, pair_has_strict_coverage, price_caps
 from .models import BTC_ASSET, DEFAULT_ASSETS, AssetSpec, ArbOpportunity, Market, OrderBook
 from .polymarket import ClobClient, GammaClient
 from .store import PaperStore
@@ -189,14 +189,49 @@ class PaperRunner:
         no_book = books.get(opportunity.no_token_id)
         if caps is None or yes_book is None or no_book is None:
             return None
-        yes_fill = fok_buy_fill(yes_book.asks, opportunity.shares, caps[0])
-        no_fill = fok_buy_fill(no_book.asks, opportunity.shares, caps[1])
+        fee_per_leg = max(0.0, self.config.fee_buffer) / 2
+        max_spends = (
+            opportunity.shares * (caps[0] + fee_per_leg),
+            opportunity.shares * (caps[1] + fee_per_leg),
+        )
+        requested_shares = (
+            fee_adjusted_buy_shares(
+                target_shares=opportunity.shares,
+                price=caps[0],
+                max_spend=max_spends[0],
+                fee_rate=yes_book.fee_rate,
+                fee_exponent=yes_book.fee_exponent,
+                tick_size=yes_book.tick_size,
+            ),
+            fee_adjusted_buy_shares(
+                target_shares=opportunity.shares,
+                price=caps[1],
+                max_spend=max_spends[1],
+                fee_rate=no_book.fee_rate,
+                fee_exponent=no_book.fee_exponent,
+                tick_size=no_book.tick_size,
+            ),
+        )
+        if not pair_has_strict_coverage(*requested_shares, *max_spends):
+            return None
+        yes_fill = fok_buy_fill(yes_book.asks, requested_shares[0], caps[0])
+        no_fill = fok_buy_fill(no_book.asks, requested_shares[1], caps[1])
         if yes_fill is not None and no_fill is not None:
             yes_cost, yes_avg = yes_fill
             no_cost, no_avg = no_fill
-            fee_cost = opportunity.shares * max(0.0, self.config.fee_buffer)
+            fee_cost = (
+                max(
+                    requested_shares[0] * fee_per_leg,
+                    requested_shares[0] * yes_book.fee_rate * ((caps[0] * (1 - caps[0])) ** yes_book.fee_exponent),
+                )
+                + max(
+                    requested_shares[1] * fee_per_leg,
+                    requested_shares[1] * no_book.fee_rate * ((caps[1] * (1 - caps[1])) ** no_book.fee_exponent),
+                )
+            )
             total_cost = yes_cost + no_cost + fee_cost
-            profit = opportunity.shares - total_cost
+            min_payout = min(requested_shares)
+            profit = min_payout - total_cost
             if profit < MIN_DISPLAYED_POSITION_VALUE:
                 return None
             return replace(
@@ -204,7 +239,7 @@ class PaperRunner:
                 yes_avg_price=yes_avg,
                 no_avg_price=no_avg,
                 total_cost=total_cost,
-                min_payout=opportunity.shares,
+                min_payout=min_payout,
                 guaranteed_profit=profit,
                 edge_per_share=profit / opportunity.shares,
             )

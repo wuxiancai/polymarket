@@ -54,6 +54,14 @@ def apply_market_message(books: dict, message) -> int:
         event_type = item.get("event_type") or item.get("type")
         if event_type == "book" and item.get("asset_id"):
             book = parse_order_book_message(item)
+            current = books.get(book.token_id)
+            if current is not None:
+                book = replace(
+                    book,
+                    fee_rate=current.fee_rate,
+                    fee_exponent=current.fee_exponent,
+                    tick_size=current.tick_size,
+                )
             books[book.token_id] = book
             updates += 1
         elif event_type == "price_change":

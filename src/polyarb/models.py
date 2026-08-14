@@ -67,6 +67,9 @@ class OrderBook:
     asks: List[Level]
     timestamp_ms: int
     hash: str
+    fee_rate: float = 0.0
+    fee_exponent: float = 0.0
+    tick_size: float = 0.01
 
     @property
     def best_ask(self) -> Optional[float]:
