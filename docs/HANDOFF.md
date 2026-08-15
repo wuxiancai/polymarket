@@ -1,5 +1,11 @@
 # Handoff
 
+## 2026-08-15 手续费份额差异再次出现：运行版本/历史模拟记录排查
+
+- 本地 `main` / `origin/main` 均指向 `fd542bc`（`v2.7.8`）。该版本的模拟路径会从 CLOB 读取与 SDK 相同的手续费元数据，按 SDK 的 `max_spend`、费率和 tick-size 舍入计算实际请求份额，并在 `min(YES, NO) - 两腿最高支出 < $0.001` 时拒绝写入模拟成交。
+- 因此，若同一时刻同一机会在真实盘报“较小份额的结算兑付…不足 $0.001”，v2.7.8 的新模拟路径不应产生新的模拟仓位。页面中仍可见的模拟仓位可能是 v2.7.8 部署前写入的历史记录，升级不会回算或删除它；另一高概率原因是 Ubuntu systemd 仍在运行旧提交。
+- 本地已核对官方已安装 SDK `0.5.0` 的实际受保护 BUY 公式与本项目模拟公式一致，并运行 `tests/test_execution_rules.py tests/test_runner.py tests/test_live.py`（26 passed）。本机无法连通 Gamma/CLOB/GitHub 的 TLS 出口，未能直接核验 Ubuntu 运行态；部署后须在目标机执行 `git rev-parse --short HEAD`、`git describe --tags --always`、`sudo systemctl restart polyarb` 与 `sudo journalctl -u polyarb -n 100 --no-pager` 留证。
+
 ## 2026-08-14 v2.7.8 模拟盘复刻真实 SDK 手续费缩量
 
 - 修复模拟成交与真实成交在手续费后的份额语义不一致：模拟盘不再固定以原始目标份额让两腿成交。它会从 CLOB `markets-by-token` / `clob-markets` 读取每个 token 的手续费率与指数，按真实 SDK 受保护 BUY 的 `max_spend` 公式计算实际可得份额，再复用 `pair_has_strict_coverage()`。
