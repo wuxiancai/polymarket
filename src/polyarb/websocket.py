@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from dataclasses import replace
 from typing import Iterable, List
 
@@ -38,10 +39,10 @@ def apply_price_change(book: OrderBook, change: dict) -> OrderBook:
 
     if side == "BUY":
         bids = _upsert_level(book.bids, price, size)
-        return replace(book, bids=bids)
+        return replace(book, bids=bids, timestamp_ms=int(time.time() * 1000))
     if side == "SELL":
         asks = _upsert_level(book.asks, price, size)
-        return replace(book, asks=asks)
+        return replace(book, asks=asks, timestamp_ms=int(time.time() * 1000))
     return book
 
 

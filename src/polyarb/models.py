@@ -121,6 +121,11 @@ class ArbOpportunity:
     executable: bool
     reason: str
     detected_at: datetime
+    yes_fee: float = 0.0
+    no_fee: float = 0.0
+    slippage_cost: float = 0.0
+    safety_buffer: float = 0.0
+    roi: float = 0.0
 
     def as_dict(self) -> Dict[str, object]:
         return {
@@ -146,4 +151,9 @@ class ArbOpportunity:
             "executable": self.executable,
             "reason": self.reason,
             "detected_at": self.detected_at.isoformat(),
+            "yes_fee": self.yes_fee,
+            "no_fee": self.no_fee,
+            "slippage_cost": self.slippage_cost,
+            "safety_buffer": self.safety_buffer,
+            "roi": self.roi,
         }

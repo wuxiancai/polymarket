@@ -1,5 +1,13 @@
 # Handoff
 
+## 2026-08-15 v2.8.0 按 Polymarket.pdf 重构为动态双腿套利决策
+
+- `Polymarket.pdf`（用户指定绝对标准）已逐页核对。系统不再以固定 `YES + NO < 97¢` 或固定 `>3¢` 价差作为执行条件；`arbitrage.py` 现在枚举 YES/NO 双方累计深度断点，对每个候选数量计算完整 VWAP、由 CLOB `fd.r/fd.e` 导出的逐档手续费、深度滑点、安全边际、净利润和 ROI，选择净利润最大的数量。
+- 新默认风控：`MIN_PROFIT_USD=1`、`MIN_ROI=0.01`、`SAFETY_BUFFER_PER_SHARE=0.002`、`STALE_BOOK_MS=5000`、`MAX_SINGLE_TRADE_USD=100`、`MAX_OPEN_EXPOSURE_USD=500`、`MAX_CONSECUTIVE_FAILURES=3`。`start.sh` 会传递这些环境变量；`DRY_RUN=true` 会只记录真实盘候选而不发单。
+- WebSocket 价格增量更新会刷新本地盘口时戳；任何一腿超过 `STALE_BOOK_MS` 不产生候选。真实下单前会再次从当前本地簿对目标数量做完整深度/费率/利润/ROI 复核，并以该数量所需的最后一档 ask 作为 FOK 上限。资金预留按 FOK 最坏价格和动态手续费计算，避免连续机会在保护上限下透支。
+- 保留原有 FOK、单腿 FAK 紧急平仓、持久化意图对账和 SDK 费率缩量结算覆盖保护；连续执行失败达到上限后真实自动交易显示“风控暂停”，需人工检查后重启服务。
+- 本轮完成后应运行 `.venv/bin/python -m pytest -p no:cacheprovider tests -q`、`bash -n start.sh deploy.sh stop.sh`，然后提交、打 `v2.8.0` tag、推送并以 `git ls-remote origin refs/tags/v2.8.0` 留证。远程 Ubuntu 仍需用户部署：`git pull --ff-only && bash start.sh`，再用 `git describe --tags --always` 与 journal 核对运行版本。
+
 ## 2026-08-15 手续费份额差异再次出现：运行版本/历史模拟记录排查
 
 - 本地 `main` / `origin/main` 均指向 `fd542bc`（`v2.7.8`）。该版本的模拟路径会从 CLOB 读取与 SDK 相同的手续费元数据，按 SDK 的 `max_spend`、费率和 tick-size 舍入计算实际请求份额，并在 `min(YES, NO) - 两腿最高支出 < $0.001` 时拒绝写入模拟成交。

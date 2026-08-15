@@ -246,6 +246,8 @@ class LiveTradingClient:
         yes_max_price: float,
         no_max_price: float,
         fee_buffer: float = 0.0,
+        yes_fee_budget: float = 0.0,
+        no_fee_budget: float = 0.0,
     ) -> List[dict]:
         """Submit both legs together as full-or-kill buys with hard price caps."""
         try:
@@ -257,23 +259,27 @@ class LiveTradingClient:
             raise LiveTradingError("套利订单的份额或价格上限无效。") from exc
         if not yes_token_id or not no_token_id or target_shares <= 0:
             raise LiveTradingError("套利订单需要两个 token 和正数份额。")
-        if fee < 0 or yes_price <= 0 or no_price <= 0 or yes_price + no_price + fee >= Decimal("0.97"):
-            raise LiveTradingError("套利两腿价格与手续费缓冲之和必须严格低于 97¢。")
+        if fee < 0 or yes_price <= 0 or no_price <= 0 or yes_price + no_price >= Decimal("1"):
+            raise LiveTradingError("套利两腿价格上限无效，必须低于最终 $1 兑付。")
         client = self._ensure_sdk_client()
-        fee_per_leg = fee / Decimal("2")
+        try:
+            yes_fee = max(Decimal("0"), Decimal(str(yes_fee_budget))) + target_shares * fee / Decimal("2")
+            no_fee = max(Decimal("0"), Decimal(str(no_fee_budget))) + target_shares * fee / Decimal("2")
+        except InvalidOperation as exc:
+            raise LiveTradingError("套利订单手续费预算无效。") from exc
         signed_orders = [
             client.create_market_order(
                 token_id=token_id,
                 side="BUY",
                 amount=str(target_shares * max_price),
-                max_spend=str(target_shares * (max_price + fee_per_leg)),
+                max_spend=str(target_shares * max_price + fee_budget),
                 max_price=str(max_price),
                 order_type="FOK",
             )
-            for token_id, max_price in ((yes_token_id, yes_price), (no_token_id, no_price))
+            for token_id, max_price, fee_budget in ((yes_token_id, yes_price, yes_fee), (no_token_id, no_price, no_fee))
         ]
         requested_shares = [_signed_buy_shares(order, target_shares) for order in signed_orders]
-        max_spends = [float(target_shares * (price + fee_per_leg)) for price in (yes_price, no_price)]
+        max_spends = [float(target_shares * yes_price + yes_fee), float(target_shares * no_price + no_fee)]
         if not pair_has_strict_coverage(*requested_shares, *max_spends):
             raise LiveTradingError(
                 "手续费导致两腿份额差异过大，较小份额的结算兑付扣除两腿最高总支出后不足 $0.001，订单未提交。"

@@ -116,6 +116,9 @@ def trader(session=None, **kwargs):
         initial_capital_usdt=1000.0,
         allocation_ratios={"BTC": 1.0, "ETH": 0.0, "XRP": 0.0, "SOL": 0.0},
         cooldown_seconds=30,
+        min_profit_usd=0.01,
+        max_single_trade_usd=1000.0,
+        max_open_exposure_usd=1000.0,
     )
     return LiveAutoTrader(session, config, BTC_ASSET, **kwargs), session
 
@@ -136,7 +139,7 @@ def test_live_auto_trader_places_yes_and_no_market_buys():
     assert session.buys[0][0] == "yes-token"
     assert round(session.buys[0][1], 2) == round(session.buys[1][1], 2)
     assert session.buys[1][0] == "no-token"
-    assert round(session.buys[0][2] + session.buys[1][2], 2) <= 0.97
+    assert round(session.buys[0][2] + session.buys[1][2], 2) < 1
     assert len(session.logs) == 1
     assert session.logs[0]["ok"] is True
     assert session.opportunities[-1]["status"] == "已成交"
@@ -163,7 +166,7 @@ def test_live_auto_trader_skips_when_disabled():
 def test_live_auto_trader_marks_insufficient_funds():
     item, session = trader(
         FakeLiveSession(
-            balance=1.0,
+                balance=0.95,
                 positions=[{"title": "Will Bitcoin be above $60,000 on August 10?", "initial_value": 0.8}],
         )
     )
@@ -182,7 +185,7 @@ def test_live_auto_trader_marks_insufficient_funds():
     assert session.opportunities[-1]["detail"] == "资金不足"
 
 
-def test_live_auto_trader_never_executes_when_spread_is_under_three_cents():
+def test_live_auto_trader_uses_net_profit_instead_of_fixed_three_cent_spread():
     item, session = trader()
     unsafe = opportunity()
     unsafe = unsafe.__class__(**{**unsafe.__dict__, "yes_avg_price": 0.40, "no_avg_price": 0.571, "total_cost": 971.0, "guaranteed_profit": 29.0})
@@ -196,16 +199,16 @@ def test_live_auto_trader_never_executes_when_spread_is_under_three_cents():
         )
     )
 
-    assert session.buys == []
-    assert session.opportunities[-1]["status"] == "仅观察"
+    assert len(session.buys) == 2
+    assert session.opportunities[-1]["status"] == "已成交"
 
 
-def test_live_price_caps_reserve_configured_fee_buffer_inside_97_cents():
+def test_live_price_caps_are_conservative_and_do_not_apply_fixed_97_cent_rule():
     safe = opportunity().__class__(**{**opportunity().__dict__, "yes_avg_price": 0.403, "no_avg_price": 0.532})
     caps = _price_caps(safe, fee_buffer=0.01)
 
     assert caps is not None
-    assert caps[0] + caps[1] + 0.01 < 0.97
+    assert caps[0] + caps[1] < 1
 
 
 def test_live_accepts_small_fee_adjusted_share_difference_when_pair_is_covered():

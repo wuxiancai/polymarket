@@ -7,9 +7,8 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 from .config import Config
+from .arbitrage import preflight_execution
 from .execution_rules import (
-    MAX_TOTAL_OPEN_COST,
-    max_pair_spend as _max_pair_spend,
     pair_has_strict_coverage,
     price_caps as _price_caps,
 )
@@ -18,9 +17,6 @@ from .live_execution import LiveExecutionStore, WalletReservations
 from .models import ArbOpportunity, AssetSpec
 from .runner import (
     MIN_DISPLAYED_POSITION_VALUE,
-    MIN_SPREAD_TO_OPEN_CENTS,
-    SIXTY_PERCENT_MAX_SPREAD_CENTS,
-    THIRTY_PERCENT_MAX_SPREAD_CENTS,
     ScanResult,
     _settlement_at,
     _spread_cents,
@@ -51,6 +47,7 @@ class LiveAutoTrader:
         self.reservations = reservations or WalletReservations()
         self._restored = False
         self._confirmed_reservations: Dict[str, float] = {}
+        self.consecutive_failures = 0
 
     def on_result(self, result: ScanResult) -> None:
         if not self.live_session.is_logged_in():
@@ -64,16 +61,13 @@ class LiveAutoTrader:
         with self.lock:
             self.last_scan_at = result.scanned_at
         for opportunity in sorted(result.opportunities, key=_settlement_at):
-            status, detail = self._opportunity_status(opportunity)
+            status, detail = self._opportunity_status(opportunity, result.books)
             self.live_session.upsert_live_opportunity(
                 self._opportunity_entry(opportunity, status, detail)
             )
 
-    def _opportunity_status(self, opportunity: ArbOpportunity) -> tuple[str, str]:
+    def _opportunity_status(self, opportunity: ArbOpportunity, books: Optional[Dict[str, object]] = None) -> tuple[str, str]:
         if not opportunity.executable:
-            return "仅观察", ""
-        spread_cents = _spread_cents(opportunity)
-        if spread_cents <= MIN_SPREAD_TO_OPEN_CENTS:
             return "仅观察", ""
         self._restore_and_reconcile()
         blocked_detail = self.blocked_pairs.get(opportunity.pair_key)
@@ -88,6 +82,8 @@ class LiveAutoTrader:
         if self.live_session.is_trading_region_blocked():
             self._set_error(self.live_session.geoblock_error() or "真实交易区域受限。")
             return "区域受限", "服务器 IP 所在地区被 Polymarket 限制开仓，仅可平仓"
+        if self.consecutive_failures >= self.config.max_consecutive_failures:
+            return "风控暂停", f"连续失败 {self.consecutive_failures} 次，需人工检查后重启服务。"
         sized, sizing_status = self._size_opportunity(opportunity)
         if sized is None:
             if sizing_status == "资金不足":
@@ -95,9 +91,19 @@ class LiveAutoTrader:
             return sizing_status or "仅观察", ""
         if not self._should_execute(opportunity):
             return last_status or "可成交", ""
-        price_caps = _price_caps(sized, self.config.fee_buffer)
+        preflight = preflight_execution(sized, books or {}, self.config) if books else None
+        if books and preflight is None:
+            return "仅观察", "执行前复核未通过：盘口过期、深度不足或动态净利润/ROI 不达标"
+        if preflight is not None:
+            sized, yes_cap, no_cap = preflight
+            price_caps = (yes_cap, no_cap)
+        else:
+            price_caps = _price_caps(sized, self.config.fee_buffer)
         if price_caps is None:
-            return "仅观察", "价格上限无法保留至少 3¢ 套利空间"
+            return "仅观察", "当前深度价格无法形成有效的双腿套利"
+        if self.config.dry_run:
+            self._log_dry_run(sized, *price_caps)
+            return "Dry Run", "已记录机会，未发送真实订单。"
         status, execution_detail = self._execute_pair(sized, *price_caps)
         if status == "资金不足":
             display_status = "已触发，未成功"
@@ -109,6 +115,10 @@ class LiveAutoTrader:
             display_status = status
             detail = execution_detail
         self.last_execution_status[opportunity.pair_key] = display_status
+        if status == "已成交":
+            self.consecutive_failures = 0
+        elif status not in {"Dry Run", "资金不足", "区域受限"}:
+            self.consecutive_failures += 1
         if status in {"已成交", "部分成交", "已平仓"}:
             with self.lock:
                 self.last_execution[opportunity.pair_key] = time.time()
@@ -140,16 +150,6 @@ class LiveAutoTrader:
     def _size_opportunity(self, opportunity: ArbOpportunity) -> tuple[Optional[ArbOpportunity], str]:
         if opportunity.total_cost <= 0:
             return None, "仅观察"
-        spread_cents = _spread_cents(opportunity)
-        if spread_cents <= MIN_SPREAD_TO_OPEN_CENTS:
-            return None, "仅观察"
-        if spread_cents <= THIRTY_PERCENT_MAX_SPREAD_CENTS:
-            position_ratio = 0.3
-        elif spread_cents <= SIXTY_PERCENT_MAX_SPREAD_CENTS:
-            position_ratio = 0.6
-        else:
-            position_ratio = 1.0
-
         snapshot = self._snapshot()
         balance = _to_float(snapshot.get("balance_pusd"))
         allocation = balance * self._allocation_ratio()
@@ -160,8 +160,9 @@ class LiveAutoTrader:
         available = min(
             max(0.0, allocation - used - reserved_asset),
             max(0.0, balance - total_used - reserved_total),
+            max(0.0, self.config.max_open_exposure_usd - total_used - reserved_total),
         )
-        target_budget = min(opportunity.total_cost, allocation * position_ratio)
+        target_budget = min(opportunity.total_cost, self.config.max_single_trade_usd, available)
         if available < target_budget:
             return None, "资金不足"
         scale = target_budget / opportunity.total_cost
@@ -169,7 +170,7 @@ class LiveAutoTrader:
         total_cost = opportunity.total_cost * scale
         min_payout = opportunity.min_payout * scale
         guaranteed_profit = opportunity.guaranteed_profit * scale
-        if shares < MIN_DISPLAYED_POSITION_VALUE or guaranteed_profit < MIN_DISPLAYED_POSITION_VALUE:
+        if shares < MIN_DISPLAYED_POSITION_VALUE or guaranteed_profit < self.config.min_profit_usd:
             # Low wallet budget can scale below the displayable minimum; treat it as insufficient funds.
             return None, "资金不足"
         return (
@@ -179,6 +180,11 @@ class LiveAutoTrader:
                 total_cost=total_cost,
                 min_payout=min_payout,
                 guaranteed_profit=guaranteed_profit,
+                yes_fee=opportunity.yes_fee * scale,
+                no_fee=opportunity.no_fee * scale,
+                slippage_cost=opportunity.slippage_cost * scale,
+                safety_buffer=opportunity.safety_buffer * scale,
+                roi=guaranteed_profit / total_cost if total_cost else 0.0,
             ),
             "",
         )
@@ -228,6 +234,11 @@ class LiveAutoTrader:
         no_max_price: float,
     ) -> tuple[str, str]:
         baseline = self._snapshot(force=True)
+        reserved_capital = (
+            sized.shares * (yes_max_price + no_max_price + max(0.0, self.config.fee_buffer))
+            + sized.yes_fee
+            + sized.no_fee
+        )
         reservation_id = ""
         intent = None
         if self.execution_store is not None:
@@ -237,14 +248,13 @@ class LiveAutoTrader:
                 yes_token_id=sized.yes_token_id,
                 no_token_id=sized.no_token_id,
                 shares=sized.shares,
-                reserved_capital=_max_pair_spend(sized.shares, yes_max_price, no_max_price, self.config.fee_buffer),
+                reserved_capital=reserved_capital,
                 baseline_yes_shares=_token_shares(baseline.get("positions", []), sized.yes_token_id),
                 baseline_no_shares=_token_shares(baseline.get("positions", []), sized.no_token_id),
             )
             reservation_id = str(intent["id"])
         else:
             reservation_id = f"memory:{sized.pair_key}:{time.time_ns()}"
-        reserved_capital = _max_pair_spend(sized.shares, yes_max_price, no_max_price, self.config.fee_buffer)
         if not self.reservations.reserve(reservation_id, self.asset.symbol, reserved_capital, _to_float(baseline.get("balance_pusd"))):
             if intent is not None:
                 self.execution_store.update(reservation_id, state="failed", detail="提交前资金预留失败。")
@@ -363,14 +373,26 @@ class LiveAutoTrader:
         no_max_price: float,
     ) -> tuple[dict, dict]:
         try:
-            results = self.live_session.place_protected_pair_buy(
-                yes_token_id=sized.yes_token_id,
-                no_token_id=sized.no_token_id,
-                shares=sized.shares,
-                yes_max_price=yes_max_price,
-                no_max_price=no_max_price,
-                fee_buffer=self.config.fee_buffer,
-            )
+            kwargs = {
+                "yes_token_id": sized.yes_token_id,
+                "no_token_id": sized.no_token_id,
+                "shares": sized.shares,
+                "yes_max_price": yes_max_price,
+                "no_max_price": no_max_price,
+                "fee_buffer": self.config.fee_buffer,
+                "yes_fee_budget": sized.yes_fee,
+                "no_fee_budget": sized.no_fee,
+            }
+            try:
+                results = self.live_session.place_protected_pair_buy(**kwargs)
+            except TypeError as exc:
+                # Keep third-party session adapters working while they migrate
+                # to the explicit dynamic fee-budget arguments.
+                if "fee_budget" not in str(exc):
+                    raise
+                kwargs.pop("yes_fee_budget")
+                kwargs.pop("no_fee_budget")
+                results = self.live_session.place_protected_pair_buy(**kwargs)
             if len(results) == 2:
                 return results[0], results[1]
             failure = {"ok": False, "message": "套利批量订单返回不完整。"}
@@ -387,6 +409,23 @@ class LiveAutoTrader:
             )
         except Exception as exc:
             return {"ok": False, "message": str(exc)}
+
+    def _log_dry_run(self, sized: ArbOpportunity, yes_max_price: float, no_max_price: float) -> None:
+        self.live_session.add_execution_log(
+            {
+                "time": datetime.now(timezone.utc).isoformat(),
+                "asset": self.asset.symbol,
+                "pair_key": sized.pair_key,
+                "yes_question": sized.yes_question,
+                "no_question": sized.no_question,
+                "shares": sized.shares,
+                "ok": False,
+                "detail": (
+                    f"DRY_RUN; yes_cap={yes_max_price:.4f}; no_cap={no_max_price:.4f}; "
+                    f"profit={sized.guaranteed_profit:.4f}; roi={sized.roi:.4%}"
+                ),
+            }
+        )
 
     def _log_execution(
         self,

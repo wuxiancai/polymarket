@@ -2,7 +2,7 @@
 
 Polyarb 是一个 Polymarket BTC / ETH / XRP / SOL 日线及以上周期套利扫描与纸面模拟交易系统。
 
-> 当前版本：`v2.7.8`；稳定回退点：`v1.0.0`。
+> 当前版本：`v2.8.0`；稳定回退点：`v1.0.0`。
 
 系统默认首页为真实交易系统，模拟系统独立保留在 `/simulation`。
 
@@ -34,14 +34,17 @@ Polyarb 是一个 Polymarket BTC / ETH / XRP / SOL 日线及以上周期套利�
 
 - `MIN_24H_VOLUME_USD=1000`
 - `MIN_ARBITRAGE_DEPTH_USD=100`
-- `SLIPPAGE_BUFFER_CENTS=3`（真实开仓要求 YES + NO 严格低于 97¢，即价差严格大于 3¢）
-- `FEE_BUFFER=0`（每份两腿合计的最高手续费缓冲；收费市场必须设置为足以覆盖实际费率的值，系统会将其从 97¢ 总成本上限中预留）
+- `MIN_PROFIT_USD=1` 与 `MIN_ROI=0.01`（两个阈值必须同时满足）
+- `SAFETY_BUFFER_PER_SHARE=0.002`（每份执行安全边际）
+- `STALE_BOOK_MS=5000`（任一腿盘口过期即不评估/不下单）
+- `MAX_SINGLE_TRADE_USD=100`、`MAX_OPEN_EXPOSURE_USD=500`
+- `FEE_BUFFER=0`（兼容旧部署的额外每份安全缓冲；实际手续费始终从当前 CLOB 市场元数据计算）
 - `ALLOW_NEAR_EXPIRY_LONG_PERIODS=true`
 - `NEAR_EXPIRY_DAYS=30`
 
-套利判断会逐档读取 order book 深度。只有当前边际档位在扣除滑点安全垫后仍然盈利，系统才会继续吃深度；前面档位的利润不会补贴后面亏损档位。
+套利引擎逐档读取两腿 order book，枚举双方累计深度断点，计算每个候选数量的真实 VWAP、逐档动态手续费、深度滑点、安全边际、净利润与 ROI，并选择净利润最大的合格数量。系统不再用固定 97¢ / 3¢ 价差作为执行条件。
 
-`/simulation` 与真实交易共用开仓逻辑：YES/NO 两腿价格与手续费合计严格低于 97¢、FOK 全额成交校验、单腿成交后的 FAK 平仓、冻结与冷却规则完全一致。模拟盘会读取同一 CLOB 市场费率，并按真实 SDK 的 `max_spend` 公式缩减每腿实际份额；两种结算结果中较小的兑付扣除两腿最高总支出后仍须至少保留 `$0.001` 净利。唯一差别是模拟盘只使用 `PAPER_INITIAL_CAPITAL_USDT`，不连接钱包、不签名也不发送真实订单。
+`/simulation` 与真实交易共用动态开仓判断：新鲜盘口、足额深度、VWAP、动态费率、净利润/ROI、FOK 全额成交校验、单腿成交后的 FAK 平仓、冻结与冷却规则完全一致。模拟盘会读取同一 CLOB 市场费率，并按真实 SDK 的 `max_spend` 公式缩减每腿实际份额；两种结算结果中较小的兑付扣除两腿最高总支出后仍须至少保留 `$0.001` 净利。唯一差别是模拟盘只使用 `PAPER_INITIAL_CAPITAL_USDT`，不连接钱包、不签名也不发送真实订单。
 
 ## 一键部署
 
@@ -157,8 +160,14 @@ PYTHONPATH=src python3 -m polyarb scan --once
 ```bash
 MIN_24H_VOLUME_USD=1000
 MIN_ARBITRAGE_DEPTH_USD=100
-SLIPPAGE_BUFFER_CENTS=4
 FEE_BUFFER=0
+MIN_PROFIT_USD=1
+MIN_ROI=0.01
+SAFETY_BUFFER_PER_SHARE=0.002
+STALE_BOOK_MS=5000
+MAX_SINGLE_TRADE_USD=100
+MAX_OPEN_EXPOSURE_USD=500
+DRY_RUN=false
 ALLOW_NEAR_EXPIRY_LONG_PERIODS=true
 NEAR_EXPIRY_DAYS=30
 PAPER_INITIAL_CAPITAL_USDT=10000
@@ -186,7 +195,7 @@ POLYARB_DB=/path/to/paper.sqlite3 bash start.sh
 示例：
 
 ```bash
-SLIPPAGE_BUFFER_CENTS=4 FEE_BUFFER=0.01 MIN_ARBITRAGE_DEPTH_USD=500 bash start.sh
+MIN_PROFIT_USD=2 MIN_ROI=0.015 MAX_SINGLE_TRADE_USD=50 DRY_RUN=true bash start.sh
 ```
 
 如果服务器访问 Polymarket 需要本机代理，先导出代理再启动。`start.sh` 会把代理变量写入 systemd 服务，避免终端关闭后服务丢失代理环境：

@@ -42,7 +42,7 @@ def runner(tmp_path) -> PaperRunner:
     return item
 
 
-def test_runner_uses_position_size_tiers_by_spread(tmp_path):
+def test_runner_uses_fixed_risk_caps_instead_of_spread_tiers(tmp_path):
     item = runner(tmp_path)
 
     full = item._sized_opportunity(opportunity(profit=54.0, total_cost=1000.0, spread_cents=5.4))
@@ -54,21 +54,21 @@ def test_runner_uses_position_size_tiers_by_spread(tmp_path):
     too_small = item._sized_opportunity(opportunity(profit=30.0, total_cost=1000.0, spread_cents=3.0))
 
     assert full is not None
-    assert round(full.total_cost, 2) == 400.00
-    assert round(full.shares, 2) == 400.00
+    assert round(full.total_cost, 2) == 100.00
+    assert round(full.shares, 2) == 100.00
     assert sixty is not None
-    assert round(sixty.total_cost, 2) == 240.00
-    assert round(sixty.shares, 2) == 240.00
+    assert round(sixty.total_cost, 2) == 100.00
+    assert round(sixty.shares, 2) == 100.00
     assert thirty is not None
-    assert round(thirty.total_cost, 2) == 120.00
-    assert round(thirty.shares, 2) == 120.00
+    assert round(thirty.total_cost, 2) == 100.00
+    assert round(thirty.shares, 2) == 100.00
     assert at_minimum is not None
-    assert round(at_minimum.total_cost, 2) == 120.00
-    assert round(at_minimum.shares, 2) == 120.00
-    assert too_small is None
+    assert round(at_minimum.total_cost, 2) == 100.00
+    assert round(at_minimum.shares, 2) == 100.00
+    assert too_small is not None
 
 
-def test_runner_sizes_spread_tiers_against_current_asset_allocation(tmp_path):
+def test_runner_respects_risk_cap_within_current_asset_allocation(tmp_path):
     config = Config(database_path=Path(tmp_path) / "paper.sqlite3", initial_capital_usdt=1000.0)
     item = PaperRunner(config, ETH_ASSET)
     item.store.initialize()
@@ -76,8 +76,8 @@ def test_runner_sizes_spread_tiers_against_current_asset_allocation(tmp_path):
     sized = item._sized_opportunity(opportunity(profit=31.0, total_cost=1000.0, spread_cents=3.1))
 
     assert sized is not None
-    assert round(sized.total_cost, 2) == 90.00
-    assert round(sized.shares, 2) == 90.00
+    assert round(sized.total_cost, 2) == 100.00
+    assert round(sized.shares, 2) == 100.00
 
 
 def test_runner_uses_config_allocation_ratios(tmp_path):
@@ -92,7 +92,7 @@ def test_runner_uses_config_allocation_ratios(tmp_path):
     sized = btc._sized_opportunity(opportunity(profit=54.0, total_cost=1000.0, spread_cents=5.4))
 
     assert sized is not None
-    assert round(sized.total_cost, 2) == 1000.00
+    assert round(sized.total_cost, 2) == 100.00
 
     eth = PaperRunner(config, ETH_ASSET)
     eth.store.initialize()

@@ -31,7 +31,7 @@ def market(market_id, question, kind, threshold, period, start, end, yes, no, vo
 
 
 def book(token, asks):
-    return OrderBook(token_id=token, bids=[], asks=asks, timestamp_ms=1, hash="h")
+    return OrderBook(token_id=token, bids=[], asks=asks, timestamp_ms=int(datetime.now(timezone.utc).timestamp() * 1000), hash="h")
 
 
 def test_reach_week_implies_current_month_and_creates_buy_month_yes_week_no_pair():
@@ -66,7 +66,7 @@ def test_reach_week_implies_current_month_and_creates_buy_month_yes_week_no_pair
 
 
 def test_marginal_depth_stops_before_unprofitable_level():
-    cfg = Config(min_24h_volume_usd=1000, min_arbitrage_depth_usd=100, slippage_buffer_cents=2)
+    cfg = Config(min_24h_volume_usd=1000, min_arbitrage_depth_usd=100, min_profit_usd=0.01, min_roi=0)
     yes_market = market(
         "month70",
         "Will Bitcoin reach $70,000 in June?",
@@ -102,12 +102,65 @@ def test_marginal_depth_stops_before_unprofitable_level():
     assert opportunity.yes_end_date == "2026-07-01T00:00:00+00:00"
     assert opportunity.no_end_date == "2026-06-29T00:00:00+00:00"
     assert opportunity.shares == 300.0
-    assert round(opportunity.total_cost, 2) == 291.00
-    assert round(opportunity.guaranteed_profit, 2) == 9.00
+    assert round(opportunity.total_cost, 2) == 291.60
+    assert round(opportunity.guaranteed_profit, 2) == 8.40
+
+
+def test_dynamic_fee_and_safety_can_reject_an_apparent_best_ask_arbitrage():
+    cfg = Config(min_profit_usd=1.0, min_roi=0.01, safety_buffer_per_share=0.002, min_arbitrage_depth_usd=0)
+    same = market(
+        "same", "Will Bitcoin reach $70,000 in June?", "reach", 70000, "week",
+        datetime(2026, 6, 22, tzinfo=timezone.utc), datetime(2026, 6, 29, tzinfo=timezone.utc), "yes", "no"
+    )
+    pair = [item for item in build_pairs([same]) if item.kind == "same_market"][0]
+    books = {
+        "yes": OrderBook("yes", [], [(0.48, 100)], int(datetime.now(timezone.utc).timestamp() * 1000), "", fee_rate=0.07, fee_exponent=1),
+        "no": OrderBook("no", [], [(0.48, 100)], int(datetime.now(timezone.utc).timestamp() * 1000), "", fee_rate=0.07, fee_exponent=1),
+    }
+
+    opportunity = evaluate_pair(pair, books, cfg)
+
+    assert opportunity is not None
+    assert opportunity.yes_fee > 1
+    assert opportunity.no_fee > 1
+    assert opportunity.executable is False
+    assert "net profit" in opportunity.reason
+
+
+def test_engine_selects_profit_maximizing_depth_not_maximum_depth():
+    cfg = Config(min_profit_usd=0.01, min_roi=0, safety_buffer_per_share=0)
+    same = market(
+        "same", "Will Bitcoin reach $70,000 in June?", "reach", 70000, "week",
+        datetime(2026, 6, 22, tzinfo=timezone.utc), datetime(2026, 6, 29, tzinfo=timezone.utc), "yes", "no"
+    )
+    pair = [item for item in build_pairs([same]) if item.kind == "same_market"][0]
+    stamp = int(datetime.now(timezone.utc).timestamp() * 1000)
+    books = {
+        "yes": OrderBook("yes", [], [(0.40, 100), (0.60, 100)], stamp, ""),
+        "no": OrderBook("no", [], [(0.55, 100), (0.60, 100)], stamp, ""),
+    }
+
+    opportunity = evaluate_pair(pair, books, cfg)
+
+    assert opportunity is not None
+    assert opportunity.shares == 100
+    assert round(opportunity.guaranteed_profit, 2) == 5.0
+
+
+def test_stale_books_are_never_evaluated():
+    cfg = Config(stale_book_ms=1_000)
+    same = market(
+        "same", "Will Bitcoin reach $70,000 in June?", "reach", 70000, "week",
+        datetime(2026, 6, 22, tzinfo=timezone.utc), datetime(2026, 6, 29, tzinfo=timezone.utc), "yes", "no"
+    )
+    pair = [item for item in build_pairs([same]) if item.kind == "same_market"][0]
+    stale = int(datetime.now(timezone.utc).timestamp() * 1000) - 1_001
+
+    assert evaluate_pair(pair, {"yes": OrderBook("yes", [], [(0.4, 10)], stale, ""), "no": OrderBook("no", [], [(0.5, 10)], stale, "")}, cfg) is None
 
 
 def test_volume_and_depth_gates_block_execution_but_record_opportunity():
-    cfg = Config(min_24h_volume_usd=1000, min_arbitrage_depth_usd=100, slippage_buffer_cents=2)
+    cfg = Config(min_24h_volume_usd=1000, min_arbitrage_depth_usd=100, min_profit_usd=0.01, min_roi=0)
     yes_market = market(
         "month70",
         "Will Bitcoin reach $70,000 in June?",

@@ -24,7 +24,7 @@ from .live_trader import LiveAutoTrader
 from .live_execution import LiveExecutionStore, WalletReservations
 from .live_web import live_dashboard_payload, render_live_page
 from .models import DEFAULT_ASSETS, AssetSpec
-from .runner import MIN_SPREAD_TO_OPEN_CENTS, PaperRunner, RealtimePaperRunner, ScanResult
+from .runner import PaperRunner, RealtimePaperRunner, ScanResult
 from .store import PaperStore
 
 DISPLAY_TZ = ZoneInfo("Asia/Shanghai")
@@ -1868,8 +1868,6 @@ def _opportunity_state(row: dict) -> tuple[str, str]:
         return "done", "已成交"
     if row.get("_execution_type") == "cooldown":
         return "watch", "冷却中"
-    if _spread_cents(row) <= MIN_SPREAD_TO_OPEN_CENTS:
-        return "watch", "仅观察"
     if row.get("executable"):
         return "exec", "可模拟成交"
     return "watch", "仅观察"

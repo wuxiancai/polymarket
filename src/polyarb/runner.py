@@ -17,9 +17,11 @@ from .websocket import apply_market_message, market_subscription_message
 
 WEBSOCKET_RECONNECT_DELAY_SECONDS = 10
 MIN_DISPLAYED_POSITION_VALUE = 0.01
-MIN_SPREAD_TO_OPEN_CENTS = 3.0
-THIRTY_PERCENT_MAX_SPREAD_CENTS = 4.5
-SIXTY_PERCENT_MAX_SPREAD_CENTS = 5.3
+# Compatibility exports for integrations from v2.7.x.  They are deliberately
+# not used for execution: dynamic net profit and ROI are the only entry gates.
+MIN_SPREAD_TO_OPEN_CENTS = 0.0
+THIRTY_PERCENT_MAX_SPREAD_CENTS = 0.0
+SIXTY_PERCENT_MAX_SPREAD_CENTS = 0.0
 
 
 def _settlement_at(opportunity: ArbOpportunity) -> datetime:
@@ -125,21 +127,14 @@ class PaperRunner:
     def _sized_opportunity(self, opportunity: ArbOpportunity) -> Optional[ArbOpportunity]:
         if opportunity.total_cost <= 0:
             return None
-        spread_cents = _spread_cents(opportunity)
-        if spread_cents <= MIN_SPREAD_TO_OPEN_CENTS:
-            return None
-        if spread_cents <= THIRTY_PERCENT_MAX_SPREAD_CENTS:
-            position_ratio = 0.3
-        elif spread_cents <= SIXTY_PERCENT_MAX_SPREAD_CENTS:
-            position_ratio = 0.6
-        else:
-            position_ratio = 1.0
-
         allocation_ratio = self._allocation_ratio()
         allocation = self.config.initial_capital_usdt * allocation_ratio
         used = self._used_capital()
-        available = max(0.0, allocation - used)
-        target_budget = min(opportunity.total_cost, allocation * position_ratio)
+        available = min(
+            max(0.0, allocation - used),
+            max(0.0, self.config.max_open_exposure_usd - used),
+        )
+        target_budget = min(opportunity.total_cost, self.config.max_single_trade_usd, available)
         if available < target_budget:
             return None
         scale = target_budget / opportunity.total_cost
@@ -147,7 +142,7 @@ class PaperRunner:
         total_cost = opportunity.total_cost * scale
         min_payout = opportunity.min_payout * scale
         guaranteed_profit = opportunity.guaranteed_profit * scale
-        if shares < MIN_DISPLAYED_POSITION_VALUE or guaranteed_profit < MIN_DISPLAYED_POSITION_VALUE:
+        if shares < MIN_DISPLAYED_POSITION_VALUE or guaranteed_profit < self.config.min_profit_usd:
             return None
         return replace(
             opportunity,
@@ -241,7 +236,8 @@ class PaperRunner:
                 total_cost=total_cost,
                 min_payout=min_payout,
                 guaranteed_profit=profit,
-                edge_per_share=profit / opportunity.shares,
+                edge_per_share=profit / min_payout,
+                roi=profit / total_cost if total_cost else 0.0,
             )
         filled_legs = [
             (yes_fill, yes_book, "YES"),

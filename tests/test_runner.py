@@ -40,14 +40,15 @@ def paper_opportunity(pair_key: str, end_date: str) -> ArbOpportunity:
 
 def paper_books(*opportunities: ArbOpportunity) -> dict:
     books = {}
+    timestamp_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
     for item in opportunities:
-        books[item.yes_token_id] = OrderBook(item.yes_token_id, bids=[(0.39, 100)], asks=[(0.40, 100)], timestamp_ms=1, hash="")
-        books[item.no_token_id] = OrderBook(item.no_token_id, bids=[(0.54, 100)], asks=[(0.55, 100)], timestamp_ms=1, hash="")
+        books[item.yes_token_id] = OrderBook(item.yes_token_id, bids=[(0.39, 100)], asks=[(0.40, 100)], timestamp_ms=timestamp_ms, hash="")
+        books[item.no_token_id] = OrderBook(item.no_token_id, bids=[(0.54, 100)], asks=[(0.55, 100)], timestamp_ms=timestamp_ms, hash="")
     return books
 
 
 def test_runner_executes_nearest_end_date_first(tmp_path):
-    config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
+    config = Config(database_path=Path(tmp_path) / "paper.sqlite3", min_profit_usd=0.01, max_single_trade_usd=1000)
     item = PaperRunner(config, BTC_ASSET)
     item.store.initialize()
     far = paper_opportunity("far", "2026-08-10T00:00:00+00:00")
@@ -69,12 +70,12 @@ def test_runner_executes_nearest_end_date_first(tmp_path):
 
 
 def test_runner_records_only_full_fok_pair_and_simulates_single_leg_exit(tmp_path):
-    config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
+    config = Config(database_path=Path(tmp_path) / "paper.sqlite3", min_profit_usd=0.01)
     item = PaperRunner(config, BTC_ASSET)
     item.store.initialize()
     candidate = paper_opportunity("one-leg", "2026-08-04T00:00:00+00:00")
     books = paper_books(candidate)
-    books[candidate.no_token_id] = OrderBook(candidate.no_token_id, bids=[(0.54, 100)], asks=[(0.58, 100)], timestamp_ms=1, hash="")
+    books[candidate.no_token_id] = OrderBook(candidate.no_token_id, bids=[(0.54, 100)], asks=[(0.58, 100)], timestamp_ms=int(datetime.now(timezone.utc).timestamp() * 1000), hash="")
 
     item._record_result(ScanResult(markets=[], pairs=1, opportunities=[candidate], scanned_at=datetime.now(timezone.utc), books=books))
 
@@ -84,13 +85,14 @@ def test_runner_records_only_full_fok_pair_and_simulates_single_leg_exit(tmp_pat
 
 
 def test_runner_freezes_pair_when_simulated_single_leg_fak_exit_is_partial(tmp_path):
-    config = Config(database_path=Path(tmp_path) / "paper.sqlite3")
+    config = Config(database_path=Path(tmp_path) / "paper.sqlite3", min_profit_usd=0.01)
     item = PaperRunner(config, BTC_ASSET)
     item.store.initialize()
     candidate = paper_opportunity("stuck-leg", "2026-08-04T00:00:00+00:00")
     books = paper_books(candidate)
-    books[candidate.yes_token_id] = OrderBook(candidate.yes_token_id, bids=[(0.39, 5)], asks=[(0.40, 100)], timestamp_ms=1, hash="")
-    books[candidate.no_token_id] = OrderBook(candidate.no_token_id, bids=[(0.54, 100)], asks=[(0.58, 100)], timestamp_ms=1, hash="")
+    timestamp_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+    books[candidate.yes_token_id] = OrderBook(candidate.yes_token_id, bids=[(0.39, 5)], asks=[(0.40, 100)], timestamp_ms=timestamp_ms, hash="")
+    books[candidate.no_token_id] = OrderBook(candidate.no_token_id, bids=[(0.54, 100)], asks=[(0.58, 100)], timestamp_ms=timestamp_ms, hash="")
 
     item._record_result(ScanResult(markets=[], pairs=1, opportunities=[candidate], scanned_at=datetime.now(timezone.utc), books=books))
 
@@ -98,13 +100,13 @@ def test_runner_freezes_pair_when_simulated_single_leg_fak_exit_is_partial(tmp_p
 
 
 def test_runner_includes_configured_fee_buffer_in_simulated_profit(tmp_path):
-    config = Config(database_path=Path(tmp_path) / "paper.sqlite3", fee_buffer=0.01)
+    config = Config(database_path=Path(tmp_path) / "paper.sqlite3", fee_buffer=0.01, min_profit_usd=0.01)
     item = PaperRunner(config, BTC_ASSET)
     item.store.initialize()
     candidate = paper_opportunity("fee", "2026-08-04T00:00:00+00:00")
     candidate = candidate.__class__(**{**candidate.__dict__, "yes_avg_price": 0.40, "no_avg_price": 0.54, "total_cost": 9.4, "guaranteed_profit": 0.6})
     books = paper_books(candidate)
-    books[candidate.no_token_id] = OrderBook(candidate.no_token_id, bids=[(0.53, 100)], asks=[(0.54, 100)], timestamp_ms=1, hash="")
+    books[candidate.no_token_id] = OrderBook(candidate.no_token_id, bids=[(0.53, 100)], asks=[(0.54, 100)], timestamp_ms=int(datetime.now(timezone.utc).timestamp() * 1000), hash="")
 
     item._record_result(ScanResult(markets=[], pairs=1, opportunities=[candidate], scanned_at=datetime.now(timezone.utc), books=books))
 

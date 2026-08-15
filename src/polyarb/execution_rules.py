@@ -6,36 +6,31 @@ from typing import List, Optional, Tuple
 from .models import ArbOpportunity, Level
 
 
-# Strictly below 97¢: only opportunities with more than 3¢ per-share spread open.
-MAX_TOTAL_OPEN_COST = Decimal("0.97")
 # Signed SDK orders can have unequal fee-adjusted shares.  Keep a small absolute
 # margin after the losing-leg payout covers both worst-case order spends.
 MIN_SETTLEMENT_PROFIT = Decimal("0.001")
 
 
 def price_caps(opportunity: ArbOpportunity, fee_buffer: float = 0.0) -> Optional[tuple[float, float]]:
-    """Split observed headroom while reserving 3¢ profit plus configured fees."""
+    """Conservative average-price caps for callers without the raw book.
+
+    The actual execution path performs a second depth check and replaces these
+    with the final fillable caps.  No fixed 97c threshold is valid across fee
+    schedules, so this helper only rejects malformed values.
+    """
     yes_price = Decimal(str(opportunity.yes_avg_price))
     no_price = Decimal(str(opportunity.no_avg_price))
     fee = Decimal(str(fee_buffer))
-    max_price_total = MAX_TOTAL_OPEN_COST - fee
-    if fee < 0 or max_price_total <= 0:
+    if fee < 0:
         return None
     observed_total = yes_price + no_price
-    if observed_total >= max_price_total:
+    if yes_price <= 0 or no_price <= 0 or observed_total >= Decimal("1"):
         return None
-    half_headroom = (max_price_total - observed_total) / Decimal("2")
     cents = Decimal("0.01")
-    yes_cap = (yes_price + half_headroom).quantize(cents, rounding=ROUND_DOWN)
-    no_cap = (no_price + half_headroom).quantize(cents, rounding=ROUND_DOWN)
-    if yes_cap <= 0 or no_cap <= 0 or yes_cap + no_cap + fee >= MAX_TOTAL_OPEN_COST:
-        # Do not turn a strict <97¢ rule into an equality because the extra
-        # headroom happened to round to whole cents.  Fall back to the lowest
-        # cent caps that can still include the observed prices.
-        yes_cap = yes_price.quantize(cents, rounding=ROUND_UP)
-        no_cap = no_price.quantize(cents, rounding=ROUND_UP)
-        if yes_cap <= 0 or no_cap <= 0 or yes_cap + no_cap + fee >= MAX_TOTAL_OPEN_COST:
-            return None
+    yes_cap = yes_price.quantize(cents, rounding=ROUND_UP)
+    no_cap = no_price.quantize(cents, rounding=ROUND_UP)
+    if yes_cap <= 0 or no_cap <= 0:
+        return None
     return float(yes_cap), float(no_cap)
 
 
